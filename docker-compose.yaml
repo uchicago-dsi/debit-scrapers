@@ -1,0 +1,96 @@
+# docker-compose.yaml
+#
+# Launches services for each DeBIT project under
+# a default network. Intended for local testing.
+#
+
+version: "3"
+services:
+  # POSTGRES DATABASE
+  db:
+    image: postgres
+    container_name: debit-scrapers-database
+    environment:
+        - POSTGRES_DB=debit-test-db
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=postgres
+
+  # PGADMIN DATABASE GUI
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: debit-scrapers-pgadmin
+    depends_on:
+      - db
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=fake@fake.com
+      - PGADMIN_DEFAULT_PASSWORD=pgadmin
+      - PGADMIN_LISTEN_PORT=443
+    logging:
+        driver: none
+    ports:
+      - "443:443"
+  
+  # DJANGO API
+  api:
+    image: debit/debit-scrapers-api
+    container_name: debit-scrapers-api
+    depends_on:
+      - db
+    environment:
+      - DJANGO_SETTINGS=dev
+      - POSTGRES_DB=debit-test-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # GOOGLE PUB/SUB EMULATOR
+  pubsub:
+    image: debit/debit-scrapers-pubsub
+    container_name: debit-scrapers-pubsub
+    ports:
+      - "8085:8085"
+
+  # QUEUE WORKFLOWS WEBHOOK
+  queue_workflows:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ENV: dev
+    command: "python3 ./scrapers/entrypoints/queue_workflows.py"
+    container_name: debit-scrapers-queue-func
+    depends_on:
+      - api
+      - pubsub
+    environment:
+      API_BASE_URL: http://api:8080
+      ENV: dev
+      GOOGLE_APPLICATION_CREDENTIALS: ./scrapers/config/credentials.dev.json
+      PUBSUB_EMULATOR_HOST: pubsub:8085
+      PUBSUB_PROJECT_ID: test
+    ports:
+      - "5000:5000"
+
+  # RUN WORKFLOWS SERVICE
+  run_workflows:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ENV: dev
+    command: "python3 ./scrapers/entrypoints/run_workflows.py"
+    container_name: debit-scrapers-run-func
+    depends_on:
+      - api
+      - pubsub
+    environment:
+      API_BASE_URL: http://api:8080
+      ENV: dev
+      GOOGLE_APPLICATION_CREDENTIALS: ./scrapers/config/credentials.dev.json
+      PUBSUB_EMULATOR_HOST: pubsub:8085
+      PUBSUB_PROJECT_ID: test
+    ports:
+      - "5050:5050"
+    restart: unless-stopped

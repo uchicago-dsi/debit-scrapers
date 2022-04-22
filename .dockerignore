@@ -1,0 +1,4 @@
+env/
+README.md
+__pycache__
+*.pyc
