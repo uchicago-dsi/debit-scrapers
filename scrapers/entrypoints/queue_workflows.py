@@ -51,8 +51,6 @@ with open(f"config.{env}.yaml", "r") as stream:
         config: dict = yaml.load(stream, Loader=FullLoader)
     except yaml.YAMLError as e:
         raise Exception(f"Failed to open configuration file. {e}")
-
-print(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
     
 # Set up Pub/Sub client
 try:
