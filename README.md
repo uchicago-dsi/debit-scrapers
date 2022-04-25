@@ -1,5 +1,7 @@
 # debit-scrapers
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 This repository houses open source web scrapers for [DeBIT](https://debit.datascience.uchicago.edu) (**De**velopment **B**ank **I**nvestment **T**racker), an online research tool developed by [Inclusive Development International](https://www.inclusivedevelopment.net/) and the [University of Chicago Data Science Institute](https://datascience.uchicago.edu/). DeBIT empowers community advocates to track investments made by development finance institutions and other entities that have independent accountability mechanisms (IAMs). Every two weeks, its scrapers extract data from all investment projects publicly disclosed by the following 17 institutions:
 
 - African Development Bank (AfDB)
