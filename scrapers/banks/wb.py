@@ -1,8 +1,6 @@
-'''
-wb.py
-
-Workflows for downloading and processing data from the World Bank (WB).
-'''
+"""Web scrapers for the World Bank (WB). Currently
+downloads project records as an Excel file.
+"""
 
 import numpy as np
 import pandas as pd
@@ -14,56 +12,52 @@ from scrapers.services.database import DbClient
 
 
 class WbDownloadWorkflow(ProjectDownloadWorkflow):
-    '''
-    Downloads project records directly from the World Bank's
+    """Downloads project records directly from the World Bank's
     website and then cleans and saves the data to a database
     using the `execute` method defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `WbDownloadWorkflow`.
 
-        Parameters:
-           data_request_client (DataRequestClient): A client
+        Args:
+           data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         return "http://search.worldbank.org/api/projects/all.csv"
 
 
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects by downloading an
+        """Retrieves all development bank projects by downloading an
         Excel file hosted on the World Bank's website. The request
         may take a few minutes to complete due to the large file size.
 
-        Parameters:
+        Args:
             None
         
         Returns:
-            (pd.DataFrame): The raw project records.
-        '''
+            (`pd.DataFrame`): The raw project records.
+        """
         try:
             return pd.read_excel(self.download_url, skiprows=2)
         except Exception as e:
@@ -72,16 +66,15 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans World Bank project records to conform to
+        """Cleans World Bank project records to conform to
         an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         try:
             # Map column names
             col_mapping = {
@@ -108,7 +101,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
             # Correct country names
             def correct_country_name(name: str) -> str:
-                '''
+                """
                 Rearranges a formal country name to remove
                 its comma (e.g., "China, People's Republic
                 of" becomes "People's Republic of China").
@@ -117,12 +110,12 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 combining different countries into one string
                 is not a concern.
 
-                Parameters:
+                Args:
                     name (str): The country name.
 
                 Returns:
                     (str): The formatted name.
-                '''
+                """
                 if not name or name is np.nan:
                     return None
 

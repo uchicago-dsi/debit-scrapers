@@ -1,39 +1,33 @@
-'''
-base_workflow.py
-
-Functionality common to all data collection
+"""Functionality common to all data collection
 workflows for development bank projects.
-'''
+"""
 
 from abc import ABC, abstractmethod, abstractproperty
 from logging import Logger
 
 
 class BaseWorkflow(ABC):
-    '''
-    An abstract class representing a generic
+    """An abstract class representing a generic
     data collection workflow for development
     bank projects.
-    '''
+    """
 
     def __init__(self, logger: Logger) -> None:
-        '''
-        Instantiates a new `BaseWorkflow`.
+        """Initializes a new instance of a `BaseWorkflow`.
 
-        Parameters:
-            logger (Logger): An instance of the logging class.
+        Args:
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         self._logger = logger
 
 
     @abstractproperty
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute, if any.
-        '''
+        """The name of the workflow to execute, if any.
+        """
         raise NotImplementedError
 
 
@@ -46,28 +40,27 @@ class BaseWorkflow(ABC):
         task_id: str,
         source: str,
         url: str=None) -> None:
-        '''
-        Executes the workflow.
+        """Executes the workflow.
 
-        Parameters:
+        Args:
             message_id (str): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (int): The unique identifier for the processing
+            job_id (str): The unique identifier for the processing
                 job that encapsulates all data loading, scraping,
                 and cleaning tasks.
 
             task_id (str): The unique identifier for the current 
-                results page scraping task.
+                scraping task.
 
             source (str): The name of the data source to scrape.
 
-            url (list of str): The URL of the page to scrape.
+            url (str): The URL of the page to scrape, if applicable.
 
         Returns:
             None
-        '''
+        """
         raise NotImplementedError

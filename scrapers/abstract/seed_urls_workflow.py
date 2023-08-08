@@ -1,6 +1,5 @@
-'''
-seed_urls_workflow.py
-'''
+"""Provides a client that generates the initial set of URLs for web scraping.
+"""
 
 from abc import abstractmethod
 from datetime import datetime
@@ -18,34 +17,32 @@ from typing import List
 
 
 class SeedUrlsWorkflow(BaseWorkflow):
-    '''
-    An abstract class that generates the initial
+    """An abstract class that generates the initial
     set of URLs for web scraping or API querying
-    and then "queue" those URLs for processing by
+    and then "queues" those URLs for processing by
     other nodes within a larger distributed system.
-    '''
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The constructor for `SeedUrlsWorkflow`.
+        """Initializes a new instance of a `SeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(logger)
         self._pubsub_client = pubsub_client
         self._db_client = db_client
@@ -53,9 +50,14 @@ class SeedUrlsWorkflow(BaseWorkflow):
 
     @abstractmethod
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape or query.
-        '''
+        """Generates the first set of URLs to scrape or query.
+
+        Args:
+            None
+
+        Returns:
+            (list of str): The URLs.
+        """
         raise NotImplementedError
 
 
@@ -67,18 +69,29 @@ class SeedUrlsWorkflow(BaseWorkflow):
         task_id: str,
         source: str,
         url: str) -> None:
-        '''
-        Executes the workflow.
+        """Executes the workflow.
 
-        Parameters:
-            job_id (int): The unique identifier for the processing
-                job encapsulating all data scraping and cleaning tasks.
+        Args:
+            message_id (str): The assigned id for the Pub/Sub message.
+
+            num_delivery_attempts (int): The number of times the
+                Pub/Sub message has been delivered without being
+                acknowledged.
+
+            job_id (str): The unique identifier for the processing
+                job that encapsulates all data loading, scraping,
+                and cleaning tasks.
+
+            task_id (str): The unique identifier for the current 
+                scraping task.
 
             source (str): The name of the data source to scrape.
 
+            url (str): The URL of the page to scrape, if applicable.
+
         Returns:
             None
-        '''
+        """
         # Begin tracking updates for current task
         task_update = TaskUpdate()
         task_update.id = task_id

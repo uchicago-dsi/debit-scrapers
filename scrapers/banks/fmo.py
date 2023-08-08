@@ -1,8 +1,5 @@
-'''
-fmo.py
-
-A web scraper for the Dutch entrepreneurial development bank (FMO).
-'''
+"""Web scrapers for the Dutch entrepreneurial development bank (FMO).
+"""
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,71 +16,65 @@ from typing import Dict, List
 
 
 class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of FMO URLs to scrape.
-    '''
+    """Retrieves the first set of FMO URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `FmoSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def first_page_num(self) -> int:
-        '''
-        The number of the first search results page.
-        '''
+        """The number of the first search results page.
+        """
         return 1
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return RESULTS_PAGE_WORKFLOW
 
 
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page on FMO's website. Should be formatted
         with a page number.
-        '''
+        """
         return 'https://www.fmo.nl/worldmap?page={}'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of search result pages.
-        '''
+        """
         try:
             last_page_num = self.find_last_page()
             results_page_urls = [
@@ -96,16 +87,15 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
     def find_last_page(self) -> int:
-        '''
-        Retrieves the number of the last page of
+        """Retrieves the number of the last page of
         development bank projects on the website.
         
-        Parameters:
+        Args:
             None
         
         Returns:
             (int): The page number.
-        '''
+        """
         try:
             first_page_url = self.search_results_base_url.format(self.first_page_num)
             html = requests.get(first_page_url).text
@@ -119,9 +109,8 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
-    '''
-    Scrapes an FMO search results page for development bank project URLs.
-    '''
+    """Scrapes an FMO search results page for development bank project URLs.
+    """
 
     def __init__(
         self,
@@ -129,89 +118,87 @@ class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `FmoResultsScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            pubsub_client (PubSubClient): A wrapper client for the 
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     def scrape_results_page(self, results_page_url: str) -> List[str]:
-        '''
-        Scrapes all development project page URLs from a given
+        """Scrapes all development project page URLs from a given
         search results page on FMO's website.
 
-        Parameters:
+        Args:
             results_page_url (str): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
-        '''
+        """
         try:
             source = requests.get(results_page_url).text
             soup = BeautifulSoup(source, "html.parser")
-            urls = [proj["href"] for proj in soup.find_all('a', {"class":"ProjectList__projectLink"})]
+            urls = [
+                proj["href"] for proj in 
+                soup.find_all('a', {"class":"ProjectList__projectLink"})
+            ]
             return urls
         except Exception as e:
             raise Exception(f"Error scraping '{results_page_url}' for project URLs. {e}")
 
 
 class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes an FMO project page for development bank project data.
-    '''
+    """Scrapes an FMO project page for development bank project data.
+    """
     
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `FmoProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
    
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes a FMO project page for data.
+        """Scrapes a FMO project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The project records.
-        '''
+        """
         try:            
             # Retrieve HTML
             response = requests.get(url)

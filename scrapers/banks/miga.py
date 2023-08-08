@@ -1,12 +1,9 @@
-'''
-miga.py
-
-Web scrapers for the Multilateral Investment Guarantee Agency
+"""Web scrapers for the Multilateral Investment Guarantee Agency
 (MIGA). Data retrieved by generating a list of all possible
 search result pages, scraping individual project URLs from
 those pages, scraping fields from each project page, and then
 mapping the fields to an expected output schema.
-'''
+"""
 
 import re
 import requests
@@ -23,63 +20,58 @@ from typing import Dict, List
 
 
 class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of MIGA URLs to scrape.
-    '''
+    """Retrieves the first set of MIGA URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `MigaSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return RESULTS_PAGE_WORKFLOW
 
 
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page on IDB's website. Should be formatted
         with the page number.
-        '''
+        """
         return "https://www.miga.org/projects?page={page_number}"
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of search result pages.
-        '''
+        """
         try:
             last_page_num = self.find_last_page()
             result_pages = [
@@ -92,16 +84,15 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
     def find_last_page(self) -> int:
-        '''
-        Retrieves the number of the last page of development
+        """Retrieves the number of the last page of development
         bank projects on the website.
         
-        Parameters:
+        Args:
             None
         
         Returns:
             (int): The page number.
-        '''
+        """
         try:
             response = requests.get(self.search_results_base_url)
             html = response.text
@@ -115,9 +106,8 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
-    '''
-    Scrapes a MIGA search results page for development bank project URLs.
-    '''
+    """Scrapes a MIGA search results page for development bank project URLs.
+    """
 
     def __init__(
         self,
@@ -125,55 +115,51 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `MigaResultsScrapeWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic. 
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
     def ifc_disclosures_base_url(self) -> str:
-        '''
-        The base URL for project disclosures from the International
+        """The base URL for project disclosures from the International
         Finance Corporation (IFC). Some MIGA search result pages
         contain links to IFC projects, a fellow member of the
         World Bank Group.
-        '''
+        """
         return "https://disclosures.ifc.org"
 
 
     @property
     def miga_projects_base_url(self) -> str:
-        '''
-        The base URL for MIGA projects.
-        '''
+        """The base URL for MIGA projects.
+        """
         return "https://www.miga.org"
 
         
     def scrape_results_page(self, results_page_url: str) -> List[str]:
-        '''
-        Scrapes all development project page URLs from a given
+        """Scrapes all development project page URLs from a given
         search results page on MIGA's website. Skips URLs that
         are linked to the IFC, which has its own scraper in
         this project.
 
-        Parameters:
+        Args:
             results_page_url (str): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
-        '''
+        """
         try:
             response = self._data_request_client.get(results_page_url)
             source = response.text
@@ -194,44 +180,41 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
 
 
 class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes a MIGA project page for development bank project data.
-    '''
+    """Scrapes a MIGA project page for development bank project data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `MigaProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
     
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes a MIGA project page for data.
+        """Scrapes a MIGA project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The project record(s).
-        '''
+        """
         try:
             html = requests.get(url).text
             soup = BeautifulSoup(html, 'html.parser')

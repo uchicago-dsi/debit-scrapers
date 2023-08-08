@@ -1,7 +1,4 @@
-'''
-afdb.py
-
-Web scrapers for the African Development Bank Group (AFDB).
+"""Web scrapers for the African Development Bank Group (AFDB).
 Individual projects are viewable in the "Data Portal" section
 of the site, but a list view of all projects is not publicly
 available. To circumvent this limitation, project ids are
@@ -11,7 +8,7 @@ April 21, 1967, through June 19, 2019, inclusive, and 2002
 through the present, respectively. The collected ids are then
 used to generate URLs to the "Data Portal" project pages,
 which are requested and scraped for data.
-'''
+"""
 
 import pandas as pd
 import re
@@ -30,74 +27,72 @@ from typing import Dict, List
 
 
 class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the set of AFDB project page URLs to scrape.
-    '''
+    """Retrieves the set of AFDB project page URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of an `AfdbSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def next_workflow(self) -> str:
-        '''
+        """
         The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def project_download_url(self) ->str:
-        '''
+        """
         The URL containing all project records.
-        '''
+        """
         return "https://projectsportal.afdb.org/dataportal/VProject/exportProjectList?_format=XLS&_name=&_file=dataPortal_project_list&reportName=dataPortal_project_list"
 
 
     @property
     def project_page_base_url(self) -> str:
-        '''
+        """
         The base URL for an individual project page.
         Should be formatted with the project id.
-        '''
+        """
         return 'https://projectsportal.afdb.org/dataportal/VProject/show/{project_id}'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the set of project page URLs to scrape.
+        """Generates the set of project page URLs to scrape.
 
         References:
         - https://pandas.pydata.org/docs/whatsnew/v1.2.0.html
         - https://stackoverflow.com/a/65266497
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of URLs.
-        '''
+        """
         # Retrieve Excel data
         try:
             response = requests.get(self.project_download_url, timeout=120)
@@ -128,44 +123,41 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes an AFDB project page for development bank project data.
-    '''
+    """Scrapes an AFDB project page for development bank project data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `AfdbProjectScrapeWorkflow`.
 
-        Parameters:
-          data_request_client (DataRequestClient): A client
+        Args:
+          data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
     
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes an AFDB project page for data.
+        """Scrapes an AFDB project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The list of project records.
-        '''
+        """
         # Retrieve HTML
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
@@ -178,20 +170,19 @@ class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Define local function to parse section table
         def parse_section_table(section_name: str) -> Dict:
-            '''
-            Extracts "field name, field value" pairs
+            """Extracts "field name, field value" pairs
             from an HTML table given the name of the
             HTML h3 section header preceding the table.
             The table is assumed to have two columns,
             with field names in the left column
             and field values in the right column.
 
-            Parameters:
+            Args:
                 section_name (str): The section name.
 
             Returns:
                 (dict): The table field names and values.
-            '''
+            """
             section_h3 = soup.find(string=section_name).findParent()
             section_table = section_h3.find_next_sibling("table")
             data = {}

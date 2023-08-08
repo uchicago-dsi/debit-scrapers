@@ -1,9 +1,6 @@
-'''
-database.py
-
-Provides a client permitting CRUD database operations
+"""Provides a client permitting CRUD database operations
 on pipeline objects through a REST API.
-'''
+"""
 
 import json
 import os
@@ -15,20 +12,18 @@ from typing import Dict, List, Tuple
 
 
 class DbClient():
-    '''
-    Permits CRUD operations against pipeline entities in the database. 
-    '''
+    """Permits CRUD operations against pipeline entities in the database. 
+    """
 
     def __init__(self, logger: Logger) -> None:
-        '''
-        Instantiates a new `DbClient`.
+        """Initializes a new instance of a `DbClient`.
 
-        Parameters:
-            logger (Logger): An instance of the logging class.
+        Args:
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         try:
             base_url = os.environ['API_BASE_URL']
         except KeyError:
@@ -44,11 +39,10 @@ class DbClient():
         url: str,
         record_type: str,
         page_number: int=1,
-        timeout: int=60) -> List[Dict]:
-        '''
-        Receives a single page of records from the database.
+        timeout: int=60) -> Tuple[List[Dict], int]:
+        """Receives a single page of records from the database.
 
-        Parameters:
+        Args:
             url (url): The API URL.
 
             record_type (str): The entity type of the records
@@ -62,8 +56,9 @@ class DbClient():
                 to 60.
 
         Returns:
-            (list of dict): The list of records.
-        '''
+            ((list of dict, int)): A two-item tuple consisting of
+                the list of records and the total number of pages.
+        """
         self._logger.info(f"Requesting page {page_number} of "
             f"data for record type {record_type}.")
 
@@ -90,10 +85,9 @@ class DbClient():
         url: str,
         record_type: str,
         timeout: int=60) -> List[Dict]:
-        '''
-        Paginates through results to retrieve records from the database.
+        """Paginates through results to retrieve records from the database.
 
-        Parameters:
+        Args:
             url (url): The API URL.
 
             record_type (str): The entity type of the records
@@ -106,7 +100,7 @@ class DbClient():
 
         Returns:
             (list of dict): The list of records.
-        '''
+        """
         self._logger.info(f"Requesting first page of data for "
             f"record type {record_type}.")
         has_pages = True
@@ -145,10 +139,9 @@ class DbClient():
         url: str, 
         record_type: str,
         timeout: int=60) -> List[Dict]:
-        '''
-        A generic method for retrieving records from the database.
+        """A generic method for retrieving records from the database.
 
-        Parameters:
+        Args:
             url (url): The API URL.
 
             record_type (str): The entity type of the records
@@ -161,7 +154,7 @@ class DbClient():
 
         Returns:
             (list of dict): The list of records.
-        '''
+        """
         response = requests.get(url, timeout=timeout)
         try:
             response_body = response.json()
@@ -183,11 +176,10 @@ class DbClient():
         record_type: str,
         perform_upsert: bool=False,
         batch_size: int=1000) -> Tuple[List[Dict], int]:
-        '''
-        Calls the API to bulk insert or upsert a list of generic
+        """Calls the API to bulk insert or upsert a list of generic
         records into a database table using batches.
 
-        Parameters:
+        Args:
             url (url): The API URL.
 
             records (list of dict): The records to upsert.
@@ -210,7 +202,7 @@ class DbClient():
                 the overall HTTP status code (i.e., 201 if
                 any records were created and 200 otherwise
                 for a successful operation).
-        '''
+        """
         # Compute number of batches necessary for bulk operation
         num_records = len(records)
         num_batches = (num_records // batch_size) + \
@@ -252,19 +244,23 @@ class DbClient():
         return returned_records, last_status_code
 
 
-    def create_job(self, invocation_id: str, job_type: str) -> Tuple[int, bool]:
-        '''
-        Creates a new pipeline job with the given invocation
+    def create_job(
+        self,
+        invocation_id: str,
+        job_type: str) -> Tuple[int, bool]:
+        """Creates a new pipeline job with the given invocation
         id if no record with that id already exists.
 
-        Parameters:
-            None
+        Args:
+            invocation_id (str): The id of the job.
+
+            job_type (str): The job type key.
 
         Returns:
             (int, bool): A two-item tuple consisting of the pipeline
                 job's id (primary key) and a boolean indicating whether
                 the job was newly-created.
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/jobs"
         data = {"invocation_id": invocation_id, "job_type": job_type}
         response = requests.post(url, json=data)
@@ -279,18 +275,19 @@ class DbClient():
         return response.json()['id'], was_created
 
 
-    def bulk_insert_staged_projects(self, project_records: List[Dict]) -> List[Dict]:
-        '''
-        Inserts new staged project records into the database table.
+    def bulk_insert_staged_projects(
+        self, 
+        project_records: List[Dict]) -> List[Dict]:
+        """Inserts new staged project records into the database table.
         Raises an exception if the operation fails.
 
-        Parameters:
+        Args:
             project_records (list of dict): The project records
                 associated with the task.
 
         Returns:
             (list of dict): A representation of the created projects.
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/staged-projects"
         record_type = 'staged projects'
         records, _ = self._perform_bulk_operation(url, project_records, record_type)
@@ -298,19 +295,18 @@ class DbClient():
 
 
     def bulk_insert_tasks(self, tasks: List[Dict]) -> List[Dict]:
-        '''
-        Creates new tasks for processing web pages and inserts
+        """Creates new tasks for processing web pages and inserts
         them into the database using a bulk operation. Raises an
         exception if the operation fails.
 
-        Parameters:
+        Args:
             tasks (list of dict): The tasks to insert.
 
         Returns:
             (list of dict): A representation of the created database rows,
                 to be used as messages. Fields include "id", "job_id",
                 "bank", "workflow_type", and "url".
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/tasks"
         record_type = 'tasks'
         records, _ = self._perform_bulk_operation(url, tasks, record_type)
@@ -318,16 +314,15 @@ class DbClient():
 
 
     def insert_task(self, task: TaskRequest) -> None:
-        '''
-        Inserts a single task in the database. Logs any failures
+        """Inserts a single task in the database. Logs any failures
         that occur rather than raising an exception.
 
-        Parameters:
-            task (TaskRequest): The task to insert.
+        Args:
+            task (`TaskRequest`): The task to insert.
 
         Returns:
             None
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/tasks"
         response = requests.post(url, data=vars(task))
         try:
@@ -338,20 +333,20 @@ class DbClient():
         if not response.ok:
             response_body = json.dumps(response.json())
             raise Exception(f"Failed to create new task in database. "
-                f"Received '{response.status_code} - {response.reason}' status code"
-                f"{' and message ' + json.dumps(response_body) + '.' if response_body else '.'}")
+                f"Received '{response.status_code} - {response.reason}'"
+                f"status code and the message"
+                f"{json.dumps(response_body) + '.' if response_body else '.'}")
 
 
     def update_task(self, task: TaskUpdate) -> None:
-        '''
-        Updates a task in the database.
+        """Updates a task in the database.
 
-        Parameters:
-            task (TaskUpdate): The task to update.
+        Args:
+            task (`TaskUpdate`): The task to update.
 
         Returns:
             None
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/tasks/{task.id}"
         response = requests.patch(url, data=vars(task))
 
@@ -362,16 +357,16 @@ class DbClient():
                 f"and message '{response_body}'.")
 
 
-    def update_job(self, job: Dict) -> None:
-        '''
-        Updates a job in the database.
+    def update_job(self, job: Dict) -> Dict:
+        """
+        Updates a job in the database and returns the resulting JSON.
 
-        Parameters:
+        Args:
             job (dict): The job to update.
 
         Returns:
-            None
-        '''
+            (dict): The job representation.
+        """
         url = f"{self._base_url}/api/pipeline/jobs/{job['id']}"
         response = requests.patch(url, data=job)
 
@@ -383,16 +378,15 @@ class DbClient():
         return response.json()
 
 
-    def update_staged_project(self, project: Dict):
-        '''
-        Updates a staged project in the database.
+    def update_staged_project(self, project: Dict) -> None:
+        """Updates a staged project in the database.
 
-        Parameters:
+        Args:
             project (dict): The project to update.
 
         Returns:
             None
-        '''
+        """
         url = f"{self._base_url}/api/pipeline/staged-projects"
         response = requests.patch(url, data=project)
 
@@ -400,9 +394,3 @@ class DbClient():
             raise Exception(f"Failed to update project within database. "
                 f"Received '{response.status_code}' status code.")
 
-
-
-if __name__ == "__main__":
-    from services.logger import DebitLogger
-    logger = DebitLogger()
-    DbClient(logger)

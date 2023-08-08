@@ -1,11 +1,8 @@
-'''
-dfc.py
-
-A web scraper for the U.S. International Development
+"""Web scrapers for the U.S. International Development
 Finance Corporation (DFC), formally known as the
-Overseas Private Invesment Corporation (OPIC). Downloads 
-all projects as JSON from a site endpoint.
-'''
+Overseas Private Invesment Corporation (OPIC). Currently
+downloads all projects as JSON from a site endpoint.
+"""
 
 import pandas as pd
 import re
@@ -18,57 +15,53 @@ from scrapers.services.database import DbClient
 
 
 class DfcDownloadWorkflow(ProjectDownloadWorkflow):
-    '''
-    Downloads project records directly from DFC's website
+    """Downloads project records directly from DFC's website
     and then cleans and saves the data to a database using
     the `execute` method defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `DfcDownloadWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         return "https://www3.dfc.gov/OPICProjects/Home/GetOPICActiveProjectList"
 
 
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects as JSON from
+        """Retrieves all development bank projects as JSON from
         DFC's website. NOTE: The endpoint does not have a valid
         SSL certificate, so verification is turned off for this
         request only.
 
-        Parameters:
+        Args:
             None
         
         Returns:
-            (pd.DataFrame): The raw project records.
-        '''
+            (`pd.DataFrame`): The raw project records.
+        """
         try:
             response = requests.post(self.download_url, json={"key": "value"}, verify=False)
             return pd.DataFrame.from_dict(response.json())
@@ -78,28 +71,26 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans DFC project records to conform to an expected schema.
+        """Cleans DFC project records to conform to an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         try:
             # Parse 'ProjectDetails' HTML column
             def parse_project_details(row: pd.Series):
-                '''
-                Uses regex to parse the 'ProjectDetails' column and extract
+                """Uses regex to parse the 'ProjectDetails' column and extract
                 the project name, company, and URL.
 
-                Parameters:
+                Args:
                     row (pd.Series): The DataFrame row.
 
                 Returns:
                     (dict): The new values and their corresponding keys.
-                '''
+                """
                 details = row['ProjectDetails']
                 url = re.search(r"<a href='(.*)' target", details)
                 company = re.search(r"<b>(.*)</b>", details)
@@ -157,20 +148,19 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             def concatenate_values(
                 group: pd.DataFrame,
                 col_name: str) -> str:
-                '''
-                Parses unique values from a given Pandas `GroupBy`
+                """Parses unique values from a given Pandas `GroupBy`
                 column and sorts them in ascending order. Produces
                 a formatted output string with commas as separators.
 
-                Parameters:
-                    group (pd.DataFrame): The group.
+                Args:
+                    group (`pd.DataFrame`): The group.
 
                     col_name (str): The column for which to
                         concatenate values.
 
                 Returns:
                     (str): The concatenated values.
-                '''
+                """
                 unique_values = (group[col_name]
                     .apply(lambda val: val[:-1] if val.endswith('.') else val)
                     .sort_values()

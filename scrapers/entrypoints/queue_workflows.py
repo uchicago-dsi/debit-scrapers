@@ -1,7 +1,4 @@
-'''
-queue_workflows.py
-
-A Google Cloud Run service triggered by the Google
+"""A Google Cloud Run app triggered by the Google
 Cloud Scheduler. Kicks off the data retrieval
 process for one or more sources (e.g., development
 banks and government forms). Written to be idempotent.
@@ -9,7 +6,7 @@ banks and government forms). Written to be idempotent.
 References:
 - https://cloud.google.com/scheduler/docs/creating
 - https://cloud.google.com/scheduler/docs/reference/rpc/google.cloud.scheduler.v1#google.cloud.scheduler.v1.HttpTarget
-'''
+"""
 
 import os
 import flask
@@ -26,7 +23,7 @@ from scrapers.constants import (
     STARTER_WORKFLOWS
 )
 from scrapers.services.database import DbClient
-from scrapers.services.logger import DebitLogger
+from scrapers.services.logger import LoggerFactory
 from scrapers.services.pubsub import PubSubClient
 from werkzeug.exceptions import (
     BadRequest,
@@ -42,7 +39,7 @@ from yaml.loader import FullLoader
 # and may be used in subsequent invocations.
 
 # Configure logger
-logger = DebitLogger("queue-workflows")
+logger = LoggerFactory.get("queue-workflows")
 
 # Load configuration file
 env = os.getenv(ENV, DEV_ENV)
@@ -78,9 +75,8 @@ app = Flask(__name__)
 
 @app.errorhandler(HTTPException)
 def handle_error(e: HTTPException):
-    '''
-    Error-handling process for Flask HTTP exceptions.
-    '''
+    """Error-handling process for Flask HTTP exceptions.
+    """
     logger.error(e.description)
     if HTTPException is BadRequest:
         return e.description, 400
@@ -90,17 +86,16 @@ def handle_error(e: HTTPException):
 
 @app.route("/", methods=['POST'])
 def main() -> flask.Response:
-    '''
-    Receives and processes an HTTP request from Google
+    """Receives and processes an HTTP request from Google
     Cloud Scheduler to initiate data collection processes
     for one or more sources.
 
-    Parameters:
+    Args:
         None
 
     Returns:
-        (flask.Response)
-    '''
+        (`flask.Response`)
+    """
     # Log start of processing
     logger.info("Received request to queue workflow(s).")
 

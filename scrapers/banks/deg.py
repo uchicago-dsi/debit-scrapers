@@ -1,11 +1,8 @@
-'''
-deg.py
-
-A web scraper for the German Investment Corporation, also
+"""Web scrapers for the German Investment Corporation, also
 known as Deutsche Investitions- und Entwicklungsgesellschaft
 (DEG), a subsdiary of development bank KFW (Kreditanstalt 
-für Wiederaufbau). Data retrieved by downloading project JSON.
-'''
+für Wiederaufbau). Currently downloads project data as JSON.
+"""
 
 import pandas as pd
 import requests
@@ -17,63 +14,60 @@ from scrapers.services.database import DbClient
 
 
 class DegDownloadWorkflow(ProjectDownloadWorkflow):
-    '''
+    """
     Downloads project records directly from DEG's website and
     then cleans and saves the data to a database using the
     `execute` method defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of a `DegDownloadWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         return "https://deginvest-investments.de/?tx_deginvests_rest%5Baction%5D=list&tx_deginvests_rest%5Bcontroller%5D=Rest&cHash=f8602c3bfb7e71d9760e1412bc0c8bb5"
 
 
     @property
     def project_detail_base_url(self) -> str:
-        '''
-        The base URL for individual project pages.
-        '''
+        """The base URL for individual project pages.
+        """
         return "https://deginvest-investments.de"
 
 
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects as JSON from
+        """Retrieves all development bank projects as JSON from
         DEG's website.
 
-        Parameters:
+        Args:
             None
 
         Returns:
-            (pd.DataFrame): The raw project records.
-        '''
+            (`pd.DataFrame`): The raw project records.
+        """
         try:
             response = requests.get(self.download_url)
             return pd.DataFrame.from_dict(response.json())
@@ -82,15 +76,14 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans DEG project records to conform to an expected schema.
+        """Cleans DEG project records to conform to an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         try:
             # Parse date column to UTC
             df['date'] = pd.to_datetime(df['signingDate'], errors='coerce', utc=True)

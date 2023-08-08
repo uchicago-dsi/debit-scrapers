@@ -1,10 +1,7 @@
-'''
-pro.py
-
-A web scraper for the development bank Proparco. Data retrieved
+"""Web scrapers for the development bank Proparco. Data retrieved
 by scraping the list of project pages from the site and then
 iteratively scraping details from each page. 
-'''
+"""
 
 import re
 import requests
@@ -20,70 +17,64 @@ from typing import Dict, List
 
 
 class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of Proparco URLs to scrape.
-    '''
+    """Retrieves the first set of Proparco URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `ProSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
     
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for development bank project search
+        """The base URL for development bank project search
         results page on Proparco's website.
-        '''
+        """
         return 'https://www.proparco.fr/en/carte-des-projets?filter=&page=all&query=%2A&view=list'
 
 
     @property
     def site_base_url(self) -> str:
-        '''
-        The base URL for Proparco's website.
-        '''
+        """The base URL for Proparco's website.
+        """
         return "https://www.proparco.fr"
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The project page URLs.
-        '''
+        """
         try:
             response = requests.get(self.search_results_base_url)
             html = response.text
@@ -99,44 +90,41 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes a Proparco project page for development bank project data.
-    '''
+    """Scrapes a Proparco project page for development bank project data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `ProProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes a Proparco project page for data.
+        """Scrapes a Proparco project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The project record(s).
-        '''
+        """
         # Retrieve HTML
         response = requests.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
@@ -146,17 +134,16 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Extract project signature date
         def date_part_to_int(date_css_class: str):
-            '''
-            A local function to convert a date component
+            """A local function to convert a date component
             (i.e., year, month, or day) formatted as a
             string with a leading zero into an integer.
 
-            Parameters:
+            Args:
                 part (str): The date part.
 
             Returns:
                 (int): The parsed date part.
-            '''
+            """
             date_part = date_field_div.find("span", class_=date_css_class).text
             digits = date_part[:-1] if date_part.endswith('/') else date_part
             return int(digits[1:]) if digits.startswith('0') else int(digits)

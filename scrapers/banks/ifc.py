@@ -1,10 +1,7 @@
-'''
-ifc.py
-
-A web scraper for the International Finance
-Corporation. Data retrieved by querying an
-external API for lists of project records.
-'''
+"""Web scrapers for the International Finance
+Corporation (IFC). Data currently retrieved by 
+querying an external API for lists of project records.
+"""
 
 import json
 import numpy as np
@@ -23,89 +20,82 @@ from typing import Dict, List
 
 
 class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of IFC URLs to download.
-    '''
+    """Retrieves the first set of IFC URLs to download.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of an `IfcSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def first_project_index(self) -> int:
-        '''
-        The starting index to use when downloading
+        """The starting index to use when downloading
         project records.
-        '''
+        """
         return 0
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def num_projects_per_download(self) -> int:
-        '''
-        The number of projects to download from the API at once.
-        '''
+        """The number of projects to download from the API at once.
+        """
         return 1000
 
 
     @property
     def project_download_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page on the IFC's website. Should be formatted
         with an offset value and number of rows.
-        '''
+        """
         return 'https://externalsearch.ifc.org/spi/api/searchxls?qterm=*&start={}&srt=disclosed_date&order=desc&rows={}'
 
     
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page on the IFC's website.
-        '''
+        """
         return 'https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the URLS used for downloading IFC project data.
+        """Generates the URLs used for downloading IFC project data.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The download URLs.
-        '''
+        """
         try:
             # Determine number of downloads necessary to retrieve
             # all development project data
@@ -133,17 +123,16 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
     def get_num_projects(self) -> int:
-        '''
-        Retrieves the total number of development bank
+        """Retrieves the total number of development bank
         projects available on the site, as given by the
         search results page.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (int): The search result count.
-        '''
+        """
         try:
             # Make IFC search results page request
             request_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.106 Safari/537.36'}
@@ -166,57 +155,53 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Queries project records from IFC's API and then
+    """Queries project records from IFC's API and then
     cleans and saves the data to a database using 
     the `execute` method defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `IfcProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def project_detail_base_url(self) -> str:
-        '''
-        The base URL for individual project pages.
-        '''
+        """The base URL for individual project pages.
+        """
         return 'https://disclosures.ifc.org/project-detail'
     
     
     def scrape_project_page(self, url) -> List[Dict]:
-        '''
-        Queries an IFC endpoint for development project
+        """Queries an IFC endpoint for development project
         records in Excel/CSV format and reads those
         records into a Pandas DataFrame. Then maps the
         records to the expected output format.
 
-        Parameters:
+        Args:
             url (str): The project download URL.
 
         Returns:
             (pd.DataFrame): The project records.
-        '''
+        """
         try:
             # Fetch project records and read into DataFrame
             project_records = requests.get(url, timeout=None)
@@ -272,15 +257,14 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Build project URLs using project name, number, and document type
             def generate_project_detail_url(row: pd.Series):
-                '''
-                Builds a complete URL to an IFC project detail page.
+                """Builds a complete URL to an IFC project detail page.
 
-                Parameters:
+                Args:
                     row (pd.Series): The DataFrame row.
 
                 Returns:
                     (str): The URL.
-                '''
+                """
                 # Compose URL fragment containing project name
                 regex = '[()\"#/@;:<>{}`+=~|.!?,]'
                 substitute = row['name'].lower().replace(' ', '-').replace('---', '-')
@@ -315,7 +299,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Correct country names
             def correct_country_name(name: str) -> str:
-                '''
+                """
                 Rearranges a formal country name to remove
                 its comma (e.g., "China, People's Republic
                 of" becomes "People's Republic of China").
@@ -324,12 +308,12 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 combining different countries into one string
                 is not a concern.
 
-                Parameters:
+                Args:
                     name (str): The country name.
 
                 Returns:
                     (str): The formatted name.
-                '''
+                """
                 if not name or name is np.nan:
                     return None
                     

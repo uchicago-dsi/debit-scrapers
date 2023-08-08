@@ -1,6 +1,8 @@
-'''
-run_workflows.py
-'''
+"""A script to pull web scraping tasks from a 
+database and publish-subscribe ("Pub/Sub") service,
+process the tasks in parallel, and then persist
+the results to a database.
+"""
 
 import concurrent.futures
 import json
@@ -25,7 +27,7 @@ from scrapers.constants import (
 )
 from scrapers.services.data_request import DataRequestClient
 from scrapers.services.database import DbClient
-from scrapers.services.logger import DebitLogger
+from scrapers.services.logger import LoggerFactory
 from scrapers.services.pubsub import PubSubClient
 from scrapers.services.registry import scraper_registry
 from typing import List
@@ -35,7 +37,7 @@ from yaml.loader import FullLoader
 #region ----------------Setup---------------------
 
 # Create logger
-logger = DebitLogger("run-workflows")
+logger = LoggerFactory.get("run-workflows")
 
 # Retrieve development environment
 env = os.getenv(ENV, DEV_ENV)
@@ -108,26 +110,24 @@ subscription_path = subscriber.subscription_path(
 
 
 def main() -> None:
-    '''
-    Executes workflows for retrieving development bank projects
+    """Executes workflows for retrieving development bank projects
     and government agency form submissions through download links,
     web scraping, and API queries in response to messages sent
     from Pub/Sub. Saves resulting records to database tables.
 
-    Parameters:
-        logger (DebitLogger): A logger instance.
+    Args:
+        logger (`Logger`): A logger instance.
 
     Returns:
         None
-    '''
+    """
     # Initialize variables and helper function
     encountered_jobs = set()
     messages_in_previous_batch = False
 
     def complete_message(msg):
-        '''
-        Local function to process and acknowledge single message.
-        '''
+        """Local function to process and acknowledge single message.
+        """
         try:
             request = { "subscription": subscription_path, "ack_ids": [msg.ack_id] }
             job_id = process_message(msg, workflows_pubsub_client, db_client, data_request_client)
@@ -179,24 +179,23 @@ def process_message(
     pubsub_client: PubSubClient,
     db_client: DbClient,
     data_request_client: DataRequestClient) -> None:
-    '''
-    Processes a single message to scrape or download
+    """Processes a single message to scrape or download
     data from a URL.
 
-    Parameters:
-        received_message (ReceivedMessage): The Google Pub/Sub message.
+    Args:
+        received_message (`ReceivedMessage`): The Google Pub/Sub message.
         
-        pubsub_client (PubSubClient): The Google Pub/Sub client.
+        pubsub_client (`PubSubClient`): The Google Pub/Sub client.
 
-        db_client (DbClient): The database client.
+        db_client (`DbClient`): The database client.
 
-        data_request_client (DataRequestClient): A client
+        data_request_client (`DataRequestClient`): A client
             for making HTTP GET requests while adding
             random delays and rotating user agent headers.
 
     Returns:
         None
-    '''
+    """
     # Retrieve message metadata
     message_id = received_message.message.message_id
     num_delivery_attempts = received_message.delivery_attempt
@@ -214,7 +213,7 @@ def process_message(
 
     # Fetch workflow class type from registry
     source_workflow = f"{source}-{workflow_type}"
-    logger = DebitLogger(f"run-workflows - {source}")
+    logger = LoggerFactory.get(f"run-workflows - {source}")
     try:
         registered_workflow = scraper_registry[source_workflow]
     except KeyError:
@@ -255,25 +254,24 @@ def audit(
     encountered_jobs: List[int],
     db_client: DbClient,
     data_cleaning_pubsub_client: PubSubClient) -> None:
-    '''
-    Marks the end of workflow processing by updating the status
+    """Marks the end of workflow processing by updating the status
     of the affected job(s) in the database and publishing
     Pub/Sub messages to trigger the next job stage: cleaning and
     merging records.
 
-    Parameters:
+    Args:
         encountered_jobs (list of int): The job ids encountered
             during processing.
 
-        db_client (DbClient): A client providing access to the
+        db_client (`DbClient`): A client providing access to the
             database holding pipeline job records.
 
-        data_cleaning_pubsub_client (PubSubClient): A client
+        data_cleaning_pubsub_client (`PubSubClient`): A client
             providing access to a topic for data cleaning.
 
     Returns:
         None
-    '''
+    """
     # Mark end of workflow processing
     stage_completed_utc = datetime.utcnow()
     stage_completed_utc_str = datetime.strftime(stage_completed_utc, '%Y_%m_%d_%H_%M_%S')

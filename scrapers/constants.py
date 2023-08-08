@@ -1,8 +1,5 @@
-'''
-constants.py
-
-Constants used for pipeline.
-'''
+"""Constants used throughout the application.
+"""
 
 import os
 

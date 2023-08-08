@@ -1,9 +1,7 @@
-'''
-kfw.py
-
-A web scraper for development bank KFW (Kreditanstalt für Wiederaufbau).
-Data retrieved by making an HTTP GET request for project JSON.
-'''
+"""Web scrapers for the development bank 
+KFW (Kreditanstalt für Wiederaufbau). Data
+currently retrieved by downloading project JSON.
+"""
 
 import pandas as pd
 from logging import Logger
@@ -14,63 +12,58 @@ from scrapers.services.database import DbClient
 
 
 class KfwDownloadWorkflow(ProjectDownloadWorkflow):
-    '''
-    Downloads project records directly from KFW's website
+    """Downloads project records directly from KFW's website
     and then cleans and saves the data to a database using
     the `execute` method defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of a `KfwDownloadWorkflow`.
 
-         Parameters:
-            data_request_client (DataRequestClient): A client
+         Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         return 'https://www.kfw-entwicklungsbank.de/ipfz/Projektdatenbank/download/json'
 
 
     @property
     def projects_base_url(self) -> str:
-        '''
-        The base URL for individual KFW project pages.
-        '''
+        """The base URL for individual KFW project pages.
+        """
         return 'https://www.kfw-entwicklungsbank.de/ipfz/Projektdatenbank'
 
 
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects as JSON from
-        KFW's website.
+        """Retrieves all development bank projects as JSON from KFW's website.
 
-        Parameters:
+        Args:
             None
         
         Returns:
             (pd.DataFrame): The raw project records.
-        '''
+        """
         try:
             return pd.read_json(self.download_url)
         except Exception as e:
@@ -78,15 +71,14 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans KFW project records to conform to an expected schema.
+        """Cleans KFW project records to conform to an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         try:
             # Rename existing columns
             col_mapping = {
@@ -102,15 +94,15 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
 
             # Construct project URLs
             def create_project_url(row: pd.Series):
-                '''
+                """
                 Constructs a URL for a KFW project page.
 
-                Parameters:
+                Args:
                     row (pd.Series): A row of data from the DataFrame.
 
                 Returns:
                     (str): The URL.
-                '''
+                """
                 return (
                     f"{self.projects_base_url}/"
                     f"{row['name'].replace(' ', '-')}-"

@@ -1,11 +1,8 @@
-'''
-aiib.py
-
-A web scraper for the Asian Infrastructure Investment Bank
+"""Web scrapers for the Asian Infrastructure Investment Bank
 (AIIB). Data retrieved by requesting a JavaScript file
 containing a list of all project page URLs and then requesting
 and scraping details from each project page.
-'''
+"""
 
 import bs4
 import json
@@ -24,69 +21,64 @@ from typing import Dict, List
 
 
 class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of AIB URLs to scrape.
-    '''
+    """Retrieves the first set of AIB URLs to scrape.
+    """
     
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of an `AiibSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def projects_base_url(self) -> str:
-        '''
-        The base URL for an individual AIIB project page.
-        '''
+        """The base URL for an individual AIIB project page.
+        """
         return 'https://www.aiib.org'
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def partial_projects_url(self) -> str:
-        '''
-        The URL containing all partial project records as JSON.
-        '''
+        """The URL containing all partial project records as JSON.
+        """
         return 'https://www.aiib.org/en/projects/list/.content/all-projects-data.js'
 
     
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of search result pages.
-        '''
+        """
         try:
             # Request JavaScript file containing list of projects
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.106 Safari/537.36'}
@@ -108,44 +100,42 @@ class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes an AIIB project page for development bank project data.
-    '''
+    """Scrapes an AIIB project page for development bank project data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of an `AiibProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
  
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes an AIIB project page for data.
+        """Scrapes an AIIB project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The project records.
-        '''
+        """
         # Retrieve the project page
         response = self._data_request_client.get(
             url,
@@ -155,16 +145,15 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Get project summary metadata
         def get_project_summary_field(field_name: str):
-            '''
-            Locates the given AIIB project summary field within the
+            """Locates the given AIIB project summary field within the
             HTML document and then returns the text of the adjacent div.
 
-            Parameters:
+            Args:
                 field_name (str): The field name.
 
             Returns:
                 (str): The extracted text if it exists.
-            '''
+            """
             try:
                 div = soup.find(string=field_name).find_next('div')
                 return div.text
@@ -182,16 +171,15 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Extract project borrower and implementing entity data
         def get_project_contact_field(field_name: str):
-            '''
-            Retrieves project borrower and implementer contact
+            """Retrieves project borrower and implementer contact
             information from an AIIB project page.
 
-            Parameters:
+            Args:
                 field_name (str): The name of the contact field to scrape.
 
             Returns:
                 (str): The contact information.
-            '''
+            """
             try:
                 contact_div = soup.find("h2", string=field_name).findNextSibling("div")
                 contact_fields = []

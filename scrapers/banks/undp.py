@@ -1,8 +1,5 @@
-'''
-undp.py
-
-A web scraper for the United Nations Development Programme (UNDP).
-'''
+"""Web scrapers for the United Nations Development Programme (UNDP).
+"""
 
 import io
 import pandas as pd
@@ -19,71 +16,65 @@ from typing import Dict, List
 
 
 class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Generates the first set of URLs/API resources to
+    """Generates the first set of URLs/API resources to
     query for development bank project data.
-    '''
+    """
     
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `UndpSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def project_list_base_url(self) -> str:
-        '''
-        The base URL for retrieving a list of project data.
-        '''
+        """The base URL for retrieving a list of project data.
+        """
         return 'https://api.open.undp.org/api/v1/undp/export_csv/'
 
 
     @property
     def project_base_url(self) -> str:
-        '''
-        The base URL for retrieving a single detailed project record.
-        '''
+        """The base URL for retrieving a single detailed project record.
+        """
         return 'https://api.open.undp.org/api/projects/{}.json'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of UNDP API URLs
+        """Generates the first set of UNDP API URLs
         from which to retrieve data.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The URLs.
-        ''' 
+        """ 
         try:
             # Retrieve list of unique projects from UNDP's public API
             response = requests.get(self.project_list_base_url)
@@ -102,52 +93,48 @@ class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class UndpProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Retrieves project data from UNDP and saves it to a database.
-    '''
+    """Retrieves project data from UNDP and saves it to a database.
+    """
     
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `UndpProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def project_page_base_url(self) -> str:
-        '''
-        The base URL for an UNDP project page.
-        '''
+        """The base URL for an UNDP project page.
+        """
         return 'https://open.undp.org/projects/{}'
 
 
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes an UNDP project page for data.
+        """Scrapes an UNDP project page for data.
 
-        Parameters:
+        Args:
             url (str): The URL for a project.
 
         Returns:
             (list of dict): The project records.
-        '''
+        """
         # Retrieve project JSON
         response = self._data_request_client.get(
             url,

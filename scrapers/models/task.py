@@ -1,14 +1,12 @@
-'''
-task.py
-'''
+"""Models used throughout the application.
+"""
 
 from datetime import datetime
 
 
 class TaskRequest:
-    '''
-    A request to create a new workflow task.
-    '''
+    """Represents a request to create a new workflow task.
+    """
 
     def __init__(
         self,
@@ -17,10 +15,9 @@ class TaskRequest:
         bank: str,
         url: str,
         workflow_type: str) -> None:
-        '''
-        Creates a new `TaskRequest`.
+        """Initializes an instance of a new `TaskRequest`.
 
-        Parameters:
+        Args:
             job_id (int): The unique identifier for the processing
                 job encapsulating all development bank data scraping
                 and cleaning tasks.
@@ -38,7 +35,7 @@ class TaskRequest:
 
         Returns:
             None
-        '''
+        """
         self.job_id = job_id
         self.status = status
         self.bank = bank
@@ -47,43 +44,47 @@ class TaskRequest:
 
 
 class TaskUpdate:
-    '''
-    An update for a workflow task.
-    '''
+    """Represents an update for a workflow task.
+    """
     
     def __init__(self) -> None:
-        '''
-        Creates a new `TaskUpdate`. Instance properties include:
+        """Initializes a new instance of a `TaskUpdate`.
+        
+        Args:
 
             id (int): The unique identifier for the task.
 
-            status (str): The processing status of the task (e.g., "Completed", "Error").
+            status (str): The processing status of the task
+                (e.g., "Completed", "Error").
 
-            processing_start_utc (datetime): The UTC timestamp indicating
-                when processing of the message started.
+            processing_start_utc (datetime): The UTC timestamp 
+                indicating when processing of the message started.
 
-            processing_end_utc (datetime or None): The UTC timestamp indicating
-                when processing of the message successfully completed.
+            processing_end_utc (datetime or None): The UTC timestamp
+                indicating when processing of the message 
+                successfully completed.
 
-            scraping_start_utc (datetime or None): The UTC timestamp indicating
-                when page scraping started.
+            scraping_start_utc (datetime or None): The UTC timestamp
+                indicating when page scraping started.
 
-            scraping_end_utc (datetime or None): The UTC timestamp indicating
-                when page scraping successfully ended.
+            scraping_end_utc (datetime or None): The UTC timestamp
+                indicating when page scraping successfully ended.
 
-            last_failed_at_utc (datetime or None): The UTC timestamp indicating
-                when the last workflow failure occurred, if any.
+            last_failed_at_utc (datetime or None): The UTC timestamp
+                indicating when the last workflow failure occurred, if any.
 
-            last_error_message (str): The last exception message generated, if any.
+            last_error_message (str): The last exception message
+                generated, if any.
 
-            retry_count (int): The number of times the message has been reprocessed.
+            retry_count (int): The number of times the 
+                message has been reprocessed.
 
-        Parameters:
+        Args:
             task_id (str): The unique identifier for the task.
 
         Returns:
             None
-        '''
+        """
         self.id: int = None
         self.status: str = None
         self.processing_start_utc: datetime = None
@@ -93,4 +94,3 @@ class TaskUpdate:
         self.last_failed_at_utc: datetime = None
         self.last_error_message: str = None
         self.retry_count: int = None
-

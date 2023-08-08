@@ -1,11 +1,8 @@
-'''
-adb.py
-
-A web scraper for the Asian Development Bank (ADB). Data
+"""Web scrapers for the Asian Development Bank (ADB). Data
 retrieved by scraping all individual project page URLs
 from search result pages and then scraping details from
 each project page.
-'''
+"""
 
 import re
 import requests
@@ -23,95 +20,90 @@ from typing import Dict, List
 
 
 class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of ADB URLs to scrape.
-    '''
+    """Retrieves the first set of ADB URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `AdbSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
 
 
     @property
     def first_page_num(self) -> int:
-        '''
-        The number of the first search results page.
-        '''
+        """The number of the first search results page.
+        """
         return 0
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return RESULTS_PAGE_WORKFLOW
 
 
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page on ADB's website. Should be formatted
-        with a page number.
-        '''
-        return 'https://www.adb.org/projects?page={}'
+        with a page number variable, "page_num".
+        """
+        return 'https://www.adb.org/projects?page={page_num}'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of search result pages.
-        '''
+        """
         try:
             last_page_num = self.find_last_page()
             result_pages = [
-                self.search_results_base_url.format(n) 
+                self.search_results_base_url.format(page_num=n) 
                 for n in range(self.first_page_num, last_page_num + 1)
             ]
             return result_pages
         except Exception as e:
-            raise Exception(f"Failed to generate ADB search result pages to crawl. {e}")
+            raise Exception("Failed to generate ADB search "
+                            f"result pages to crawl. {e}")
 
 
     def find_last_page(self) -> int:
-        '''
-        Retrieves the number of the last page of
+        """Retrieves the number of the last page of
         development bank projects on the website.
         
-        Parameters:
+        Args:
             None
         
         Returns:
             (int): The page number.
-        '''
+        """
         try:
-            first_results_page = self.search_results_base_url.format(self.first_page_num)
+            first_results_page = self.search_results_base_url.format(
+                page_num=self.first_page_num)
             html = requests.get(first_results_page).text
             soup = BeautifulSoup(html, "html.parser")
 
@@ -125,9 +117,8 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
-    '''
-    Scrapes an ADB search results page for development bank project URLs.
-    '''
+    """Scrapes an ADB search results page for development bank project URLs.
+    """
 
     def __init__(
         self,
@@ -135,50 +126,47 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `AdbResultsScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            pubsub_client (PubSubClient): A wrapper client for the 
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, pubsub_client, db_client, logger)
 
     
     @property
     def project_page_base_url(self) -> str:
-        '''
-        The base URL for individual ADB project pages.
-        '''
+        """The base URL for individual ADB project pages.
+        """
         return 'https://www.adb.org/print'
 
 
     def scrape_results_page(self, results_page_url: str) -> List[str]:
-        '''
-        Scrapes all development project page URLs from a given
+        """Scrapes all development project page URLs from a given
         search results page on ADB's website. NOTE: Delays must
         be placed in between requests to avoid throttling.
 
-        Parameters:
+        Args:
             results_page_url (str): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
-        '''
+        """
         try:
             response = self._data_request_client.get(
                 url=results_page_url,
@@ -205,46 +193,43 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
 
 
 class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Scrapes an ADB project page for development bank project data.
-    '''
+    """Scrapes an ADB project page for development bank project data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `AdbProjectScrapeWorkflow`.
 
-        Parameters:
-          data_request_client (DataRequestClient): A client
+        Args:
+          data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
     
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Scrapes an AFDB project page for data. NOTE: Delays
+        """Scrapes an AFDB project page for data. NOTE: Delays
         must be placed in between requests to avoid throttling.
 
-        Parameters:
+        Args:
             url (str): The URL for a project. Has the form:
                 'https://www.adb.org/print/projects/{project_id}/main'.
 
         Returns:
             (list of dict): The list of project records.
-        '''
+        """
         # Request page and parse HTML
         response = self._data_request_client.get(
             url=url,

@@ -1,8 +1,5 @@
-'''
-eib.py
-
-Web scrapers for the European Investment Bank.
-'''
+"""Web scrapers for the European Investment Bank.
+"""
 
 import numpy as np
 import requests
@@ -18,78 +15,71 @@ from typing import Dict, List
 
 
 class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
-    '''
-    Retrieves the first set of EIB URLs to scrape.
-    '''
+    """Retrieves the first set of EIB URLs to scrape.
+    """
 
     def __init__(
         self,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `EibSeedUrlsWorkflow`.
 
-        Parameters:
-            pubsub_client (PubSubClient): A wrapper client for the 
+        Args:
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(pubsub_client, db_client, logger)
  
 
     @property
     def first_page_num(self) -> str:
-        '''
-        The starting page number for development project search results.
-        '''
+        """The starting page number for development project search results.
+        """
         return 0
 
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @property
     def num_results_per_page(self) -> int:
-        '''
-        The number of search result items to return per page. 
-        '''
+        """The number of search result items to return per page. 
+        """
         return 500
 
 
     @property
     def search_results_base_url(self) -> str:
-        '''
-        The base URL for a development bank project search
+        """The base URL for a development bank project search
         results page provided by EIB's API.
-        '''
+        """
         return 'https://www.eib.org/page-provider/projects/list?pageNumber={page_num}&itemPerPage={items_per_page}&pageable=true&sortColumn=id'
 
 
     def generate_seed_urls(self) -> List[str]:
-        '''
-        Generates the first set of URLs to scrape.
+        """Generates the first set of URLs to scrape.
 
-        Parameters:
+        Args:
             None
 
         Returns:
             (list of str): The unique list of search result pages.
-        '''
+        """
         try:
             last_page_num = self.find_last_page()
             result_page_urls = [
@@ -105,16 +95,15 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
     def find_last_page(self) -> int:
-        '''
-        Retrieves the number of the last page of
+        """Retrieves the number of the last page of
         development bank projects from the API.
         
-        Parameters:
+        Args:
             None
         
         Returns:
             (int): The page number.
-        '''
+        """
         try:
             first_results_page_url = self.search_results_base_url.format(
                 page_num=self.first_page_num,
@@ -133,62 +122,58 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
 
 
 class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    '''
-    Retrieves and parses a list of EIB project records for data.
-    '''
+    """Retrieves and parses a list of EIB project records for data.
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of an `EibProjectScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def loan_project_base_url(self) -> str:
-        '''
-        The base API URL for an EIB financed project.
-        '''
+        """The base API URL for an EIB financed project.
+        """
         return 'https://www.eib.org/en/projects/loans/all/{project_id}'
 
 
     @property
     def pipeline_project_base_url(self) -> str:
-        '''
-        The base API URL for an EIB pipeline project (i.e., one to be financed).
-        '''
+        """The base API URL for an EIB pipeline project
+        (i.e., one to be financed).
+        """
         return 'https://www.eib.org/en/pipelines/loans/all/{project_id}'
 
 
     def scrape_project_page(self, url: str) -> List[Dict]:
-        '''
-        Queries EIB's API for a page of development bank
+        """Queries EIB's API for a page of development bank
         project record(s) and then maps the fields of the
         resulting payload to the expected schema.
 
-        Parameters:
+        Args:
             url (str): The URL for the results page.
 
         Returns:
             (list of dict): The raw record(s).
-        '''
+        """
         try:
             response = requests.get(url)
             projects = response.json()
@@ -198,19 +183,17 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
 
     def map_project_record(self, project: Dict) -> Dict:
-        '''
-        Maps an EIB project record to an expected schema.
+        """Maps an EIB project record to an expected schema.
 
-        Parameters:
+        Args:
             project (dict): The project record retrieved from the API.
 
         Returns:
             (dict): The mapped project record.
-        '''
+        """
         # Create local function to correct country names
         def correct_country_name(name: str) -> str:
-            '''
-            Rearranges a formal country name to remove
+            """Rearranges a formal country name to remove
             its comma (e.g., "China, People's Republic
             of" becomes "People's Republic of China").
             At the time of writing, only one country
@@ -218,12 +201,12 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             combining different countries into one string
             is not a concern.
 
-            Parameters:
+            Args:
                 name (str): The country name.
 
             Returns:
                 (str): The formatted name.
-            '''
+            """
             if not name or name is np.nan:
                 return None
 

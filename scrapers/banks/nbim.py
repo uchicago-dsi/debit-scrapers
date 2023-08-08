@@ -1,10 +1,8 @@
-'''
-nbim.py
+"""Web scrapers for Norges Bank Investment Management (NBIM).
+Data currently retrieved by downloading JSON data for each
+investment project type and year.
+"""
 
-A web scraper for Norges Bank Investment Management (NBIM).
-Data retrieved by downloading JSON data for each investment
-project type and year.
-'''
 import pandas as pd
 import requests
 from logging import Logger
@@ -16,79 +14,73 @@ from urllib.parse import quote
 
 
 class NbimDownloadWorkflow(ProjectDownloadWorkflow):
-    '''
-    Downloads project records directly from NBIM and then cleans
+    """Downloads project records directly from NBIM and then cleans
     and saves the data to a database using the `execute` method
     defined in its superclass.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The public constructor.
+        """
+        Initializes a new instance of a `NbimDownloadWorkflow`.
 
-         Parameters:
-            data_request_client (DataRequestClient): A client
+         Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(data_request_client, db_client, logger)
 
 
     @property
     def investments_base_url(self) -> str:
-        '''
-        The base URL for NBIM investments.
-        '''
+        """The base URL for NBIM investments.
+        """
         return 'https://www.nbim.no/en/the-fund/investments#'
 
 
     @property
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         return 'https://www.nbim.no/api/investments/history.json?year={}'
 
 
     @property
     def project_start_year(self) -> int:
-        '''
-        The inclusive start year to use when querying NBIM projects.
-        '''
+        """The inclusive start year to use when querying NBIM projects.
+        """
         return 1998
 
 
     @property
     def project_end_year(self) -> int:
-        '''
-        The inclusive end year to use when querying NBIM projects.
-        '''
+        """The inclusive end year to use when querying NBIM projects.
+        """
         return 2022
 
 
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects by downloading
+        """Retrieves all development bank projects by downloading
         JSON data from NBIM's website for each year.
         
-        Parameters:
+        Args:
             None
 
         Returns:
-            (pd.DataFrame): The raw project records.
-        '''
+            (`pd.DataFrame`): The raw project records.
+        """
         try:
             projects_df = None
 
@@ -145,15 +137,14 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans NBIM project records to conform to an expected schema.
+        """Cleans NBIM project records to conform to an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         try:
             # Rename existing columns
             df = df.rename(columns={
@@ -164,15 +155,14 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
 
             # Construct project URLs
             def create_project_url(row: pd.Series):
-                '''
-                Constructs a URL for an NBIM project page.
+                """Constructs a URL for an NBIM project page.
 
-                Parameters:
+                Args:
                     row (pd.Series): A row of data from the DataFrame.
 
                 Returns:
                     (str): The URL.
-                '''
+                """
                 return (
                     f"{self.investments_base_url}/"
                     f"{row['year']}/"

@@ -1,9 +1,6 @@
-'''
-project_download_workflow.py
-
-Provides a client that outlines the series of steps
+"""Provides a client that outlines the series of steps
 necessary to download project data for a development bank.
-'''
+"""
 
 import json
 import pandas as pd
@@ -18,33 +15,31 @@ from scrapers.services.data_request import DataRequestClient
 
 
 class ProjectDownloadWorkflow(BaseWorkflow):
-    '''
-    An abstract class to download project records directly
+    """An abstract class to download project records directly
     from a development bank website and then clean and
     save the data to a database.
-    '''
+    """
 
     def __init__(
         self,
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The constructor for `ProjectDownloadWorkflow`.
+        """Initializes a new instance of a `ProjectDownloadWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            db_client (DbClient): A client for inserting and
+            db_client (`DbClient`): A client for inserting and
                 updating tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(logger)
         self._data_request_client = data_request_client
         self._db_client = db_client
@@ -53,46 +48,42 @@ class ProjectDownloadWorkflow(BaseWorkflow):
     @property
     @abstractmethod
     def download_url(self) -> str:
-        '''
-        The URL containing all project records.
-        '''
+        """The URL containing all project records.
+        """
         raise NotImplementedError
     
     
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute, if any.
-        '''
+        """The name of the workflow to execute, if any.
+        """
         return None
 
 
     @abstractmethod
     def get_projects(self) -> pd.DataFrame:
-        '''
-        Retrieves all development bank projects through direct
+        """Retrieves all development bank projects through direct
         download and parses them into a Pandas DataFrame.
 
-        Parameters:
+        Args:
             None
         
         Returns:
-            (pd.DataFrame): The raw project records.
-        '''
+            (`pd.DataFrame`): The raw project records.
+        """
         raise NotImplementedError
 
     
     @abstractmethod
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Cleans project records to conform to an expected schema.
+        """Cleans project records to conform to an expected schema.
 
-        Parameters:
-            df (pd.DataFrame): The raw project records.
+        Args:
+            df (`pd.DataFrame`): The raw project records.
 
         Returns:
-            (pd.DataFrame): The cleaned records.
-        '''
+            (`pd.DataFrame`): The cleaned records.
+        """
         raise NotImplementedError
 
 
@@ -104,30 +95,29 @@ class ProjectDownloadWorkflow(BaseWorkflow):
         task_id: str,
         source: str,
         url: str=None) -> None:
-        '''
-        Executes the workflow.
+        """Executes the workflow.
 
-        Parameters:
+        Args:
             message_id (str): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (int): The unique identifier for the processing
+            job_id (str): The unique identifier for the processing
                 job that encapsulates all data loading, scraping,
                 and cleaning tasks.
 
             task_id (str): The unique identifier for the current 
-                results page scraping task.
+                scraping task.
 
             source (str): The name of the data source to scrape.
 
-            url (list of str): The URL of the page to scrape.
+            url (str): The URL of the page to scrape, if applicable.
 
         Returns:
             None
-        '''
+        """
         try:
             # Begin tracking updates for current task
             task_update = TaskUpdate()

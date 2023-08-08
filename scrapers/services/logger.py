@@ -1,74 +1,44 @@
-'''
-logger.py
-'''
+"""Provides loggers for use across the application.
+"""
 
 import logging
 
 
-class DebitLogger():
-    '''
-    A wrapper for Python's default Logger class. Configures a
-    logger with a given name and attaches a console handler.
-    '''
+class LoggerFactory:
+    """
+    A simple factory for configuring standard loggers.
+    """
 
-    def __init__(self, name: str) -> None:
-        '''
-        The public constructor.
+    @staticmethod
+    def get(name: str, level: int=logging.INFO) -> logging.Logger:
+        """
+        Creates a new logger with the given name and
+        level and then attaches a stream handler.
 
         Parameters:
-            name (str): The name of the logger (included in
-                output).
+            name (str): The logger name.
+
+            level (int): The initial level. Defaults
+                to 20 ("INFO").
 
         Returns:
-            None
-        '''
-        # Create logging console handler and set level to debug
+            (`logging.Logger`): The logger.
+        """
+        # Create logger and set level
+        logger = logging.getLogger(name)
+        logger.setLevel(level)
+
+        # Create console handler and set level
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setLevel(level)
+
+        # Create formatter and add to handler
+        format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        formatter = logging.Formatter(format)
         ch.setFormatter(formatter)
 
-        # Create logger and attach handler
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(ch)
+        # Add handler to logger
+        logger.addHandler(ch)
 
-    
-    def info(self, message:str) -> None:
-        '''
-        Logs an info message to the console.
-
-        Parameters:
-            message (str): The message.
-
-        Returns:
-            None
-        '''
-        self.logger.info(message)
-
-
-    def debug(self, message:str) -> None:
-        '''
-        Logs a debugging message to the console.
-
-        Parameters:
-            message (str): The message.
-
-        Returns:
-            None
-        '''
-        self.logger.debug(message)
-
-
-    def error(self, message:str) -> None:
-        '''
-        Logs an error message to the console.
-
-        Parameters:
-            message (str): The message.
-
-        Returns:
-            None
-        '''
-        self.logger.error(message)
+        return logger
 

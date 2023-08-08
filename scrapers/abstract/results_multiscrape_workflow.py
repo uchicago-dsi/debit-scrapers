@@ -1,10 +1,7 @@
-'''
-results_multiscrape_workflow.py
-
-Provides a client that outlines the series of steps
+"""Provides a client that outlines the series of steps
 necessary to scrape a search results page of a
 development bank for project URLs and data.
-'''
+"""
 
 from abc import abstractmethod
 from scrapers.constants import (
@@ -24,8 +21,7 @@ from typing import Dict, List, Tuple
 
 
 class ResultsMultiScrapeWorkflow(BaseWorkflow):
-    '''
-    An abstract class to scrape the search results page of a
+    """An abstract class to scrape the search results page of a
     generic development bank website (or alternatively, call an
     API endpoint) for *both* project page URLs and project
     data. The URLs are then "queued" for processing by other nodes
@@ -35,7 +31,7 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
     This process is necessary when a list of project records and a
     project detailed view each have incomplete information when
     considered separately.
-    '''
+    """
 
     def __init__(
         self,
@@ -43,26 +39,25 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The constructor for `ResultsMultiScrapeWorkflow`.
+        """Initializes a new instance of a `ResultsMultiScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            pubsub_client (PubSubClient): A wrapper client for the 
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(logger)
         self._data_request_client = data_request_client
         self._pubsub_client = pubsub_client
@@ -71,28 +66,26 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PARTIAL_PAGE_WORKFLOW
 
 
     @abstractmethod
     def scrape_results_page(self, url: str) -> Tuple[List[str], List[Dict]]:
-        '''
-        Requests the given development bank project search
+        """Requests the given development bank project search
         results page and then scrapes all individual project
         URLs and records from that page. Implementation of
         this method differs by bank.
 
-        Parameters:
+        Args:
             url (str): The URL for the results page.
 
         Returns:
             (list of str, list of dict): A tuple consisting of the
                 project page URLs and partial project records.
-        '''
+        """
         raise NotImplementedError
 
 
@@ -104,30 +97,29 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
         task_id: str,
         source: str,
         url: str) -> None:
-        '''
-        Executes the workflow.
+        """Executes the workflow.
 
-        Parameters:
+        Args:
             message_id (str): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (int): The unique identifier for the processing
-                job that encapsulates all data source loading,
-                scraping, and cleaning tasks.
+            job_id (str): The unique identifier for the processing
+                job that encapsulates all data loading, scraping,
+                and cleaning tasks.
 
             task_id (str): The unique identifier for the current 
-                results page multi-scraping task.
+                scraping task.
 
             source (str): The name of the data source to scrape.
 
-            url (list of str): The URL of the page to scrape.
+            url (str): The URL of the page to scrape, if applicable.
 
         Returns:
             None
-        '''
+        """
         # Begin tracking updates for current task
         task_update = TaskUpdate()
         task_update.id = task_id
@@ -196,4 +188,3 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
         task_update.status = COMPLETED_STATUS
         task_update.processing_end_utc = datetime.utcnow()
         self._db_client.update_task(task_update)
-

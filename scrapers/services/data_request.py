@@ -1,6 +1,5 @@
-'''
-data_request.py
-'''
+"""Clients for requesting data over HTTP.
+"""
 
 import requests
 import random
@@ -9,19 +8,20 @@ from typing import Dict, List
 
 
 class DataRequestClient:
-    '''
-    A wrapper for the `requests` class to rotate HTTP headers
+    """A wrapper for the `requests` class to rotate HTTP headers
     and add random delays to avoid throttling.
-    '''
+    """
 
     def __init__(self, user_agent_headers: List[str]) -> None:
-        '''
-        The public constructor.
+        """Initializes a new instance of a `DataRequestClient`.
 
-        Parameters:
+        Args:
             user_agent_headers (list of str): The user agent
                 headers in HTTP requests.
-        '''
+
+        Returns:
+            None
+        """
         self._user_agent_headers = user_agent_headers
 
     
@@ -33,11 +33,10 @@ class DataRequestClient:
         min_random_delay: int=1,
         max_random_delay:int=3,
         timeout_in_seconds:int=60,
-        custom_headers:Dict=None):
-        '''
-        Makes an HTTP GET request against the given URL.
+        custom_headers:Dict=None) -> requests.Response:
+        """Makes an HTTP GET request against the given URL.
 
-        Parameters:
+        Args:
             url (str): The resource identifier.
 
             use_random_user_agent (bool): A boolean indicating
@@ -61,7 +60,10 @@ class DataRequestClient:
                 request should be awaited before raising a timeout
                 error. Defaults to 60. A value of `None` will cause
                 the request to wait indefinitely.
-        '''
+
+        Returns:
+            (`requests.Response`): The response object.
+        """
         if max_random_delay < min_random_delay:
             raise ValueError("The minimum delay time must be less than "
                 "the maximum time.")
@@ -79,4 +81,3 @@ class DataRequestClient:
             headers = None
 
         return requests.get(url, timeout=timeout_in_seconds, headers=headers)
-

@@ -1,16 +1,18 @@
-'''
-results_scrape_workflow.py
-
-Provides a client that outlines the series of steps
+"""Provides a client that outlines the series of steps
 necessary to scrape a search results page of a
 development bank for project URLs.
-'''
+"""
 
 from abc import abstractmethod
 from datetime import datetime
 from logging import Logger
 from scrapers.abstract.base_workflow import BaseWorkflow
-from scrapers.constants import COMPLETED_STATUS, ERROR_STATUS, NOT_STARTED_STATUS, PROJECT_PAGE_WORKFLOW
+from scrapers.constants import (
+    COMPLETED_STATUS,
+    ERROR_STATUS,
+    NOT_STARTED_STATUS,
+    PROJECT_PAGE_WORKFLOW
+)
 from scrapers.models.task import TaskUpdate
 from scrapers.services.data_request import DataRequestClient
 from scrapers.services.database import DbClient
@@ -19,13 +21,12 @@ from typing import List
 
 
 class ResultsScrapeWorkflow(BaseWorkflow):
-    '''
-    An abstract class to scrape the search results page of a
+    """An abstract class to scrape the search results page of a
     generic development bank website for project page URLs
     (or alternatively, retrieve project page URLs from an 
     API endpoint) and then "queue" those URLs for processing
     by other nodes within a larger distributed system.
-    '''
+    """
 
     def __init__(
         self,
@@ -33,26 +34,25 @@ class ResultsScrapeWorkflow(BaseWorkflow):
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        '''
-        The constructor for `ResultsScrapeWorkflow`.
+        """Initializes a new instance of a `ResultsScrapeWorkflow`.
 
-        Parameters:
-            data_request_client (DataRequestClient): A client
+        Args:
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
-            pubsub_client (PubSubClient): A wrapper client for the 
+            pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
 
-            db_client (DbClient): A client used to insert and
+            db_client (`DbClient`): A client used to insert and
                 update tasks in the database.
 
-            logger (Logger): An instance of the logging class.
+            logger (`Logger`): An instance of the logging class.
 
         Returns:
             None
-        '''
+        """
         super().__init__(logger)
         self._data_request_client = data_request_client
         self._pubsub_client = pubsub_client
@@ -61,27 +61,25 @@ class ResultsScrapeWorkflow(BaseWorkflow):
 
     @property
     def next_workflow(self) -> str:
-        '''
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
-        '''
+        """
         return PROJECT_PAGE_WORKFLOW
 
 
     @abstractmethod
     def scrape_results_page(self, url: str) -> List[str]:
-        '''
-        Requests the given development bank project search
+        """Requests the given development bank project search
         results page and then scrapes all individual project
         URLs from that page. Implementation of this method
         differs by bank.
 
-        Parameters:
+        Args:
             url (str): The URL for the results page.
 
         Returns:
             (list of str): The project page URLs.
-        '''
+        """
         raise NotImplementedError
 
 
@@ -93,30 +91,29 @@ class ResultsScrapeWorkflow(BaseWorkflow):
         task_id: str,
         source: str,
         url: str) -> None:
-        '''
-        Executes the workflow.
+        """Executes the workflow.
 
-        Parameters:
+        Args:
             message_id (str): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (int): The unique identifier for the processing
-                job that encapsulates all data source loading,
-                scraping, and cleaning tasks.
+            job_id (str): The unique identifier for the processing
+                job that encapsulates all data loading, scraping,
+                and cleaning tasks.
 
             task_id (str): The unique identifier for the current 
-                results page scraping task.
+                scraping task.
 
             source (str): The name of the data source to scrape.
 
-            url (list of str): The URL of the page to scrape.
+            url (str): The URL of the page to scrape, if applicable.
 
         Returns:
             None
-        '''
+        """
         # Begin tracking updates for current task
         task_update = TaskUpdate()
         task_update.id = task_id

@@ -1,5 +1,4 @@
-"""
-registry.py
+"""Registers names for web scraping workflows.
 """
 
 from scrapers.banks.adb import *
