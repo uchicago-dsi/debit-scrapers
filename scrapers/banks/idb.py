@@ -280,32 +280,3 @@ class IdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             }]
         except Exception as e:
             raise Exception(f"Failed to parse project page '{url}' for data. {e}")
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    w = IdbSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsScrapeWorkflow'
-    w = IdbResultsScrapeWorkflow(data_request_client, None, None, None)
-    url = 'https://www.iadb.org/en/projects-search?country=&sector=&status=&query=&page=120'
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectScrapeWorkflow'
-    w = IdbProjectScrapeWorkflow(data_request_client, None, None)
-    url = 'https://www.iadb.org/en/project/TC9409295'
-    print(w.scrape_project_page(url))

@@ -204,15 +204,3 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-
-
-
-if __name__ == "__main__":
-    # Test 'StartScrapeWorkflow'
-    w = ProSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = ProProjectScrapeWorkflow(None, None, None)
-    url = "https://www.proparco.fr/en/carte-des-projets/ecobank-trade-finance"
-    print(w.scrape_project_page(url))

@@ -334,17 +334,3 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         except Exception as e:
             raise Exception(f"Error mapping IFC project records "
                 f"to expected output schema. {e}")
-
-
-
-if __name__ == "__main__":
-    # Test 'SeedUrlsWorkflow'
-    w = IfcSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = IfcProjectScrapeWorkflow(None, None, None)
-    url = "https://externalsearch.ifc.org/spi/api/searchxls?qterm=*&start=8000&srt=disclosed_date&order=desc&rows=1000"
-    records = w.scrape_project_page(url)
-    print(records)
-    print(f"Found {len(records)} record(s).")

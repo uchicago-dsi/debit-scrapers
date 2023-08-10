@@ -287,33 +287,3 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         except Exception as e:
             raise Exception(f"Failed to scrape MIGA project page {url}. {e}")
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    w = MigaSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsScrapeWorkflow'
-    w = MigaResultsScrapeWorkflow(data_request_client, None, None, None)
-    url = "https://www.miga.org/projects?page=1"
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectScrapeWorkflow'
-    w = MigaProjectScrapeWorkflow(data_request_client, None, None)
-    url = "https://www.miga.org/project/bboxx-rwanda-kenya-and-drc-0"
-    print(w.scrape_project_page(url))
-
