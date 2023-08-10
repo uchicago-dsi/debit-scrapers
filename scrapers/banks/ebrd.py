@@ -276,20 +276,3 @@ class EbrdProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-      
-
-
-if __name__ == "__main__":
-    # Test 'StartScrape' workflow
-    w = EbrdSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # # Test 'ResultsPageScrape' workflow
-    w = EbrdResultsScrapeWorkflow(None, None, None, None)
-    url = 'https://www.ebrd.com/cs/Satellite?c=Page&cid=1395238314964&d=&pagename=EBRD/Page/SolrSearchAndFilterPSD&page=65&safSortBy=PublicationDate_sort&safSortOrder=descending'
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectPageScrape' workflow
-    w = EbrdProjectScrapeWorkflow(None, None, None)
-    url = 'https://www.ebrd.com/work-with-us/projects/psd/52642.html'
-    print(w.scrape_project_page(url))
