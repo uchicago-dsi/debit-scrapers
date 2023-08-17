@@ -23,7 +23,7 @@ from scrapers.constants import CONFIG_DIR_PATH
 from scrapers.services.data_request import DataRequestClient
 
 
-def test_kfw():
+def test_kfw() -> None:
     """Test KfW scrape"""
     # Test 'DownloadWorkflow'
     w = KfwDownloadWorkflow(None, None, None)
@@ -33,7 +33,7 @@ def test_kfw():
     print(clean_df.head())
 
 
-def test_aiib():
+def test_aiib() -> None:
     """Test aiib scrape"""
     # Set up DataRequestClient to rotate HTTP headers and add random delays
     with open(
@@ -61,7 +61,7 @@ def test_aiib():
     print(w.scrape_project_page(url))
 
 
-def test_bio():
+def test_bio() -> None:
     """Test scrape for bio"""
     # Test 'StartScrape' workflow
     w = BioSeedUrlsWorkflow(None, None, None)
@@ -80,7 +80,7 @@ def test_bio():
     print(w.scrape_project_page(url))
 
 
-def test_deg():
+def test_deg() -> None:
     """Test deg workflow"""
     # Test 'DownloadWorkflow'
     w = DegDownloadWorkflow(None, None, None)
@@ -90,7 +90,7 @@ def test_deg():
     print(clean_df.head())
 
 
-def test_dfc():
+def test_dfc() -> None:
     """Test dfc scrape workflow"""
     # Set up DataRequestClient to rotate HTTP headers and add random delays
     with open(
@@ -112,7 +112,7 @@ def test_dfc():
     print(clean_df.head())
 
 
-def test_fmo():
+def test_fmo() -> None:
     """Test workflow for fmo scrape"""
     # Test 'StartScrape' workflow
     w = FmoSeedUrlsWorkflow(None, None, None)
@@ -129,7 +129,7 @@ def test_fmo():
     print(w.scrape_project_page(url))
 
 
-def test_wb():
+def test_wb() -> None:
     """test workflow for wb scrape"""
     # Test 'DownloadWorkflow'
     w = WbDownloadWorkflow(None, None, None)

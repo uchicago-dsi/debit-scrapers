@@ -21,7 +21,7 @@ from scrapers.constants import CONFIG_DIR_PATH
 from scrapers.services.data_request import DataRequestClient
 
 
-def test_afdb():
+def test_afdb() -> None:
     """Test afdb scrape"""
     # Test 'SeedUrlsWorkflow'
     # NOTE: Performs a download that takes
@@ -36,7 +36,7 @@ def test_afdb():
     print(w.scrape_project_page(url))
 
 
-def test_ebrd():
+def test_ebrd() -> None:
     """Test workflow for ebfd"""
     # Test 'StartScrape' workflow
     w = EbrdSeedUrlsWorkflow(None, None, None)
@@ -58,7 +58,7 @@ def test_ebrd():
     print(w.scrape_project_page(url))
 
 
-def test_eib():
+def test_eib() -> None:
     """Test workflow for eib"""
     # Test 'SeedUrlsWorkflow'
     w = EibSeedUrlsWorkflow(None, None, None)
@@ -73,7 +73,7 @@ def test_eib():
     print(w.scrape_project_page(url))
 
 
-def test_ifc():
+def test_ifc() -> None:
     """Test workflow for ifc scrape"""
     # Test 'SeedUrlsWorkflow'
     w = IfcSeedUrlsWorkflow(None, None, None)
@@ -90,7 +90,7 @@ def test_ifc():
     print(f"Found {len(records)} record(s).")
 
 
-def test_miga():
+def test_miga() -> None:
     """Test workflow for miga scrape"""
     # Set up DataRequestClient to rotate HTTP headers and add random delays
     with open(
@@ -119,7 +119,7 @@ def test_miga():
     print(w.scrape_project_page(url))
 
 
-def test_nbim():
+def test_nbim() -> None:
     """test workflow for nbim scrape"""
     # Test 'DownloadWorkflow'
     w = NbimDownloadWorkflow(None, None, None)
@@ -129,7 +129,7 @@ def test_nbim():
     print(clean_df.head())
 
 
-def test_undp():
+def test_undp() -> None:
     """test workflow for undp scrape"""
     # Set up DataRequestClient to rotate HTTP headers and add random delays
     with open(

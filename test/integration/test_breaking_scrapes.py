@@ -17,7 +17,7 @@ from scrapers.constants import CONFIG_DIR_PATH
 from scrapers.services.data_request import DataRequestClient
 
 
-def test_adb():
+def test_adb() -> None:
     """Test scrape process for adb"""
     with open(
         f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r", encoding="utf-8"
@@ -44,7 +44,7 @@ def test_adb():
     print(w.scrape_project_page(url))
 
 
-def test_idb():
+def test_idb() -> None:
     """Test workflow for idb scrape"""
     # Set up DataRequestClient to rotate HTTP headers and add random delays
     with open(
@@ -76,7 +76,7 @@ def test_idb():
     print(w.scrape_project_page(url))
 
 
-def test_pro():
+def test_pro() -> None:
     """test workflow for pro scrape"""
     # Test 'StartScrapeWorkflow'
     w = ProSeedUrlsWorkflow(None, None, None)
