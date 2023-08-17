@@ -17,8 +17,8 @@ jobs:
           python-version: '3.10'
       - run: |
           pip3 install --upgrade pip
-          pip3 install flake8 mypy black
+          pip3 install flake8 mypy black types-PyYAML
       - run: |
+          python3 -m black --check test
           python3 -m flake8 test # should also run against scrapers but that will need more cleanup
           python3 -m mypy test --follow-imports=skip --disallow-untyped-defs # turned off for now becuase there's no way it's passing any time soon 
-          python3 -m black --check test
