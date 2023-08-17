@@ -19,14 +19,14 @@ jobs:
     needs: setup
     steps:
       - run: |
-        pip3 install flake8
-        python3 -m flake8 scrapers test
+          pip3 install flake8
+          python3 -m flake8 scrapers test
   type_check_mypy:
     needs: setup
     steps:
       - run: |
-        pip3 install mypy
-        python3 -m mypy scrapers test
+          pip3 install mypy
+          python3 -m mypy scrapers test
   style_black:
     needs: setup
     steps:
