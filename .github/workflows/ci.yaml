@@ -7,7 +7,8 @@ on:
       - 'main'
 
 jobs:
-  setup:
+  style_lint_and_type_check:
+    name: style lint and type check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,22 +16,7 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip3 install --upgrade pip
-  lint_flake8:
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - run: |
-          pip3 install flake8
-          python3 -m flake8 scrapers test
-  type_check_mypy:
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - run: |
-          pip3 install mypy
-          python3 -m mypy scrapers test
-  style_black:
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
       - uses: psf/black@stable
+      - run: | 
+          python3 -m flake8 test
+          python3 -m mypy scrapers test
