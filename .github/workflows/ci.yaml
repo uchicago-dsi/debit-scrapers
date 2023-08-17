@@ -6,6 +6,10 @@ on:
     branches:
       - 'main'
 
+env:
+  SRC_DIR: scrapers
+  TEST_DIR: test
+
 jobs:
   style_lint_and_type_check:
     name: style lint and type check
@@ -19,6 +23,6 @@ jobs:
           pip3 install --upgrade pip
           pip3 install flake8 mypy black types-PyYAML
       - run: |
-          python3 -m black --check test
-          python3 -m flake8 test # should also run against scrapers but that will need more cleanup
-          python3 -m mypy test --follow-imports=skip --disallow-untyped-defs # turned off for now becuase there's no way it's passing any time soon 
+          python3 -m black --check $TEST_DIR
+          python3 -m flake8 $TEST_DIR # should also run against scrapers but that will need more cleanup
+          python3 -m mypy $TEST_DIR --follow-imports=skip --disallow-untyped-defs
