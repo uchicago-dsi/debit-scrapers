@@ -24,5 +24,27 @@ jobs:
           pip3 install flake8 mypy black types-PyYAML
       - run: |
           python3 -m black --check $TEST_DIR
-          python3 -m flake8 $TEST_DIR # should also run against scrapers but that will need more cleanup
+          python3 -m flake8 $SRC_DIR # $TEST_DIR # should also run against scrapers but that will need more cleanup
           python3 -m mypy $TEST_DIR --follow-imports=skip --disallow-untyped-defs
+  secrets_check:
+    name: check secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: |
+          pip3 install --upgrade pip
+          pip3 install detect-secrets
+      - run: (
+        detect-secrets scan $SRC_DIR |
+        python3 -c '
+        import sys, json
+        sys.exit(len(json.load(sys.stdin)["results"]))
+        ') &&
+        echo "No secrets detected" ||
+        (echo "STOP : [ $? ] secrets detected" && exit 1)
+
+# detect-secrets scan test | python3 -c 'import sys, json; sys.exit(len(json.load(sys.stdin)["results"]))' | exit $?
+# (detect-secrets scan | python3 -c 'import sys, json; sys.exit(len(json.load(sys.stdin)["results"]))') && echo "No secrets detected" || (echo "STOP: $? secrets detected" && exit 1)
