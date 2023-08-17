@@ -7,14 +7,27 @@ on:
       - 'main'
 
 jobs:
-  mypy_type_check:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+      - run: pip3 install --upgrade pip
+  lint_flake8:
+    needs: setup
+    steps:
       - run: |
-          pip3 install --upgrade pip
-          pip3 install mypy
-          python3 -m mypy scrapers
+        pip3 install flake8
+        python3 -m flake8 scrapers test
+  type_check_mypy:
+    needs: setup
+    steps:
+      - run: |
+        pip3 install mypy
+        python3 -m mypy scrapers test
+  style_black:
+    needs: setup
+    steps:
+      - uses: psf/black@stable
