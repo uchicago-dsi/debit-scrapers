@@ -150,3 +150,12 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
         except Exception as e:
             raise Exception(f"Error cleaning World Bank Project data. {e}")
+
+
+if __name__ == "__main__":
+    # Test 'DownloadWorkflow'
+    w = WbDownloadWorkflow(None, None, None)
+    raw_df = w.get_projects()
+    clean_df = w.clean_projects(raw_df)
+    print(f"Found {len(clean_df)} record(s).")
+    print(clean_df.head())

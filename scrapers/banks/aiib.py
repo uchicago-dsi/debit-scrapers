@@ -237,3 +237,27 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
+
+
+
+if __name__ == "__main__":
+    import json
+    import yaml
+    from scrapers.constants import CONFIG_DIR_PATH
+    
+    # Set up DataRequestClient to rotate HTTP headers and add random delays
+    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
+        try:
+            user_agent_headers = json.load(stream)
+            data_request_client = DataRequestClient(user_agent_headers)
+        except yaml.YAMLError as e:
+            raise Exception(f"Failed to open configuration file. {e}")
+
+    # Test 'SeedUrlsWorkflow'
+    w = AiibSeedUrlsWorkflow(None, None, None)
+    print(w.generate_seed_urls())
+
+    # Test 'ProjectScrapeWorkflow'
+    w = AiibProjectScrapeWorkflow(data_request_client, None, None)
+    url = "https://www.aiib.org/en/projects/details/2021/proposed/India-Extension-Renovation-and-Modernization-of-Grand-Anicut-Canal-System.html"
+    print(w.scrape_project_page(url))

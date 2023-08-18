@@ -105,8 +105,6 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             first_results_page = self.search_results_base_url.format(
                 page_num=self.first_page_num)
             html = requests.get(first_results_page).text
-            # print("html is here")
-            # print(html[:100])
             soup = BeautifulSoup(html, "html.parser")
 
             last_page_btn = soup.find('li', {"class": "pager-last"})
@@ -359,3 +357,33 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url.replace('/print', '')
         }]
+
+
+
+if __name__ == "__main__":
+    import json
+    import yaml
+    from scrapers.constants import CONFIG_DIR_PATH
+
+    # Set up DataRequestClient to rotate HTTP headers and add random delays
+    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
+        try:
+            user_agent_headers = json.load(stream)
+            data_request_client = DataRequestClient(user_agent_headers)
+        except yaml.YAMLError as e:
+            raise Exception(f"Failed to open configuration file. {e}")
+
+    # Test 'SeedUrlsWorkflow'
+    seed_workflow = AdbSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
+
+    # Test 'ResultsScrapeWorkflow'
+    res_scrape_workflow = AdbResultsScrapeWorkflow(data_request_client, None, None, None)
+    url = 'https://www.adb.org/projects?page=558'
+    project_page_urls = res_scrape_workflow.scrape_results_page(url)
+    print(project_page_urls)
+
+    # Test 'ProjectScrapeWorkflow'
+    proj_scrape_workflow = AdbProjectScrapeWorkflow(data_request_client, None, None)
+    url = 'https://www.adb.org/print/projects/53303-001/main'
+    print(proj_scrape_workflow.scrape_project_page(url))

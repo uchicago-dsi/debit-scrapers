@@ -263,3 +263,20 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         except Exception as e:
             raise Exception(f"Error scraping project page '{url}'. {e}")
+
+
+        
+if __name__ == "__main__":
+    # Test 'StartScrape' workflow
+    w = FmoSeedUrlsWorkflow(None, None, None)
+    print(w.generate_seed_urls())
+
+    # Test 'ResultsPageScrape' workflow
+    w = FmoResultsScrapeWorkflow(None, None, None, None)
+    url = 'https://www.fmo.nl/worldmap?page=21'
+    print(w.scrape_results_page(url))
+
+    # Test 'ProjectPageScrape' workflow
+    w = FmoProjectScrapeWorkflow(None, None, None)
+    url = 'https://www.fmo.nl/project-detail/60377'
+    print(w.scrape_project_page(url))

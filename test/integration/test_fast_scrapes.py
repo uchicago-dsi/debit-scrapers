@@ -18,7 +18,6 @@ from scrapers.banks.fmo import (
     FmoSeedUrlsWorkflow,
 )
 from scrapers.banks.kfw import KfwDownloadWorkflow
-from scrapers.banks.wb import WbDownloadWorkflow
 from scrapers.constants import CONFIG_DIR_PATH
 from scrapers.services.data_request import DataRequestClient
 
@@ -48,36 +47,36 @@ def test_aiib() -> None:
             ) from yml_err
 
     # Test 'SeedUrlsWorkflow'
-    w = AiibSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = AiibSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ProjectScrapeWorkflow'
-    w = AiibProjectScrapeWorkflow(data_request_client, None, None)
+    scrape_workflow = AiibProjectScrapeWorkflow(data_request_client, None, None)
     url = (
         "https://www.aiib.org/en/projects/details/2021/proposed"
         "/India-Extension-Renovation-and-Modernization-of-Grand-Anicut-"
         "Canal-System.html"
     )
-    print(w.scrape_project_page(url))
+    print(scrape_workflow.scrape_project_page(url))
 
 
 def test_bio() -> None:
     """Test scrape for bio"""
     # Test 'StartScrape' workflow
-    w = BioSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = BioSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ResultsPageMultiScrape' workflow
-    w = BioResultsMultiScrapeWorkflow(None, None, None, None)
+    res_multi_scrape_workflow = BioResultsMultiScrapeWorkflow(None, None, None, None)
     url = "https://www.bio-invest.be/en/investments/p5?search="
-    urls, project_records = w.scrape_results_page(url)
+    urls, project_records = res_multi_scrape_workflow.scrape_results_page(url)
     print(urls)
     print(project_records)
 
     # Test 'ProjectPartialScrapeWorkflow' workflow
-    w = BioProjectPartialScrapeWorkflow(None, None, None)
+    proj_partial_scrape_workflow = BioProjectPartialScrapeWorkflow(None, None, None)
     url = "https://www.bio-invest.be/en/investments/zoscales-fund-i"
-    print(w.scrape_project_page(url))
+    print(proj_partial_scrape_workflow.scrape_project_page(url))
 
 
 def test_deg() -> None:
@@ -115,25 +114,15 @@ def test_dfc() -> None:
 def test_fmo() -> None:
     """Test workflow for fmo scrape"""
     # Test 'StartScrape' workflow
-    w = FmoSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = FmoSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ResultsPageScrape' workflow
-    w = FmoResultsScrapeWorkflow(None, None, None, None)
+    res_scrape_workflow = FmoResultsScrapeWorkflow(None, None, None, None)
     url = "https://www.fmo.nl/worldmap?page=21"
-    print(w.scrape_results_page(url))
+    print(res_scrape_workflow.scrape_results_page(url))
 
     # Test 'ProjectPageScrape' workflow
-    w = FmoProjectScrapeWorkflow(None, None, None)
+    proj_scrape_workflow = FmoProjectScrapeWorkflow(None, None, None)
     url = "https://www.fmo.nl/project-detail/60377"
-    print(w.scrape_project_page(url))
-
-
-def test_wb() -> None:
-    """test workflow for wb scrape"""
-    # Test 'DownloadWorkflow'
-    w = WbDownloadWorkflow(None, None, None)
-    raw_df = w.get_projects()
-    clean_df = w.clean_projects(raw_df)
-    print(f"Found {len(clean_df)} record(s).")
-    print(clean_df.head())
+    print(proj_scrape_workflow.scrape_project_page(url))

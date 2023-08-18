@@ -261,3 +261,15 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": None,
             "url": url
         }
+
+
+
+if __name__ == "__main__":
+    # Test 'SeedUrlsWorkflow'
+    w = EibSeedUrlsWorkflow(None, None, None)
+    print(w.generate_seed_urls())
+
+    # Test 'ProjectScrapeWorkflow'
+    w = EibProjectScrapeWorkflow(None, None, None)
+    url = 'https://www.eib.org/page-provider/projects/list?pageNumber=17&itemPerPage=500&pageable=true&sortColumn=id'
+    print(w.scrape_project_page(url))

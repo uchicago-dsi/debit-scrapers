@@ -38,6 +38,7 @@ jobs:
           pip3 install --upgrade pip
           pip3 install detect-secrets
       - run: |
+          set -e
           detect-secrets scan $TEST_DIR | python3 -c '
           import sys, json
           sys.exit(len(json.load(sys.stdin)["results"]))
@@ -48,5 +49,5 @@ jobs:
           fi
           echo "No secrets detected"
 
-# detect-secrets scan test | python3 -c 'import sys, json; sys.exit(len(json.load(sys.stdin)["results"]))' | exit $?
-# (detect-secrets scan | python3 -c 'import sys, json; sys.exit(len(json.load(sys.stdin)["results"]))') && echo "No secrets detected" || (echo "STOP: $? secrets detected" && exit 1)
+# Run mypy on diff
+# git diff --name-only --diff-filter=d origin/main -- '*.py' | xargs mypy --follow-imports=skip --disallow-untyped-defs

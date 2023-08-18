@@ -312,3 +312,22 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
+
+
+
+if __name__ == "__main__":
+    # Test 'StartScrape' workflow
+    w = BioSeedUrlsWorkflow(None, None, None)
+    print(w.generate_seed_urls())
+
+    # Test 'ResultsPageMultiScrape' workflow
+    w = BioResultsMultiScrapeWorkflow(None, None, None, None)
+    url = "https://www.bio-invest.be/en/investments/p5?search="
+    urls, project_records = w.scrape_results_page(url)
+    print(urls)
+    print(project_records)
+
+    # Test 'ProjectPartialScrapeWorkflow' workflow
+    w = BioProjectPartialScrapeWorkflow(None, None, None)
+    url = "https://www.bio-invest.be/en/investments/zoscales-fund-i"
+    print(w.scrape_project_page(url))

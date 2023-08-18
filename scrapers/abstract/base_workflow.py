@@ -4,6 +4,7 @@ workflows for development bank projects.
 
 from abc import ABC, abstractmethod, abstractproperty
 from logging import Logger
+from typing import Optional
 
 
 class BaseWorkflow(ABC):
@@ -39,7 +40,7 @@ class BaseWorkflow(ABC):
         job_id: str,
         task_id: str,
         source: str,
-        url: str=None) -> None:
+        url: Optional[str]=None) -> None:
         """Executes the workflow.
 
         Args:

@@ -7,12 +7,14 @@ from scrapers.banks.adb import (
     AdbResultsScrapeWorkflow,
     AdbSeedUrlsWorkflow,
 )
+from scrapers.banks.afdb import AfdbProjectScrapeWorkflow, AfdbSeedUrlsWorkflow
 from scrapers.banks.idb import (
     IdbProjectScrapeWorkflow,
     IdbResultsScrapeWorkflow,
     IdbSeedUrlsWorkflow,
 )
 from scrapers.banks.pro import ProProjectScrapeWorkflow, ProSeedUrlsWorkflow
+from scrapers.banks.wb import WbDownloadWorkflow
 from scrapers.constants import CONFIG_DIR_PATH
 from scrapers.services.data_request import DataRequestClient
 
@@ -29,19 +31,19 @@ def test_adb() -> None:
             raise RuntimeError(f"Failed to open config file. {exc}") from exc
 
     # Test 'SeedUrlsWorkflow'
-    w = AdbSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = AdbSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ResultsScrapeWorkflow'
-    w = AdbResultsScrapeWorkflow(data_request_client, None, None, None)
+    res_scrape_workflow = AdbResultsScrapeWorkflow(data_request_client, None, None, None)
     url = "https://www.adb.org/projects?page=558"
-    project_page_urls = w.scrape_results_page(url)
+    project_page_urls = res_scrape_workflow.scrape_results_page(url)
     print(project_page_urls)
 
     # Test 'ProjectScrapeWorkflow'
-    w = AdbProjectScrapeWorkflow(data_request_client, None, None)
+    proj_scrape_workflow = AdbProjectScrapeWorkflow(data_request_client, None, None)
     url = "https://www.adb.org/print/projects/53303-001/main"
-    print(w.scrape_project_page(url))
+    print(proj_scrape_workflow.scrape_project_page(url))
 
 
 def test_idb() -> None:
@@ -59,30 +61,55 @@ def test_idb() -> None:
             ) from yml_err
 
     # Test 'SeedUrlsWorkflow'
-    w = IdbSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = IdbSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ResultsScrapeWorkflow'
-    w = IdbResultsScrapeWorkflow(data_request_client, None, None, None)
+    res_scrape_workflow = IdbResultsScrapeWorkflow(data_request_client, None, None, None)
     url = (
         "https://www.iadb.org/en/projects-search"
         "?country=&sector=&status=&query=&page=120"
     )
-    print(w.scrape_results_page(url))
+    print(res_scrape_workflow.scrape_results_page(url))
 
     # Test 'ProjectScrapeWorkflow'
-    w = IdbProjectScrapeWorkflow(data_request_client, None, None)
+    proj_scrape_workflow = IdbProjectScrapeWorkflow(data_request_client, None, None)
     url = "https://www.iadb.org/en/project/TC9409295"
-    print(w.scrape_project_page(url))
+    print(proj_scrape_workflow.scrape_project_page(url))
 
 
 def test_pro() -> None:
     """test workflow for pro scrape"""
     # Test 'StartScrapeWorkflow'
-    w = ProSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
+    seed_workflow = ProSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
 
     # Test 'ProjectScrapeWorkflow'
-    w = ProProjectScrapeWorkflow(None, None, None)
+    scrape_workflow = ProProjectScrapeWorkflow(None, None, None)
     url = "https://www.proparco.fr/en/carte-des-projets/ecobank-trade-finance"
-    print(w.scrape_project_page(url))
+    print(scrape_workflow.scrape_project_page(url))
+
+
+def test_wb() -> None:
+    """test workflow for wb scrape"""
+    # Test 'DownloadWorkflow'
+    download_workflow = WbDownloadWorkflow(None, None, None)
+    raw_df = download_workflow.get_projects()
+    clean_df = download_workflow.clean_projects(raw_df)
+    print(f"Found {len(clean_df)} record(s).")
+    print(clean_df.head())
+
+
+def test_afdb() -> None:
+    """Test afdb scrape"""
+    # Test 'SeedUrlsWorkflow'
+    # NOTE: Performs a download that takes
+    # several seconds to complete.
+    seed_workflow = AfdbSeedUrlsWorkflow(None, None, None)
+    print(seed_workflow.generate_seed_urls())
+
+    # Test 'ProjectScrapeWorkflow'
+    scrape_workflow = AfdbProjectScrapeWorkflow(None, None, None)
+    url = "https://projectsportal.afdb.org"
+    "/dataportal/VProject/show/P-Z1-FAB-030"
+    print(scrape_workflow.scrape_project_page(url))

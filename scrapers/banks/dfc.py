@@ -192,3 +192,24 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
         except Exception as e:
             raise Exception(f"Error cleaning DFC projects. {e}")
+
+
+if __name__ == "__main__":
+    import json
+    import yaml
+    from scrapers.constants import CONFIG_DIR_PATH
+
+    # Set up DataRequestClient to rotate HTTP headers and add random delays
+    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
+        try:
+            user_agent_headers = json.load(stream)
+            data_request_client = DataRequestClient(user_agent_headers)
+        except yaml.YAMLError as e:
+            raise Exception(f"Failed to open configuration file. {e}")
+
+    # Test 'DownloadWorkflow'
+    w = DfcDownloadWorkflow(data_request_client, None, None)
+    raw_df = w.get_projects()
+    clean_df = w.clean_projects(raw_df)
+    print(f"Found {len(clean_df)} record(s).")
+    print(clean_df.head())

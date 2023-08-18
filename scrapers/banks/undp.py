@@ -184,3 +184,27 @@ class UndpProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies if companies else None,
             "url": self.project_page_base_url.format(project['project_id'])
         }]
+
+
+     
+if __name__ == "__main__":
+    import json
+    import yaml
+    from scrapers.constants import CONFIG_DIR_PATH
+    
+    # Set up DataRequestClient to rotate HTTP headers and add random delays
+    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
+        try:
+            user_agent_headers = json.load(stream)
+            data_request_client = DataRequestClient(user_agent_headers)
+        except yaml.YAMLError as e:
+            raise Exception(f"Failed to open configuration file. {e}")
+            
+    # Test 'SeedUrlsWorkflow'
+    w = UndpSeedUrlsWorkflow(None, None, None)
+    print(w.generate_seed_urls())
+
+    # Test 'ProjectPageScrapeWorkflow'
+    w = UndpProjectScrapeWorkflow(data_request_client, None, None)
+    url = 'https://api.open.undp.org/api/projects/00110684.json'
+    print(w.scrape_project_page(url))
