@@ -67,7 +67,7 @@ class PubSubClient():
         try:
             # Encode data
             data_str = json.dumps(data)
-            encoded_data = data_str.encode('utf-8')
+            encoded_data: bytes = data_str.encode('utf-8')
 
             # Initiate message publishing
             publish_future = self._publisher.publish(self._topic_path, encoded_data)

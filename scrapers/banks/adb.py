@@ -5,6 +5,7 @@ each project page.
 """
 
 import re
+import logging
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -81,10 +82,12 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             last_page_num = self.find_last_page()
+            logging.debug(f"Last page num found for ADB : {last_page_num}")
             result_pages = [
                 self.search_results_base_url.format(page_num=n) 
                 for n in range(self.first_page_num, last_page_num + 1)
             ]
+            # print(f"result pages list : {result_pages}")
             return result_pages
         except Exception as e:
             raise Exception("Failed to generate ADB search "
@@ -102,13 +105,17 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             (int): The page number.
         """
         try:
-            first_results_page = self.search_results_base_url.format(
+            first_results_page: str = self.search_results_base_url.format(
                 page_num=self.first_page_num)
             html = requests.get(first_results_page).text
+            # print(f"Got text from results page, type :  {type(html)}")
+            # print(f"Got text from results page, length :  {len(html)}")
             soup = BeautifulSoup(html, "html.parser")
 
-            last_page_btn = soup.find('li', {"class": "pager-last"})
+            last_page_btn = soup.find('li', {"class": "pager__item--last"})
+            # print(f"Got last page button : {last_page_btn}")
             last_page_num = int(last_page_btn.find("a")["href"].split('=')[-1])
+            # print("Last page number :", last_page_num)
             return last_page_num
 
         except Exception as e:
@@ -152,7 +159,7 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
     def project_page_base_url(self) -> str:
         """The base URL for individual ADB project pages.
         """
-        return 'https://www.adb.org/print'
+        return 'https://www.adb.org'
 
 
     def scrape_results_page(self, results_page_url: str) -> List[str]:
@@ -225,12 +232,13 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         Args:
             url (str): The URL for a project. Has the form:
-                'https://www.adb.org/print/projects/{project_id}/main'.
+                'https://www.adb.org/projects/{project_id}/main'.
 
         Returns:
             (list of dict): The list of project records.
         """
         # Request page and parse HTML
+        # print(f"URL to scrape : {url}")
         response = self._data_request_client.get(
             url=url,
             use_random_user_agent=True,
@@ -241,7 +249,8 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         soup = BeautifulSoup(response.text, features='html.parser')
 
         # Find first project table holding project background details
-        table = soup.find('table')
+        table = soup.find('article')
+        # print(f"Table here : {table}")
 
         # Extract project name, number, and status
         def get_field(detail_name):
@@ -258,9 +267,11 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         name = get_field("Project Name")
         number = get_field("Project Number")
         status = get_field("Project Status")
+        # print(f"table : {table}")
 
         # Extract and format countries
         country_label = table.find(string="Country / Economy")
+        # print(f"country label : {country_label}")
         if not country_label:
             country_label = table.find(string="Country")
         parent = country_label.findParent()
@@ -385,5 +396,5 @@ if __name__ == "__main__":
 
     # Test 'ProjectScrapeWorkflow'
     proj_scrape_workflow = AdbProjectScrapeWorkflow(data_request_client, None, None)
-    url = 'https://www.adb.org/print/projects/53303-001/main'
+    url = 'https://www.adb.org/projects/53303-001/main'
     print(proj_scrape_workflow.scrape_project_page(url))

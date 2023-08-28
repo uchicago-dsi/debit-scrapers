@@ -75,12 +75,14 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             (list of str): The unique list of search result pages.
         """
+        print("Generating seed URL's for IDB")
         try:
             last_page_num = self.find_last_page()
             result_page_urls = [
                 self.search_results_base_url.format(page_num=str(n))
                 for n in range(self.first_page_num, last_page_num + 1)
             ]
+            print(f"Resulting pages : {result_page_urls}")
             return result_page_urls
         except Exception as e:
             raise Exception("Failed to generate search "
@@ -97,13 +99,17 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             (int): The page number.
         """
+        print("Finding last page for IDB")
         try:
             first_results_page_url = self.search_results_base_url.format(
                 page_num=self.first_page_num)
+            print(f"URL for first IDB page : {first_results_page_url}")
             html = requests.get(first_results_page_url).text
+            print(f"html for first page of results from IDB : {html}")
             soup = BeautifulSoup(html, "html.parser")
 
-            last_page_item = soup.find('li', {"class":"pager__item pager__item--last"})
+            last_page_item = soup.find('li', {"class":"pager__item--last"})
+            print(f"Text from last pager item for IDB : {last_page_item.text}")
             return int(last_page_item.find("a")["href"].split('=')[-1])
         except Exception as e:
             raise Exception(f"Error retrieving last page number. {e}")
