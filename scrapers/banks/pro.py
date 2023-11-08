@@ -60,7 +60,7 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
         """The base URL for development bank project search
         results page on Proparco's website.
         """
-        return 'https://www.proparco.fr/en/carte-des-projets?filter=&page=all&query=%2A&view=list'
+        return 'https://www.proparco.fr/en/carte-des-projets-list?page=all&query=%2A&view=start'
 
 
     @property
@@ -79,6 +79,7 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             (list of str): The project page URLs.
         """
+        print("Seeding URLs for PRO")
         try:
             r = self._data_request_client.get(self.search_results_base_url)
             r.raise_for_status()

@@ -85,6 +85,7 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             last_page_num = self.find_last_page()
+            self._logger.debug(f"Last page num found for ADB : {last_page_num}")
             result_pages = [
                 self.search_results_base_url.format(page_num=n) 
                 for n in range(self.first_page_num, last_page_num + 1)
@@ -106,15 +107,13 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             (`int`): The page number.
         """
         try:
-            first_results_page = self.search_results_base_url.format(
-                page_num=self.first_page_num)
+            params = {"page_num": self.first_page_num}
+            first_results_page = self.search_results_base_url.format(**params)
             html = self._data_request_client.get(first_results_page).text
             soup = BeautifulSoup(html, "html.parser")
-
-            last_page_btn = soup.find('li', {"class": "pager-last"})
+            last_page_btn = soup.find('li', {"class": "pager__item--last"})
             last_page_num = int(last_page_btn.find("a")["href"].split('=')[-1])
             return last_page_num
-
         except Exception as e:
             raise Exception("Error retrieving last page number at "
                 f"'{first_results_page}'. {e}")
@@ -156,7 +155,7 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
     def project_page_base_url(self) -> str:
         """The base URL for individual ADB project pages.
         """
-        return 'https://www.adb.org/print'
+        return 'https://www.adb.org'
 
 
     def scrape_results_page(self, results_page_url: str) -> List[str]:
@@ -245,7 +244,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         soup = BeautifulSoup(response.text, features='html.parser')
 
         # Find first project table holding project background details
-        table = soup.find('table')
+        table = soup.find('article')
 
         # Extract project name, number, and status
         def get_field(detail_name):
@@ -267,6 +266,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         country_label = table.find(string="Country / Economy")
         if not country_label:
             country_label = table.find(string="Country")
+            
         parent = country_label.findParent()
         sibling_cell = parent.find_next_siblings('td')[0]
         contents = sibling_cell.contents

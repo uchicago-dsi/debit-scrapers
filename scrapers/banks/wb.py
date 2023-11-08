@@ -59,10 +59,14 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
             (`pd.DataFrame`): The raw project records.
         """
         try:
-            return pd.read_excel(self.download_url, skiprows=2)
+            return pd.read_excel(self.download_url, skiprows=2, engine='xlrd')
+            # return pd.read_html(self.download_url, flavor='bs4')
         except Exception as e:
-            raise Exception(f"Error retrieving Excel project data "
-                f"from the World Bank. {e}")
+            try:
+                return pd.read_csv(self.download_url, skiprows=2)
+            except Exception as ee:
+                raise Exception(f"Error retrieving Excel project data "
+                    f"from the World Bank. {e}")
 
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
