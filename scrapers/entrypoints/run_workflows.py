@@ -15,21 +15,15 @@ from google.pubsub_v1.types.pubsub import PullResponse, ReceivedMessage
 from google.pubsub_v1.services.subscriber.client import SubscriberClient
 from scrapers.constants import (
     COMPLETED_STATUS,
-    DEV_ENV,
-    DOWNLOAD_WORKFLOW,
+    DEV,
     ENV,
-    PROJECT_PAGE_WORKFLOW,
-    PROJECT_PARTIAL_PAGE_WORKFLOW,
-    RESULTS_PAGE_MULTISCRAPE_WORKFLOW,
-    RESULTS_PAGE_WORKFLOW,
-    SEED_URLS_WORKFLOW,
-    USER_AGENT_HEADERS_FPATH,
+    USER_AGENT_HEADERS_FPATH
 )
 from scrapers.services.data_request import DataRequestClient
 from scrapers.services.database import DbClient
 from scrapers.services.logger import LoggerFactory
 from scrapers.services.pubsub import PubSubClient
-from scrapers.services.registry import scraper_registry
+from scrapers.services.registry import WorkflowClassRegistry
 from typing import List
 from yaml.loader import FullLoader
 
@@ -40,7 +34,7 @@ from yaml.loader import FullLoader
 logger = LoggerFactory.get("run-workflows")
 
 # Retrieve development environment
-env = os.getenv(ENV, DEV_ENV)
+env = os.getenv(ENV, DEV)
 
 # Load corresponding configuration file
 logger.info(f"Loading configuration file for '{env}' environment.")
@@ -211,31 +205,14 @@ def process_message(
     except KeyError as e:
         raise Exception(f"Failed to extract data from Pub/Sub message. {e}")
 
-    # Fetch workflow class type from registry
-    source_workflow = f"{source}-{workflow_type}"
-    logger = LoggerFactory.get(f"run-workflows - {source}")
-    try:
-        registered_workflow = scraper_registry[source_workflow]
-    except KeyError:
-        raise Exception(f"Invalid input workflow encountered: "
-            f"{source_workflow}. All scraping workflows must "
-            "be properly registered.")
-
-    # Instantiate workflow
-    if workflow_type == DOWNLOAD_WORKFLOW:
-        w = registered_workflow(data_request_client, db_client, logger)
-    elif workflow_type == PROJECT_PAGE_WORKFLOW:
-        w = registered_workflow(data_request_client, db_client, logger)
-    elif workflow_type == PROJECT_PARTIAL_PAGE_WORKFLOW:
-        w = registered_workflow(data_request_client, db_client, logger)
-    elif workflow_type == RESULTS_PAGE_MULTISCRAPE_WORKFLOW:
-        w = registered_workflow(data_request_client, pubsub_client, db_client, logger)
-    elif workflow_type == RESULTS_PAGE_WORKFLOW:
-        w = registered_workflow(data_request_client, pubsub_client, db_client, logger)
-    elif workflow_type == SEED_URLS_WORKFLOW:
-        w = registered_workflow(pubsub_client, db_client, logger)
-    else:
-        raise Exception(f"Invalid workflow type encountered: {workflow_type}.")
+    # Instantiate appropriate workflow class from registry
+    w = WorkflowClassRegistry.get(
+        source,
+        workflow_type,
+        data_request_client,
+        pubsub_client,
+        db_client
+    )
 
     # Excecute workflow
     w.execute(

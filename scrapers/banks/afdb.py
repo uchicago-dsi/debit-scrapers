@@ -12,7 +12,6 @@ which are requested and scraped for data.
 
 import pandas as pd
 import re
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from io import BytesIO
@@ -32,13 +31,17 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """
-        Initializes a new instance of an `AfdbSeedUrlsWorkflow`.
+        """Initializes a new instance of an `AfdbSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+                
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -51,13 +54,12 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
     def next_workflow(self) -> str:
-        """
-        The name of the workflow to execute after this
+        """The name of the workflow to execute after this
         workflow has finished.
         """
         return PROJECT_PAGE_WORKFLOW
@@ -65,16 +67,14 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     @property
     def project_download_url(self) ->str:
-        """
-        The URL containing all project records.
+        """The URL containing all project records.
         """
         return "https://projectsportal.afdb.org/dataportal/VProject/exportProjectList?_format=XLS&_name=&_file=dataPortal_project_list&reportName=dataPortal_project_list"
 
 
     @property
     def project_page_base_url(self) -> str:
-        """
-        The base URL for an individual project page.
+        """The base URL for an individual project page.
         Should be formatted with the project id.
         """
         return 'https://projectsportal.afdb.org/dataportal/VProject/show/{project_id}'
@@ -95,7 +95,12 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         # Retrieve Excel data
         try:
-            response = requests.get(self.project_download_url, timeout=120)
+            response = self._data_request_client.get(
+                url=self.project_download_url,
+                use_random_user_agent=True,
+                use_random_delay=True,
+                timeout=120
+            )
             response.raise_for_status()
             df = pd.read_excel(
                 io=BytesIO(response.content),
@@ -103,10 +108,10 @@ class AfdbSeedUrlsWorkflow(SeedUrlsWorkflow):
                 sheet_name='dataPortal_project_list',
                 skipfooter=2)
         except Exception as e:
-            raise Exception(f"Failed to seed AfDB urls. Error "
+            raise RuntimeError(f"Failed to seed AfDB urls. Error "
                 "requesting and parsing Excel project data from "
                 "the African Development Bank into Pandas "
-                f"DataFrame. {e}")
+                f"DataFrame. {e}") from None
 
         # Compose project page URLs
         try:
@@ -134,7 +139,7 @@ class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Initializes a new instance of an `AfdbProjectScrapeWorkflow`.
 
         Args:
-          data_request_client (`DataRequestClient`): A client
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
@@ -153,13 +158,13 @@ class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes an AFDB project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The list of project records.
+            (`list` of `dict`): The list of project records.
         """
         # Retrieve HTML
-        response = requests.get(url)
+        response = self._data_request_client.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
 
         # Extract project number from URL
@@ -178,7 +183,7 @@ class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             and field values in the right column.
 
             Args:
-                section_name (str): The section name.
+                section_name (`str`): The section name.
 
             Returns:
                 (dict): The table field names and values.
@@ -250,16 +255,3 @@ class AfdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-
-
-if __name__ == "__main__":
-    # Test 'SeedUrlsWorkflow'
-    # NOTE: Performs a download that takes
-    # several seconds to complete.
-    w = AfdbSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = AfdbProjectScrapeWorkflow(None, None, None)
-    url = 'https://projectsportal.afdb.org/dataportal/VProject/show/P-Z1-FAB-030'
-    print(w.scrape_project_page(url))

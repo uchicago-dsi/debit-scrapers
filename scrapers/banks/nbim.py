@@ -24,8 +24,7 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
         data_request_client: DataRequestClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """
-        Initializes a new instance of a `NbimDownloadWorkflow`.
+        """Initializes a new instance of a `NbimDownloadWorkflow`.
 
          Args:
             data_request_client (`DataRequestClient`): A client
@@ -161,7 +160,7 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
                     row (pd.Series): A row of data from the DataFrame.
 
                 Returns:
-                    (str): The URL.
+                    (`str`): The URL.
                 """
                 return (
                     f"{self.investments_base_url}/"
@@ -209,13 +208,3 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
         
         except Exception as e:
             raise Exception(f"Error cleaning NBIM investment data. {e}")
-
-
-
-if __name__ == "__main__":
-    # Test 'DownloadWorkflow'
-    w = NbimDownloadWorkflow(None, None, None)
-    raw_df = w.get_projects()
-    clean_df = w.clean_projects(raw_df)
-    print(f"Found {len(clean_df)} record(s).")
-    print(clean_df.head())

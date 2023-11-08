@@ -1,7 +1,6 @@
 """Web scrapers for the Dutch entrepreneurial development bank (FMO).
 """
 
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import Logger
@@ -21,12 +20,17 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """Initializes a new instance of a `FmoSeedUrlsWorkflow`.
+        """Initializes a new instance of an `FmoSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -39,7 +43,7 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -98,7 +102,7 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             first_page_url = self.search_results_base_url.format(self.first_page_num)
-            html = requests.get(first_page_url).text
+            html = self._data_request_client.get(first_page_url).text
             soup = BeautifulSoup(html, "html.parser")
 
             pager = soup.find('div', {"class":"pbuic-pager-container"})
@@ -145,14 +149,14 @@ class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
         search results page on FMO's website.
 
         Args:
-            results_page_url (str): The URL to a search results page
+            results_page_url (`str`): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
         """
         try:
-            source = requests.get(results_page_url).text
+            source = self._data_request_client.get(results_page_url).text
             soup = BeautifulSoup(source, "html.parser")
             urls = [
                 proj["href"] for proj in 
@@ -194,14 +198,14 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes a FMO project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project records.
+            (`list` of `dict`): The project records.
         """
         try:            
             # Retrieve HTML
-            response = requests.get(url)
+            response = self._data_request_client.get(url)
             soup = BeautifulSoup(response.content, 'html.parser')
 
             # Extract data from page
@@ -264,19 +268,3 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
         except Exception as e:
             raise Exception(f"Error scraping project page '{url}'. {e}")
 
-
-        
-if __name__ == "__main__":
-    # Test 'StartScrape' workflow
-    w = FmoSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsPageScrape' workflow
-    w = FmoResultsScrapeWorkflow(None, None, None, None)
-    url = 'https://www.fmo.nl/worldmap?page=21'
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectPageScrape' workflow
-    w = FmoProjectScrapeWorkflow(None, None, None)
-    url = 'https://www.fmo.nl/project-detail/60377'
-    print(w.scrape_project_page(url))

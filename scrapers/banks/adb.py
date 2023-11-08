@@ -5,7 +5,6 @@ each project page.
 """
 
 import re
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import Logger
@@ -25,12 +24,17 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of an `AdbSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -41,9 +45,9 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             logger (`Logger`): An instance of the logging class.
 
         Returns:
-            None
+            (`None`)
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -77,7 +81,7 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             None
 
         Returns:
-            (list of str): The unique list of search result pages.
+            (`list` of `str`): The unique list of search result pages.
         """
         try:
             last_page_num = self.find_last_page()
@@ -99,12 +103,12 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             None
         
         Returns:
-            (int): The page number.
+            (`int`): The page number.
         """
         try:
             first_results_page = self.search_results_base_url.format(
                 page_num=self.first_page_num)
-            html = requests.get(first_results_page).text
+            html = self._data_request_client.get(first_results_page).text
             soup = BeautifulSoup(html, "html.parser")
 
             last_page_btn = soup.find('li', {"class": "pager-last"})
@@ -143,7 +147,7 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
             logger (`Logger`): An instance of the logging class.
 
         Returns:
-            None
+            (`None`)
         """
         super().__init__(data_request_client, pubsub_client, db_client, logger)
 
@@ -161,11 +165,11 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
         be placed in between requests to avoid throttling.
 
         Args:
-            results_page_url (str): The URL to a search results page
+            results_page_url (`str`): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
-            (list of str): The list of scraped project page URLs.
+            (`list` of `str`): The list of scraped project page URLs.
         """
         try:
             response = self._data_request_client.get(
@@ -204,7 +208,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Initializes a new instance of an `AdbProjectScrapeWorkflow`.
 
         Args:
-          data_request_client (`DataRequestClient`): A client
+            data_request_client (`DataRequestClient`): A client
                 for making HTTP GET requests while adding
                 random delays and rotating user agent headers.
 
@@ -214,7 +218,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             logger (`Logger`): An instance of the logging class.
 
         Returns:
-            None
+            (`None`)
         """
         super().__init__(data_request_client, db_client, logger)
 
@@ -224,11 +228,11 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         must be placed in between requests to avoid throttling.
 
         Args:
-            url (str): The URL for a project. Has the form:
+            url (`str`): The URL for a project. Has the form:
                 'https://www.adb.org/print/projects/{project_id}/main'.
 
         Returns:
-            (list of dict): The list of project records.
+            (`list` of `dict`): The list of project records.
         """
         # Request page and parse HTML
         response = self._data_request_client.get(
@@ -357,33 +361,3 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url.replace('/print', '')
         }]
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    seed_workflow = AdbSeedUrlsWorkflow(None, None, None)
-    print(seed_workflow.generate_seed_urls())
-
-    # Test 'ResultsScrapeWorkflow'
-    res_scrape_workflow = AdbResultsScrapeWorkflow(data_request_client, None, None, None)
-    url = 'https://www.adb.org/projects?page=558'
-    project_page_urls = res_scrape_workflow.scrape_results_page(url)
-    print(project_page_urls)
-
-    # Test 'ProjectScrapeWorkflow'
-    proj_scrape_workflow = AdbProjectScrapeWorkflow(data_request_client, None, None)
-    url = 'https://www.adb.org/print/projects/53303-001/main'
-    print(proj_scrape_workflow.scrape_project_page(url))

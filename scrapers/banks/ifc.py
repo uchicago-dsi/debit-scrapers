@@ -25,13 +25,17 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """
-        Initializes a new instance of an `IfcSeedUrlsWorkflow`.
+        """Initializes a new instance of an `IfcSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -44,7 +48,7 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -197,7 +201,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         records to the expected output format.
 
         Args:
-            url (str): The project download URL.
+            url (`str`): The project download URL.
 
         Returns:
             (pd.DataFrame): The project records.
@@ -263,7 +267,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                     row (pd.Series): The DataFrame row.
 
                 Returns:
-                    (str): The URL.
+                    (`str`): The URL.
                 """
                 # Compose URL fragment containing project name
                 regex = '[()\"#/@;:<>{}`+=~|.!?,]'
@@ -309,10 +313,10 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 is not a concern.
 
                 Args:
-                    name (str): The country name.
+                    name (`str`): The country name.
 
                 Returns:
-                    (str): The formatted name.
+                    (`str`): The formatted name.
                 """
                 if not name or name is np.nan:
                     return None
@@ -334,17 +338,3 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         except Exception as e:
             raise Exception(f"Error mapping IFC project records "
                 f"to expected output schema. {e}")
-
-
-
-if __name__ == "__main__":
-    # Test 'SeedUrlsWorkflow'
-    w = IfcSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = IfcProjectScrapeWorkflow(None, None, None)
-    url = "https://externalsearch.ifc.org/spi/api/searchxls?qterm=*&start=8000&srt=disclosed_date&order=desc&rows=1000"
-    records = w.scrape_project_page(url)
-    print(records)
-    print(f"Found {len(records)} record(s).")

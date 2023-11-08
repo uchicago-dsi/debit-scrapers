@@ -101,7 +101,7 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                     row (pd.Series): A row of data from the DataFrame.
 
                 Returns:
-                    (str): The URL.
+                    (`str`): The URL.
                 """
                 return (
                     f"{self.projects_base_url}/"
@@ -144,12 +144,3 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
             
         except Exception as e:
             raise Exception(f"Error cleaning KFW project data. {e}")
-
-
-if __name__ == "__main__":
-    # Test 'DownloadWorkflow'
-    w = KfwDownloadWorkflow(None, None, None)
-    raw_df = w.get_projects()
-    clean_df = w.clean_projects(raw_df)
-    print(f"Found {len(clean_df)} record(s).")
-    print(clean_df.head())

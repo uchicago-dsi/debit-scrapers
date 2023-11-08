@@ -7,7 +7,6 @@ and scraping details from each project page.
 import bs4
 import json
 import re
-import requests
 from bs4.element import NavigableString
 from datetime import datetime
 from logging import Logger
@@ -26,13 +25,17 @@ class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
     
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """
-        Initializes a new instance of an `AiibSeedUrlsWorkflow`.
+        """Initializes a new instance of an `AiibSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -45,7 +48,7 @@ class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -81,8 +84,11 @@ class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             # Request JavaScript file containing list of projects
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.106 Safari/537.36'}
-            response = requests.get(self.partial_projects_url, headers=headers)
+            response = self._data_request_client.get(
+                url=self.partial_projects_url,
+                use_random_user_agent=True,
+                use_random_delay=True
+            )
 
             # Extract project data as string from response body
             stripped_doc = re.sub("[\t\n\r]", '', response.text)
@@ -131,10 +137,10 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes an AIIB project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project records.
+            (`list` of `dict`): The project records.
         """
         # Retrieve the project page
         response = self._data_request_client.get(
@@ -149,10 +155,10 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             HTML document and then returns the text of the adjacent div.
 
             Args:
-                field_name (str): The field name.
+                field_name (`str`): The field name.
 
             Returns:
-                (str): The extracted text if it exists.
+                (`str`): The extracted text if it exists.
             """
             try:
                 div = soup.find(string=field_name).find_next('div')
@@ -175,10 +181,10 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             information from an AIIB project page.
 
             Args:
-                field_name (str): The name of the contact field to scrape.
+                field_name (`str`): The name of the contact field to scrape.
 
             Returns:
-                (str): The contact information.
+                (`str`): The contact information.
             """
             try:
                 contact_div = soup.find("h2", string=field_name).findNextSibling("div")
@@ -237,27 +243,3 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    w = AiibSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = AiibProjectScrapeWorkflow(data_request_client, None, None)
-    url = "https://www.aiib.org/en/projects/details/2021/proposed/India-Extension-Renovation-and-Modernization-of-Grand-Anicut-Canal-System.html"
-    print(w.scrape_project_page(url))

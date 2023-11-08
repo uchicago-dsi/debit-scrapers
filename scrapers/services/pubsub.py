@@ -29,9 +29,9 @@ class PubSubClient():
         Args:
             logger (`Logger`): An instance of the logger.
 
-            project_id (str): The Google Cloud Project id.
+            project_id (`str`): The Google Cloud Project id.
 
-            topic_id (str): The name of the topic to which
+            topic_id (`str`): The name of the topic to which
                 messages will be published.
 
             publish_timeout_in_seconds (int): The number of

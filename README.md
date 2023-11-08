@@ -54,7 +54,7 @@ Linux Example:
 python3 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
-pip install --editable .
+pip install --e .
 python3 scrapers/banks/adb.py
 ```
 

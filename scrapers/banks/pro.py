@@ -4,7 +4,6 @@ iteratively scraping details from each page.
 """
 
 import re
-import requests
 from bs4 import BeautifulSoup
 from logging import Logger
 from scrapers.abstract.project_scrape_workflow import ProjectScrapeWorkflow
@@ -22,12 +21,17 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of a `ProSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -40,7 +44,7 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
     
     @property
@@ -76,17 +80,21 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
             (list of str): The project page URLs.
         """
         try:
-            response = requests.get(self.search_results_base_url)
-            html = response.text
+            r = self._data_request_client.get(self.search_results_base_url)
+            r.raise_for_status()
+            html = r.text
             soup = BeautifulSoup(html, "lxml")
-
             search_results = soup.find("div", class_="ctsearch-result-list")
             anchors = search_results.find_all("a")
-            links = [f"{self.site_base_url}{a['href']}" for a in anchors if a.parent.name == 'h3']
+            links = [
+                f"{self.site_base_url}{a['href']}" 
+                for a in anchors 
+                if a.parent.name == 'h3'
+            ]
             return links
-
         except Exception as e:
-            raise Exception(f"Error retrieving list of project page URLs. {e}")
+            raise RuntimeError(f"Error retrieving list "
+                            f"of project page URLs. {e}") from None
 
 
 class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
@@ -120,14 +128,22 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes a Proparco project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project record(s).
+            (`list` of `dict`): The project record(s).
         """
         # Retrieve HTML
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
+        r = self._data_request_client.get(url)
+        if not r.ok:
+            raise RuntimeError("Failed to fetch project "
+                               f"page at url \"{url}\" The request "
+                               f"returned a \"{r.status_code}-"
+                               f"{r.reason}\" response with the "
+                               f"message \"{r.text}\".")
+
+        # Load HTML
+        soup = BeautifulSoup(r.text, "html.parser")
 
         # Extract project name
         name = soup.find("h1", class_="title").text.replace("\n", "").strip()
@@ -139,7 +155,7 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             string with a leading zero into an integer.
 
             Args:
-                part (str): The date part.
+                part (`str`): The date part.
 
             Returns:
                 (int): The parsed date part.
@@ -204,15 +220,3 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-
-
-
-if __name__ == "__main__":
-    # Test 'StartScrapeWorkflow'
-    w = ProSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = ProProjectScrapeWorkflow(None, None, None)
-    url = "https://www.proparco.fr/en/carte-des-projets/ecobank-trade-finance"
-    print(w.scrape_project_page(url))

@@ -17,14 +17,14 @@ from scrapers.constants import (
     DEFAULT_HOST,
     DEFAULT_PORT,
     DEV_BANK_PROJECTS_JOB_TYPE,
-    DEV_ENV,
+    DEV,
     ENV,
-    NOT_STARTED_STATUS,
-    STARTER_WORKFLOWS
+    NOT_STARTED_STATUS
 )
 from scrapers.services.database import DbClient
 from scrapers.services.logger import LoggerFactory
 from scrapers.services.pubsub import PubSubClient
+from scrapers.services.registry import StarterWorkflowRegistry
 from werkzeug.exceptions import (
     BadRequest,
     HTTPException,
@@ -42,7 +42,7 @@ from yaml.loader import FullLoader
 logger = LoggerFactory.get("queue-workflows")
 
 # Load configuration file
-env = os.getenv(ENV, DEV_ENV)
+env = os.getenv(ENV, DEV)
 with open(f"config.{env}.yaml", "r") as stream:
     try:
         config: dict = yaml.load(stream, Loader=FullLoader)
@@ -125,9 +125,9 @@ def main() -> flask.Response:
             "or more data sources must be specified for processing.")
 
     # Validate data source names
-    all_sources = STARTER_WORKFLOWS.keys()
+    all_sources = StarterWorkflowRegistry.list()
     for s in selected_sources:
-        if s not in all_sources:
+        if not StarterWorkflowRegistry.exists(s):
             valid_sources = ', '.join(e for e in all_sources)
             raise BadRequest("Failed to queue workflows. Received "
                 f"invalid source name \"{s}\" in HTTP request. Only "
@@ -159,7 +159,7 @@ def main() -> flask.Response:
             "status": NOT_STARTED_STATUS,
             "source": source,
             "url": 'NULL',
-            "workflow_type": STARTER_WORKFLOWS[source]
+            "workflow_type": StarterWorkflowRegistry.get(source)
         })
 
     # Persist data retrieval tasks to database. If the tasks already
@@ -187,7 +187,7 @@ def main() -> flask.Response:
 
 
 if __name__ == "__main__":
-    debug = env == DEV_ENV
+    debug = env == DEV
     host = os.environ.get("HOST", DEFAULT_HOST)
     port = int(os.environ.get("PORT", DEFAULT_PORT))
     app.run(debug=debug, host=host, port=port)   

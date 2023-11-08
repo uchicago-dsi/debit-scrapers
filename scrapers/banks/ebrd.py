@@ -5,7 +5,6 @@ and then scraping details from each project page.
 """
 
 import re
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import Logger
@@ -25,12 +24,17 @@ class EbrdSeedUrlsWorkflow(SeedUrlsWorkflow):
     
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of an `EbrdSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -43,7 +47,7 @@ class EbrdSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
     
     @property
@@ -101,7 +105,7 @@ class EbrdSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             first_results_page_url = self.search_results_base_url.format(self.first_page_num)
-            html = requests.get(first_results_page_url).text
+            html = self._data_request_client.get(first_results_page_url).text
             soup = BeautifulSoup(html, "html.parser")
             max_page_input = soup.find("input", {"id": "maxPage"})
             return int(max_page_input['value'])
@@ -155,14 +159,14 @@ class EbrdResultsScrapeWorkflow(ResultsScrapeWorkflow):
         search results page on EBRD's website.
 
         Args:
-            results_page_url (str): The URL to a search results page
+            results_page_url (`str`): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
         """
         try:
-            response = requests.get(url)
+            response = self._data_request_client.get(url)
             soup = BeautifulSoup(response.text, features='html')
 
             project_urls = []
@@ -208,13 +212,13 @@ class EbrdProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes an EBRD project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
             None
         """
         # Retrieve HTML
-        response = requests.get(url)
+        response = self._data_request_client.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Extract data from page
@@ -276,20 +280,3 @@ class EbrdProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-      
-
-
-if __name__ == "__main__":
-    # Test 'StartScrape' workflow
-    w = EbrdSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # # Test 'ResultsPageScrape' workflow
-    w = EbrdResultsScrapeWorkflow(None, None, None, None)
-    url = 'https://www.ebrd.com/cs/Satellite?c=Page&cid=1395238314964&d=&pagename=EBRD/Page/SolrSearchAndFilterPSD&page=65&safSortBy=PublicationDate_sort&safSortOrder=descending'
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectPageScrape' workflow
-    w = EbrdProjectScrapeWorkflow(None, None, None)
-    url = 'https://www.ebrd.com/work-with-us/projects/psd/52642.html'
-    print(w.scrape_project_page(url))

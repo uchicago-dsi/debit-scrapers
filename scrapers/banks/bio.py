@@ -3,7 +3,6 @@ for Developing Countries (BIO).
 """
 
 import re
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import Logger
@@ -26,13 +25,17 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """
-        Initializes a new instance of a `BioSeedUrlsWorkflow`.
+        """Initializes a new instance of a `BioSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -45,7 +48,7 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -111,7 +114,7 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             first_results_page = self.search_results_base_url.format(self.first_page_num)
-            html = requests.get(first_results_page).text
+            html = self._data_request_client.get(first_results_page).text
             soup = BeautifulSoup(html, "html.parser")
 
             results_div = soup.find("div", {"class" : "js-filter-results"})
@@ -167,7 +170,7 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
         from a given search results page on BIO's website.
 
         Args:
-            results_page_url (str): The URL to a search results page
+            results_page_url (`str`): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
@@ -175,7 +178,7 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 scraped project page URLs and list of project records.
         """
         # Retrieve search results page
-        response = requests.get(url)
+        response = self._data_request_client.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Scrape page for both project data and project page URLs
@@ -269,13 +272,13 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         """Scrapes a BIO project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project records.
+            (`list` of `dict`): The project records.
         """
         # Retrieve HTML
-        response = requests.get(url)
+        response = self._data_request_client.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Retrieve project companies
@@ -312,22 +315,3 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             "companies": companies,
             "url": url
         }]
-
-
-
-if __name__ == "__main__":
-    # Test 'StartScrape' workflow
-    w = BioSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsPageMultiScrape' workflow
-    w = BioResultsMultiScrapeWorkflow(None, None, None, None)
-    url = "https://www.bio-invest.be/en/investments/p5?search="
-    urls, project_records = w.scrape_results_page(url)
-    print(urls)
-    print(project_records)
-
-    # Test 'ProjectPartialScrapeWorkflow' workflow
-    w = BioProjectPartialScrapeWorkflow(None, None, None)
-    url = "https://www.bio-invest.be/en/investments/zoscales-fund-i"
-    print(w.scrape_project_page(url))

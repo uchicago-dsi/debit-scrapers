@@ -12,6 +12,7 @@ from scrapers.constants import (
 )
 from scrapers.models.task import TaskUpdate
 from scrapers.services.database import DbClient
+from scrapers.services.data_request import DataRequestClient
 from scrapers.services.pubsub import PubSubClient
 from typing import List
 
@@ -25,12 +26,17 @@ class SeedUrlsWorkflow(BaseWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of a `SeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+                
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -44,6 +50,7 @@ class SeedUrlsWorkflow(BaseWorkflow):
             None
         """
         super().__init__(logger)
+        self._data_request_client = data_request_client
         self._pubsub_client = pubsub_client
         self._db_client = db_client
 
@@ -72,22 +79,22 @@ class SeedUrlsWorkflow(BaseWorkflow):
         """Executes the workflow.
 
         Args:
-            message_id (str): The assigned id for the Pub/Sub message.
+            message_id (`str`): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (str): The unique identifier for the processing
+            job_id (`str`): The unique identifier for the processing
                 job that encapsulates all data loading, scraping,
                 and cleaning tasks.
 
-            task_id (str): The unique identifier for the current 
+            task_id (`str`): The unique identifier for the current 
                 scraping task.
 
-            source (str): The name of the data source to scrape.
+            source (`str`): The name of the data source to scrape.
 
-            url (str): The URL of the page to scrape, if applicable.
+            url (`str`): The URL of the page to scrape, if applicable.
 
         Returns:
             None

@@ -2,7 +2,6 @@
 """
 
 import numpy as np
-import requests
 from datetime import datetime
 from logging import Logger
 from scrapers.abstract.project_scrape_workflow import ProjectScrapeWorkflow
@@ -20,12 +19,17 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of an `EibSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -38,7 +42,7 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
  
 
     @property
@@ -109,7 +113,7 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
                 page_num=self.first_page_num,
                 items_per_page=self.num_results_per_page
             )
-            response = requests.get(first_results_page_url)
+            response = self._data_request_client.get(first_results_page_url)
             data = response.json()
             total_num_items = int(data['totalItems'])
             return (
@@ -169,13 +173,13 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         resulting payload to the expected schema.
 
         Args:
-            url (str): The URL for the results page.
+            url (`str`): The URL for the results page.
 
         Returns:
-            (list of dict): The raw record(s).
+            (`list` of `dict`): The raw record(s).
         """
         try:
-            response = requests.get(url)
+            response = self._data_request_client.get(url)
             projects = response.json()
             return [self.map_project_record(p) for p in projects['data']]
         except Exception as e:
@@ -202,10 +206,10 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             is not a concern.
 
             Args:
-                name (str): The country name.
+                name (`str`): The country name.
 
             Returns:
-                (str): The formatted name.
+                (`str`): The formatted name.
             """
             if not name or name is np.nan:
                 return None
@@ -261,15 +265,3 @@ class EibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": None,
             "url": url
         }
-
-
-
-if __name__ == "__main__":
-    # Test 'SeedUrlsWorkflow'
-    w = EibSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectScrapeWorkflow'
-    w = EibProjectScrapeWorkflow(None, None, None)
-    url = 'https://www.eib.org/page-provider/projects/list?pageNumber=17&itemPerPage=500&pageable=true&sortColumn=id'
-    print(w.scrape_project_page(url))

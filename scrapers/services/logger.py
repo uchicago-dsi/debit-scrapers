@@ -16,7 +16,7 @@ class LoggerFactory:
         level and then attaches a stream handler.
 
         Parameters:
-            name (str): The logger name.
+            name (`str`): The logger name.
 
             level (int): The initial level. Defaults
                 to 20 ("INFO").

@@ -22,14 +22,14 @@ class TaskRequest:
                 job encapsulating all development bank data scraping
                 and cleaning tasks.
 
-            status (str): The initial/default status for the task
+            status (`str`): The initial/default status for the task
                 (e.g., "Not Started").
 
-            bank (str): The name of the development bank to scrape.
+            bank (`str`): The name of the development bank to scrape.
 
             url (list of str): The URL of the page to scrape.
 
-            workflow_type (str): The type of workflow necessary to
+            workflow_type (`str`): The type of workflow necessary to
                 complete the task (e.g., "Project Page Scrape",
                 "Results Page Scrape").
 
@@ -54,7 +54,7 @@ class TaskUpdate:
 
             id (int): The unique identifier for the task.
 
-            status (str): The processing status of the task
+            status (`str`): The processing status of the task
                 (e.g., "Completed", "Error").
 
             processing_start_utc (datetime): The UTC timestamp 
@@ -73,14 +73,14 @@ class TaskUpdate:
             last_failed_at_utc (datetime or None): The UTC timestamp
                 indicating when the last workflow failure occurred, if any.
 
-            last_error_message (str): The last exception message
+            last_error_message (`str`): The last exception message
                 generated, if any.
 
             retry_count (int): The number of times the 
                 message has been reprocessed.
 
         Args:
-            task_id (str): The unique identifier for the task.
+            task_id (`str`): The unique identifier for the task.
 
         Returns:
             None

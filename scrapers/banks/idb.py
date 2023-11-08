@@ -2,7 +2,6 @@
 """
 
 import re
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import Logger
@@ -15,18 +14,24 @@ from scrapers.services.database import DbClient
 from scrapers.services.pubsub import PubSubClient
 from typing import Dict, List
 
+
 class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
     """Retrieves the first set of IBD URLs to scrape.
     """
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
-        """Initializes a new instance of a `IdbSeedUrlsWorkflow`.
+        """Initializes a new instance of an `IdbSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -39,7 +44,7 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
     
     @property
@@ -100,7 +105,7 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         try:
             first_results_page_url = self.search_results_base_url.format(
                 page_num=self.first_page_num)
-            html = requests.get(first_results_page_url).text
+            html = self._data_request_client.get(first_results_page_url).text
             soup = BeautifulSoup(html, "html.parser")
 
             last_page_item = soup.find('li', {"class":"pager__item pager__item--last"})
@@ -153,14 +158,14 @@ class IdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
         search results page on IDB's website.
 
         Args:
-            results_page_url (str): The URL to a search results
+            results_page_url (`str`): The URL to a search results
                 page containing lists of development projects.
 
         Returns:
             (list of str): The list of scraped project page URLs.
         """
         try:
-            html = requests.get(results_page_url).text
+            html = self._data_request_client.get(results_page_url).text
             soup = BeautifulSoup(html, "html.parser")
             urls = []
             for project in soup.find_all('tr', {'class':['odd','even']}):
@@ -203,10 +208,10 @@ class IdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes an IDB project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project records.
+            (`list` of `dict`): The project records.
         """
         try:
             # Request and parse page into BeautifulSoup object
@@ -280,32 +285,3 @@ class IdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             }]
         except Exception as e:
             raise Exception(f"Failed to parse project page '{url}' for data. {e}")
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    w = IdbSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsScrapeWorkflow'
-    w = IdbResultsScrapeWorkflow(data_request_client, None, None, None)
-    url = 'https://www.iadb.org/en/projects-search?country=&sector=&status=&query=&page=120'
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectScrapeWorkflow'
-    w = IdbProjectScrapeWorkflow(data_request_client, None, None)
-    url = 'https://www.iadb.org/en/project/TC9409295'
-    print(w.scrape_project_page(url))

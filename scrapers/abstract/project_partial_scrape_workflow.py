@@ -62,10 +62,10 @@ class ProjectPartialScrapeWorkflow(BaseWorkflow):
         of this method differs by bank.
 
         Args:
-            url (str): The URL for the results page.
+            url (`str`): The URL for the results page.
 
         Returns:
-            (list of dict): The raw record(s).
+            (`list` of `dict`): The raw record(s).
         """
         raise NotImplementedError
 
@@ -81,22 +81,22 @@ class ProjectPartialScrapeWorkflow(BaseWorkflow):
         """Executes the workflow.
 
         Args:
-            message_id (str): The assigned id for the Pub/Sub message.
+            message_id (`str`): The assigned id for the Pub/Sub message.
 
             num_delivery_attempts (int): The number of times the
                 Pub/Sub message has been delivered without being
                 acknowledged.
 
-            job_id (str): The unique identifier for the processing
+            job_id (`str`): The unique identifier for the processing
                 job that encapsulates all data loading, scraping,
                 and cleaning tasks.
 
-            task_id (str): The unique identifier for the current 
+            task_id (`str`): The unique identifier for the current 
                 scraping task.
 
-            source (str): The name of the data source to scrape.
+            source (`str`): The name of the data source to scrape.
 
-            url (str): The URL of the page to scrape, if applicable.
+            url (`str`): The URL of the page to scrape, if applicable.
 
         Returns:
             None

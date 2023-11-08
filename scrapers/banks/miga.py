@@ -25,12 +25,17 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
 
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of a `MigaSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -43,7 +48,7 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -94,8 +99,9 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
             (int): The page number.
         """
         try:
-            response = requests.get(self.search_results_base_url)
-            html = response.text
+            r = self._data_request_client.get(self.search_results_base_url)
+            r.raise_for_status()
+            html = r.text
             soup = BeautifulSoup(html, "html.parser")
             last = soup.find('li', {"class":"pager__item pager__item--last"})
             last_page = int(last.find("a")["href"].split('=')[1])
@@ -154,7 +160,7 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
         this project.
 
         Args:
-            results_page_url (str): The URL to a search results page
+            results_page_url (`str`): The URL to a search results page
                 containing lists of development projects.
 
         Returns:
@@ -210,10 +216,10 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes a MIGA project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project record(s).
+            (`list` of `dict`): The project record(s).
         """
         try:
             html = requests.get(url).text
@@ -287,33 +293,3 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         except Exception as e:
             raise Exception(f"Failed to scrape MIGA project page {url}. {e}")
-
-
-
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-
-    # Test 'SeedUrlsWorkflow'
-    w = MigaSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ResultsScrapeWorkflow'
-    w = MigaResultsScrapeWorkflow(data_request_client, None, None, None)
-    url = "https://www.miga.org/projects?page=1"
-    print(w.scrape_results_page(url))
-
-    # Test 'ProjectScrapeWorkflow'
-    w = MigaProjectScrapeWorkflow(data_request_client, None, None)
-    url = "https://www.miga.org/project/bboxx-rwanda-kenya-and-drc-0"
-    print(w.scrape_project_page(url))
-

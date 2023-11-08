@@ -3,7 +3,6 @@
 
 import io
 import pandas as pd
-import requests
 from datetime import datetime
 from logging import Logger
 from scrapers.abstract.project_scrape_workflow import ProjectScrapeWorkflow
@@ -22,12 +21,17 @@ class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
     
     def __init__(
         self,
+        data_request_client: DataRequestClient,
         pubsub_client: PubSubClient,
         db_client: DbClient,
         logger: Logger) -> None:
         """Initializes a new instance of an `UndpSeedUrlsWorkflow`.
 
         Args:
+            data_request_client (`DataRequestClient`): A client
+                for making HTTP GET requests while adding
+                random delays and rotating user agent headers.
+
             pubsub_client (`PubSubClient`): A wrapper client for the 
                 Google Cloud Platform Pub/Sub API. Configured to
                 publish messages to the appropriate 'tasks' topic.
@@ -40,7 +44,7 @@ class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             None
         """
-        super().__init__(pubsub_client, db_client, logger)
+        super().__init__(data_request_client, pubsub_client, db_client, logger)
 
 
     @property
@@ -77,9 +81,10 @@ class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
         """ 
         try:
             # Retrieve list of unique projects from UNDP's public API
-            response = requests.get(self.project_list_base_url)
+            r = self._data_request_client.get(self.project_list_base_url)
+            r.raise_for_status()
             projects_df = pd.read_csv(
-                filepath_or_buffer=io.StringIO(response.text),
+                filepath_or_buffer=io.StringIO(r.text),
                 usecols=['project_id'],
                 dtype='object'
             )
@@ -89,7 +94,8 @@ class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
             return [self.project_base_url.format(id) for id in project_ids]
 
         except Exception as e:
-            raise Exception(f"Failed to generate list of UNDP project API URLs. {e}")
+            raise RuntimeError("Failed to generate list of "
+                            f"UNDP project API URLs. {e}") from None
 
 
 class UndpProjectScrapeWorkflow(ProjectScrapeWorkflow):
@@ -130,10 +136,10 @@ class UndpProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Scrapes an UNDP project page for data.
 
         Args:
-            url (str): The URL for a project.
+            url (`str`): The URL for a project.
 
         Returns:
-            (list of dict): The project records.
+            (`list` of `dict`): The project records.
         """
         # Retrieve project JSON
         response = self._data_request_client.get(
@@ -184,27 +190,3 @@ class UndpProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "companies": companies if companies else None,
             "url": self.project_page_base_url.format(project['project_id'])
         }]
-
-
-     
-if __name__ == "__main__":
-    import json
-    import yaml
-    from scrapers.constants import CONFIG_DIR_PATH
-    
-    # Set up DataRequestClient to rotate HTTP headers and add random delays
-    with open(f"{CONFIG_DIR_PATH}/user_agent_headers.json", "r") as stream:
-        try:
-            user_agent_headers = json.load(stream)
-            data_request_client = DataRequestClient(user_agent_headers)
-        except yaml.YAMLError as e:
-            raise Exception(f"Failed to open configuration file. {e}")
-            
-    # Test 'SeedUrlsWorkflow'
-    w = UndpSeedUrlsWorkflow(None, None, None)
-    print(w.generate_seed_urls())
-
-    # Test 'ProjectPageScrapeWorkflow'
-    w = UndpProjectScrapeWorkflow(data_request_client, None, None)
-    url = 'https://api.open.undp.org/api/projects/00110684.json'
-    print(w.scrape_project_page(url))

@@ -37,7 +37,7 @@ class DataRequestClient:
         """Makes an HTTP GET request against the given URL.
 
         Args:
-            url (str): The resource identifier.
+            url (`str`): The resource identifier.
 
             use_random_user_agent (bool): A boolean indicating
                 whether one of several user agent HTTP headers

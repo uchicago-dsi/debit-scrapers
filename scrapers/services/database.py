@@ -45,7 +45,7 @@ class DbClient():
         Args:
             url (url): The API URL.
 
-            record_type (str): The entity type of the records
+            record_type (`str`): The entity type of the records
                 (e.g., 'projects', 'tasks', etc.) Used to
                 compose an exception message.
 
@@ -90,7 +90,7 @@ class DbClient():
         Args:
             url (url): The API URL.
 
-            record_type (str): The entity type of the records
+            record_type (`str`): The entity type of the records
                 (e.g., 'projects', 'tasks', etc.) Used to
                 compose an exception message.
 
@@ -99,7 +99,7 @@ class DbClient():
                 to 60.
 
         Returns:
-            (list of dict): The list of records.
+            (`list` of `dict`): The list of records.
         """
         self._logger.info(f"Requesting first page of data for "
             f"record type {record_type}.")
@@ -144,7 +144,7 @@ class DbClient():
         Args:
             url (url): The API URL.
 
-            record_type (str): The entity type of the records
+            record_type (`str`): The entity type of the records
                 (e.g., 'projects', 'tasks', etc.) Used to
                 compose an exception message.
 
@@ -153,7 +153,7 @@ class DbClient():
                 to 60.
 
         Returns:
-            (list of dict): The list of records.
+            (`list` of `dict`): The list of records.
         """
         response = requests.get(url, timeout=timeout)
         try:
@@ -182,9 +182,9 @@ class DbClient():
         Args:
             url (url): The API URL.
 
-            records (list of dict): The records to upsert.
+            records (`list` of `dict`): The records to upsert.
 
-            record_type (str): The entity type of the records
+            record_type (`str`): The entity type of the records
                 (e.g., 'projects', 'tasks', etc.) Used to
                 compose an exception message.
 
@@ -252,9 +252,9 @@ class DbClient():
         id if no record with that id already exists.
 
         Args:
-            invocation_id (str): The id of the job.
+            invocation_id (`str`): The id of the job.
 
-            job_type (str): The job type key.
+            job_type (`str`): The job type key.
 
         Returns:
             (int, bool): A two-item tuple consisting of the pipeline
@@ -282,11 +282,11 @@ class DbClient():
         Raises an exception if the operation fails.
 
         Args:
-            project_records (list of dict): The project records
+            project_records (`list` of `dict`): The project records
                 associated with the task.
 
         Returns:
-            (list of dict): A representation of the created projects.
+            (`list` of `dict`): A representation of the created projects.
         """
         url = f"{self._base_url}/api/pipeline/staged-projects"
         record_type = 'staged projects'
@@ -300,10 +300,10 @@ class DbClient():
         exception if the operation fails.
 
         Args:
-            tasks (list of dict): The tasks to insert.
+            tasks (`list` of `dict`): The tasks to insert.
 
         Returns:
-            (list of dict): A representation of the created database rows,
+            (`list` of `dict`): A representation of the created database rows,
                 to be used as messages. Fields include "id", "job_id",
                 "bank", "workflow_type", and "url".
         """
