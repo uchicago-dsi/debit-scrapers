@@ -14,6 +14,11 @@ from scrapers.services.data_request import DataRequestClient
 from scrapers.services.database import DbClient
 from scrapers.services.pubsub import PubSubClient
 from typing import Dict, List
+import time, random
+
+USER_AGENT_HEADER = headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
+}
 
 class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
     """Retrieves the first set of IBD URLs to scrape.
@@ -104,13 +109,14 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             first_results_page_url = self.search_results_base_url.format(
                 page_num=self.first_page_num)
             print(f"URL for first IDB page : {first_results_page_url}")
-            html = requests.get(first_results_page_url).text
+            html = requests.get(first_results_page_url, headers = USER_AGENT_HEADER).text
             print(f"html for first page of results from IDB : {html}")
             soup = BeautifulSoup(html, "html.parser")
-
             last_page_item = soup.find('li', {"class":"pager__item--last"})
             print(f"Text from last pager item for IDB : {last_page_item.text}")
-            return int(last_page_item.find("a")["href"].split('=')[-1])
+            last_page_url = last_page_item.find('idb-button')['button-url']
+            last_page_number = int(last_page_url.split('=')[-1])
+            return last_page_number
         except Exception as e:
             raise Exception(f"Error retrieving last page number. {e}")
 
@@ -216,40 +222,35 @@ class IdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """
         try:
             # Request and parse page into BeautifulSoup object
-            response = self._data_request_client.get(url, use_random_user_agent=False)
+            time.sleep(.2) # site breaks if requests come too fast
+            response = self._data_request_client.get(
+                url, 
+                use_random_user_agent=True, 
+                # custom_headers=USER_AGENT_HEADER
+            )
             soup = BeautifulSoup(response.text, 'html.parser')
-
             # Abort process if no project data available
-            project_title = soup.find("h1", {"class":"project-title"}).text
+            project_title = soup.find("idb-section-wrapper")["heading"]
             if not project_title or project_title.strip() == ":":
                 return
-
             # Parse project detail and information sections
-            project_detail_section = soup.find("div", {"class": "project-detail project-section"})
-            project_info_section = soup.find("div", {"class": "project-information project-section"})
+            project_info_table = soup.find('idb-project-table')
+            table_info = {}
+            for row in project_info_table.findAll('idb-project-table-row'):
+                fact, value, *_ = [p.text for p in row.findAll('p')]
+                table_info[fact] = value
 
             # Define local function for extracting data from a project section
-            def extract_field(project_section, field_name: str):
-                try:
-                    title_div = project_section.find(
-                        name="div",
-                        attrs={"class": "project-field-title"},
-                        string=re.compile(field_name, re.IGNORECASE)
-                    )
-                    data = title_div.find_next_sibling("span").text.strip()
-                    return data if data else None
-                except AttributeError:
-                    return None
 
             # Retrieve fields
-            number = extract_field(project_detail_section, "PROJECT NUMBER")
+            number = table_info['Project Number']
             name = project_title.split(":")[1].strip() if ":" in project_title else project_title
-            status = extract_field(project_detail_section, "PROJECT STATUS")
-            date = extract_field(project_detail_section, "APPROVAL DATE")
-            loan_amount = extract_field(project_info_section, "AMOUNT")
-            sectors = extract_field(project_detail_section, "PROJECT SECTOR")
-            subsectors = extract_field(project_detail_section, "PROJECT SUBSECTOR")
-            countries = extract_field(project_detail_section, "PROJECT COUNTRY")
+            status = table_info['Project Status']
+            date = table_info['Approval Date']
+            loan_amount = table_info['Total Cost']
+            sectors = table_info['Sector']
+            subsectors = table_info['Subsector']
+            countries = table_info['Country']
 
             # Parse project approval date to retrieve year, month, and day
             if date:
