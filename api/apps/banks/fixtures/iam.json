@@ -1,0 +1,90 @@
+[
+    {
+        "model": "banks.iam",
+        "pk": 1,
+        "fields": {
+            "id": 1,
+            "name": "Compliance Advisor/Ombudsman"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 2,
+        "fields": {
+            "id": 2,
+            "name": "Complaints Mechanism"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 3,
+        "fields": {
+            "id": 3,
+            "name": "Independent Complaints Mechanism"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 4,
+        "fields": {
+            "id": 4,
+            "name": "Independent Consultation and Investigation Mechanism"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 5,
+        "fields": {
+            "id": 5,
+            "name": "Independent Review Mechanism"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 6,
+        "fields": {
+            "id": 6,
+            "name": "Inspection Panel"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 7,
+        "fields": {
+            "id": 7,
+            "name": "Office of Accountability"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 8,
+        "fields": {
+            "id": 8,
+            "name": "Project Complaint Mechanism"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 9,
+        "fields": {
+            "id": 9,
+            "name": "Social and Environmental Compliance Unit"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 10,
+        "fields": {
+            "id": 10,
+            "name": "Special Project Facilitator and Compliance Review Panel"
+        }
+    },
+    {
+        "model": "banks.iam",
+        "pk": 11,
+        "fields": {
+            "id": 11,
+            "name": "Stakeholder Response Mechanism"
+        }
+    }
+]

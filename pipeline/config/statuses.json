@@ -1,0 +1,45 @@
+{
+    "Cancelled":[
+       "cancelled",
+       "cancelled after signature",
+       "dropped"
+    ],
+    "Completed":[
+       "abgeschlossen",
+       "closed",
+       "complete",
+       "completion",
+       "fully disbursed"
+    ],
+    "Ongoing":[
+       "active",
+       "aktiv",
+       "approved",
+       "board approved",
+       "disbursing",
+       "implementation",
+       "partially disbursed",
+       "pipeline",
+       "repaying",
+       "signed"
+    ],
+    "Pending":[
+       "board approved, pending signing",
+       "concept reviewed",
+       "exploratory",
+       "hold",
+       "in exploratory, pending final review",
+       "not active",
+       "not signed",
+       "partially disbursed",
+       "passed concept review, pending final review",
+       "passed concept review, pending structure review",
+       "passed final review, pending approval",
+       "passed structure review, pending final review",
+       "pending approval",
+       "promotion",
+       "proposed",
+       "status pending",
+       "under appraisal"
+    ]
+}

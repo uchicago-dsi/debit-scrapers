@@ -93,4 +93,10 @@ target/
 *.build/
 *pgdata/
 
+# Pytest
+.pytest_cache/
+
+# Development
+*credentials.dev.json
+
 ### EOF

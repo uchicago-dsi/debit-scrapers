@@ -1,9 +1,15 @@
 [project]
-name = "scrapers"
+name = "debit-scrapers-idi"
+description = "web scrapers for international development banks"
+readme = "README.md"
 version = "0.0.1"
 dependencies = [
     'importlib-metadata; python_version<"3.8"',
 ]
 
+[build-system]
+requires = ["setuptools>=40.6.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools.packages.find]
-include = ["scrapers*"]
+include = ["pipeline*"]

@@ -1,11 +1,30 @@
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
 current_abs_path := $(subst Makefile,,$(mkfile_path))
+project_name := "debit-scrapers"
+container_dir := "src"
 
-build:
-	cd $(current_abs_path)
-	docker-compose build
-
-run:
+run-api:
 	cd $(current_abs_path)
 	docker-compose up
+
+build-scrapers:
+	cd $(current_abs_path)
+	docker build -t $(project_name) $(current_abs_path)
+
+run-scrapers-bash:
+	cd $(current_abs_path)
+	docker run \
+		--name $(project_name) \
+		-v "pipeline:/$(container_dir)/pipeline" \
+		-it \
+		--env-file .env \
+		--rm $(project_name) bash
+
+build-scraper-webserver:
+	cd $(current_abs_path)
+	docker compose --profile pipeline build
+
+run-scraper-webserver:
+	cd $(current_abs_path)
+	docker compose --profile pipeline up

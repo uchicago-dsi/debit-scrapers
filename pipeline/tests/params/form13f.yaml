@@ -1,0 +1,9 @@
+---
+# Parameters (i.e., URLs) used to test web scraping of Form 13F resources.
+history_urls:
+    - https://data.sec.gov/submissions/CIK0000748054.json
+archived_urls:
+    - https://data.sec.gov/submissions/CIK0001067983-submissions-001.json
+form_urls:
+    - https://www.sec.gov/Archives/edgar/data/1368163/000094787122000121/0000947871-22-000121-index.htm
+...

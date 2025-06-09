@@ -1,0 +1,155 @@
+[
+    {
+        "model": "banks.bank",
+        "pk": 1,
+        "fields": {
+            "id": 1,
+            "name": "African Development Bank",
+            "abbreviation": "afdb"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 2,
+        "fields": {
+            "id": 2,
+            "name": "Asian Development Bank",
+            "abbreviation": "adb"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 3,
+        "fields": {
+            "id": 3,
+            "name": "Asian Infrastructure Investment Bank",
+            "abbreviation": "aiib"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 4,
+        "fields": {
+            "id": 4,
+            "name": "Belgian Investment Company for Developing Countries",
+            "abbreviation": "bio"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 5,
+        "fields": {
+            "id": 5,
+            "name": "Deutsche Investitions- und Entwicklungsgesellschaft",
+            "abbreviation": "deg"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 6,
+        "fields": {
+            "id": 6,
+            "name": "European Bank for Reconstruction and Development",
+            "abbreviation": "ebrd"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 7,
+        "fields": {
+            "id": 7,
+            "name": "European Investment Bank",
+            "abbreviation": "eib"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 8,
+        "fields": {
+            "id": 8,
+            "name": "Inter-American Development Bank",
+            "abbreviation": "idb"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 9,
+        "fields": {
+            "id": 9,
+            "name": "International Finance Corporation and Multilateral Investment Guarantee Agency",
+            "abbreviation": "ifc"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 10,
+        "fields": {
+            "id": 10,
+            "name": "KFW",
+            "abbreviation": "kfw"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 11,
+        "fields": {
+            "id": 11,
+            "name": "Multilateral Investment Guarantee Agency",
+            "abbreviation": "miga"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 12,
+        "fields": {
+            "id": 12,
+            "name": "Nederlandse Financierings-Maatschappij voor Ontwikkelingslanden N.V.",
+            "abbreviation": "fmo"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 13,
+        "fields": {
+            "id": 13,
+            "name": "Norges Bank Investment Management",
+            "abbreviation": "nbim"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 14,
+        "fields": {
+            "id": 14,
+            "name": "U.S. International Development Finance Corporation",
+            "abbreviation": "dfc"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 15,
+        "fields": {
+            "id": 15,
+            "name": "Proparco Development Bank",
+            "abbreviation": "pro"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 16,
+        "fields": {
+            "id": 16,
+            "name": "United Nations Development Programme",
+            "abbreviation": "undp"
+        }
+    },
+    {
+        "model": "banks.bank",
+        "pk": 17,
+        "fields": {
+            "id": 17,
+            "name": "World Bank",
+            "abbreviation": "wb"
+        }
+    }
+]
