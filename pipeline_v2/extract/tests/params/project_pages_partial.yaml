@@ -1,0 +1,19 @@
+---
+# Parameters (i.e., bank and URL) used to test partial scraping of project pages.
+- afdb:
+    - https://mapafrica.afdb.org/api/v13/activities/46002-P-MZ-AA0-045/organisations
+- bio:
+    - https://www.bio-invest.be/en/investments/cofina-mali
+    - https://www.bio-invest.be/en/investments/banco-guayaquil-1
+    - https://www.bio-invest.be/en/investments/zoscales-fund-i
+- ebrd:
+    - https://www.ebrd.com/home/work-with-us/projects/psd/56092.html
+    - https://www.ebrd.com/work-with-us/projects/psd/54846.html
+    - https://www.ebrd.com/work-with-us/projects/psd/52642.html
+    - https://www.ebrd.com/work-with-us/projects/psd/technonicol-regional-expansion--resource-efficiency.html
+- eib:
+    - https://www.eib.org/en/projects/all/20190714
+- undp:
+    - https://api.open.undp.org/api/projects/00061970.json
+    - https://api.open.undp.org/api/projects/00091070.json
+    - https://api.open.undp.org/api/projects/00107513.json

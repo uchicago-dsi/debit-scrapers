@@ -10,15 +10,15 @@ run-api:
 
 build-scrapers:
 	cd $(current_abs_path)
-	docker build -t $(project_name) $(current_abs_path)
+	docker build -t $(project_name) $(current_abs_path)/pipeline_v2
 
 run-scrapers-bash:
 	cd $(current_abs_path)
 	docker run \
 		--name $(project_name) \
-		-v "pipeline:/$(container_dir)/pipeline" \
+		-v $(current_abs_path)pipeline_v2:/$(container_dir) \
 		-it \
-		--env-file .env \
+		--env-file ./pipeline_v2/.env.dev \
 		--rm $(project_name) bash
 
 build-scraper-webserver:

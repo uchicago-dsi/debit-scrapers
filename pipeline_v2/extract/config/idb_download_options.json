@@ -1,0 +1,565 @@
+{
+    "exportDataType": 2,
+    "executeSemanticQueryRequest": {
+        "version": "1.0.0",
+        "queries": [
+            {
+                "Query": {
+                    "Commands": [
+                        {
+                            "SemanticQueryDataShapeCommand": {
+                                "Query": {
+                                    "Version": 2,
+                                    "From": [
+                                        {
+                                            "Name": "l1",
+                                            "Entity": "List of Projects IATI",
+                                            "Type": 0
+                                        }
+                                    ],
+                                    "Select": [
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Project Number"
+                                            },
+                                            "Name": "List of Projects IATI.Project Number",
+                                            "NativeReferenceName": "Project Number1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Project Name"
+                                            },
+                                            "Name": "List of Projects IATI.Project Name",
+                                            "NativeReferenceName": "Project Name1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Project Description"
+                                            },
+                                            "Name": "List of Projects IATI.Project Description",
+                                            "NativeReferenceName": "Project Description1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Lending Type"
+                                            },
+                                            "Name": "List of Projects IATI.Lending Type",
+                                            "NativeReferenceName": "Lending Type1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Project Type"
+                                            },
+                                            "Name": "List of Projects IATI.Project Type",
+                                            "NativeReferenceName": "Project Type1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Approval Date"
+                                            },
+                                            "Name": "List of Projects IATI.Approval Date",
+                                            "NativeReferenceName": "Approval Date1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Signature Date"
+                                            },
+                                            "Name": "List of Projects IATI.Signature Date",
+                                            "NativeReferenceName": "Signature Date1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Sector"
+                                            },
+                                            "Name": "List of Projects IATI.Sector",
+                                            "NativeReferenceName": "Sector1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Sub-Sector"
+                                            },
+                                            "Name": "List of Projects IATI.Sub-Sector",
+                                            "NativeReferenceName": "Sub-Sector1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Project Country"
+                                            },
+                                            "Name": "List of Projects IATI.Project Country",
+                                            "NativeReferenceName": "Project Country1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Status"
+                                            },
+                                            "Name": "List of Projects IATI.Status",
+                                            "NativeReferenceName": "Status1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "ESG Classification"
+                                            },
+                                            "Name": "List of Projects IATI.ESG Classification",
+                                            "NativeReferenceName": "ESG Classification1"
+                                        },
+                                        {
+                                            "Aggregation": {
+                                                "Expression": {
+                                                    "Column": {
+                                                        "Expression": {
+                                                            "SourceRef": {
+                                                                "Source": "l1"
+                                                            }
+                                                        },
+                                                        "Property": "Total Cost"
+                                                    }
+                                                },
+                                                "Function": 0
+                                            },
+                                            "Name": "Sum(List of Projects IATI.Total Cost)",
+                                            "NativeReferenceName": "Total Cost"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Operation Number"
+                                            },
+                                            "Name": "List of Projects IATI.Operation Number",
+                                            "NativeReferenceName": "Operation Number1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Modality Code"
+                                            },
+                                            "Name": "List of Projects IATI.Modality Code",
+                                            "NativeReferenceName": "Modality Code1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Currency"
+                                            },
+                                            "Name": "List of Projects IATI.Currency",
+                                            "NativeReferenceName": "Currency1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Funding Source"
+                                            },
+                                            "Name": "List of Projects IATI.Funding Source",
+                                            "NativeReferenceName": "Funding Source1"
+                                        },
+                                        {
+                                            "Aggregation": {
+                                                "Expression": {
+                                                    "Column": {
+                                                        "Expression": {
+                                                            "SourceRef": {
+                                                                "Source": "l1"
+                                                            }
+                                                        },
+                                                        "Property": "Approval Amount"
+                                                    }
+                                                },
+                                                "Function": 0
+                                            },
+                                            "Name": "Sum(List of Projects IATI.Approval Amount)",
+                                            "NativeReferenceName": "Approval Amount"
+                                        },
+                                        {
+                                            "Aggregation": {
+                                                "Expression": {
+                                                    "Column": {
+                                                        "Expression": {
+                                                            "SourceRef": {
+                                                                "Source": "l1"
+                                                            }
+                                                        },
+                                                        "Property": "Disbursed Amount"
+                                                    }
+                                                },
+                                                "Function": 0
+                                            },
+                                            "Name": "Sum(List of Projects IATI.Disbursed Amount)",
+                                            "NativeReferenceName": "Disbursed Amount"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Last Updated"
+                                            },
+                                            "Name": "List of Projects IATI.Last Updated",
+                                            "NativeReferenceName": "Last Updated"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Borrower"
+                                            },
+                                            "Name": "List of Projects IATI.Borrower",
+                                            "NativeReferenceName": "Borrower1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Repeat Investment"
+                                            },
+                                            "Name": "List of Projects IATI.Repeat Investment",
+                                            "NativeReferenceName": "Repeat Investment1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Executing Agency"
+                                            },
+                                            "Name": "List of Projects IATI.Executing Agency",
+                                            "NativeReferenceName": "Executing Agency1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Interest Rates (Loans)"
+                                            },
+                                            "Name": "List of Projects IATI.Interest Rates (Loans)",
+                                            "NativeReferenceName": "Interest Rates (Loans)1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Amortization Date"
+                                            },
+                                            "Name": "List of Projects IATI.Amortization Date",
+                                            "NativeReferenceName": "Amortization Date1"
+                                        },
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {
+                                                        "Source": "l1"
+                                                    }
+                                                },
+                                                "Property": "Tenor (Loans) / Guarantee Length"
+                                            },
+                                            "Name": "List of Projects IATI.Tenor (Loans) / Guarantee Length",
+                                            "NativeReferenceName": "Tenor (Loans) / Guarantee Length1"
+                                        }
+                                    ],
+                                    "OrderBy": [
+                                        {
+                                            "Direction": 2,
+                                            "Expression": {
+                                                "Column": {
+                                                    "Expression": {
+                                                        "SourceRef": {
+                                                            "Source": "l1"
+                                                        }
+                                                    },
+                                                    "Property": "Approval Date"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "Binding": {
+                                    "Primary": {
+                                        "Groupings": [
+                                            {
+                                                "Projections": [
+                                                    0,
+                                                    1,
+                                                    2,
+                                                    3,
+                                                    4,
+                                                    5,
+                                                    6,
+                                                    7,
+                                                    8,
+                                                    9,
+                                                    10,
+                                                    11,
+                                                    12,
+                                                    13,
+                                                    14,
+                                                    15,
+                                                    16,
+                                                    17,
+                                                    18,
+                                                    19,
+                                                    20,
+                                                    21,
+                                                    22,
+                                                    23,
+                                                    24,
+                                                    25
+                                                ],
+                                                "Subtotal": 1
+                                            }
+                                        ]
+                                    },
+                                    "DataReduction": {
+                                        "Primary": {
+                                            "Top": {
+                                                "Count": 1000000
+                                            }
+                                        },
+                                        "Secondary": {
+                                            "Top": {
+                                                "Count": 100
+                                            }
+                                        }
+                                    },
+                                    "Version": 1
+                                }
+                            }
+                        },
+                        {
+                            "ExportDataCommand": {
+                                "Columns": [
+                                    {
+                                        "QueryName": "List of Projects IATI.Project Number",
+                                        "Name": "Project Number"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Project Name",
+                                        "Name": "Project Name"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Project Description",
+                                        "Name": "Project Description"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Lending Type",
+                                        "Name": "Lending Type"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Project Type",
+                                        "Name": "Project Type"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Approval Date",
+                                        "Name": "Approval Date"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Signature Date",
+                                        "Name": "Signature Date"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Sector",
+                                        "Name": "Sector"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Sub-Sector",
+                                        "Name": "Sub-Sector"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Project Country",
+                                        "Name": "Project Country"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Status",
+                                        "Name": "Status"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.ESG Classification",
+                                        "Name": "ESG Classification"
+                                    },
+                                    {
+                                        "QueryName": "Sum(List of Projects IATI.Total Cost)",
+                                        "Name": "Total Cost"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Operation Number",
+                                        "Name": "Operation Number"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Modality Code",
+                                        "Name": "Modality Code"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Currency",
+                                        "Name": "Currency"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Funding Source",
+                                        "Name": "Funding Source"
+                                    },
+                                    {
+                                        "QueryName": "Sum(List of Projects IATI.Approval Amount)",
+                                        "Name": "Approval Amount"
+                                    },
+                                    {
+                                        "QueryName": "Sum(List of Projects IATI.Disbursed Amount)",
+                                        "Name": "Disbursed Amount"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Last Updated",
+                                        "Name": "Last Updated"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Borrower",
+                                        "Name": "Borrower"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Repeat Investment",
+                                        "Name": "Repeat Investment"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Executing Agency",
+                                        "Name": "Executing Agency"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Interest Rates (Loans)",
+                                        "Name": "Interest Rates (Loans)"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Amortization Date",
+                                        "Name": "Amortization Date"
+                                    },
+                                    {
+                                        "QueryName": "List of Projects IATI.Tenor (Loans) / Guarantee Length",
+                                        "Name": "Tenor (Loans) / Guarantee Length"
+                                    }
+                                ],
+                                "Ordering": [
+                                    0,
+                                    1,
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    8,
+                                    9,
+                                    10,
+                                    11,
+                                    12,
+                                    13,
+                                    14,
+                                    15,
+                                    16,
+                                    17,
+                                    18,
+                                    19,
+                                    20,
+                                    21,
+                                    22,
+                                    23,
+                                    24,
+                                    25
+                                ],
+                                "FiltersDescription": "No filters applied"
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "cancelQueries": [],
+        "modelId": 8885174,
+        "userPreferredLocale": "en-US"
+    },
+    "artifactId": 9297051
+}
