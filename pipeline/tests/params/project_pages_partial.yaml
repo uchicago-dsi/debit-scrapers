@@ -1,7 +1,0 @@
----
-# Parameters (i.e., bank and URL) used to test partial scraping of project pages.
-- bio:
-    - https://www.bio-invest.be/en/investments/cofina-mali
-    - https://www.bio-invest.be/en/investments/banco-guayaquil-1
-    - https://www.bio-invest.be/en/investments/zoscales-fund-i
-...

@@ -1,7 +1,0 @@
----
-# Parameters (i.e., bank and URL) used to test scraping of project search result pages for project data and project page URLs.
-- bio:
-    - https://www.bio-invest.be/en/investments/p1
-    - https://www.bio-invest.be/en/investments/p31
-    - https://www.bio-invest.be/en/investments/p17
-...
