@@ -67,7 +67,9 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
             ]
             return result_pages
         except Exception as e:
-            raise Exception(f"Failed to generate BIO search result pages to crawl. {e}")
+            raise Exception(
+                f"Failed to generate BIO search result pages to crawl. {e}"
+            )
 
     def find_last_page(self) -> int:
         """Retrieves the number of the last page of development
@@ -135,10 +137,14 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
 
             # Extract project date
             try:
-                raw_date = div.find(class_="icon--calendar").find_parent().text.strip()
-                effective_utc = datetime.strptime(raw_date, "%d/%m/%Y").strftime(
-                    "%Y-%m-%d"
+                raw_date = (
+                    div.find(class_="icon--calendar")
+                    .find_parent()
+                    .text.strip()
                 )
+                effective_utc = datetime.strptime(
+                    raw_date, "%d/%m/%Y"
+                ).strftime("%Y-%m-%d")
             except AttributeError:
                 effective_utc = None
 
@@ -155,9 +161,9 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 loan_amount_str = (
                     div.find(class_="icon--euro").find_parent().text.strip()
                 )
-                loan_amount_match = re.search(r"([\d,\.]+)", loan_amount_str).groups(0)[
-                    0
-                ]
+                loan_amount_match = re.search(
+                    r"([\d,\.]+)", loan_amount_str
+                ).groups(0)[0]
                 loan_amount_value = float(loan_amount_match.replace(",", ""))
                 loan_amount_currency = "EUR"
             except AttributeError:
@@ -167,17 +173,12 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             project_page_urls.append(url)
             projects.append(
                 {
-                    "bank": settings.BIO_ABBREVIATION.upper(),
-                    "number": None,
-                    "name": name,
-                    "status": None,
-                    "effective_utc": effective_utc,
-                    "loan_amount": loan_amount_value,
-                    "loan_amount_currency": loan_amount_currency,
-                    "loan_amount_in_usd": None,
-                    "sectors": None,
                     "countries": countries,
-                    "companies": None,
+                    "date_effective": effective_utc,
+                    "name": name,
+                    "source": settings.BIO_ABBREVIATION.upper(),
+                    "total_amount": loan_amount_value,
+                    "total_amount_currency": loan_amount_currency,
                     "url": url,
                 }
             )
@@ -218,7 +219,9 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Retrieve investment activity type
         try:
             inv_activity_div = soup.find(string="Activity").parent
-            inv_activity = inv_activity_div.find_next_sibling("div").find("p").text
+            inv_activity = (
+                inv_activity_div.find_next_sibling("div").find("p").text
+            )
         except AttributeError:
             inv_activity = None
 
@@ -234,9 +237,9 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Compose partial project record schema
         return [
             {
-                "bank": settings.BIO_ABBREVIATION.upper(),
+                "affiliates": companies,
                 "sectors": sectors,
-                "companies": companies,
+                "source": settings.BIO_ABBREVIATION.upper(),
                 "url": url,
             }
         ]

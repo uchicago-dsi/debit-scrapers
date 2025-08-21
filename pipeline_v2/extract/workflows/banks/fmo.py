@@ -60,7 +60,9 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
             ]
             return results_page_urls
         except Exception as e:
-            raise Exception(f"Failed to generate search result pages to crawl. {e}")
+            raise Exception(
+                f"Failed to generate search result pages to crawl. {e}"
+            )
 
     def find_last_page(self) -> int:
         """Retrieves the number of the last page of
@@ -73,7 +75,9 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
             The page number.
         """
         try:
-            first_page_url = self.search_results_base_url.format(self.first_page_num)
+            first_page_url = self.search_results_base_url.format(
+                self.first_page_num
+            )
             html = self._data_request_client.get(first_page_url).text
             soup = BeautifulSoup(html, "html.parser")
 
@@ -103,7 +107,9 @@ class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
             soup = BeautifulSoup(source, "html.parser")
             urls = [
                 proj["href"]
-                for proj in soup.find_all("a", {"class": "ProjectList__projectLink"})
+                for proj in soup.find_all(
+                    "a", {"class": "ProjectList__projectLink"}
+                )
             ]
             return urls
         except Exception as e:
@@ -202,12 +208,16 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             try:
                 financing = detail_lookup["Total FMO financing"]
                 if financing and financing != "n.a.":
-                    loan_amount_currency, loan_amount, _ = financing.split(" ")
-                    loan_amount = float(loan_amount) * get_multiplier(financing)
+                    total_amount_currency, total_amount, _ = financing.split(
+                        " "
+                    )
+                    total_amount = float(total_amount) * get_multiplier(
+                        financing
+                    )
                 else:
-                    loan_amount_currency = loan_amount = None
+                    total_amount_currency = total_amount = None
             except Exception:
-                loan_amount_currency = loan_amount = None
+                total_amount_currency = total_amount = None
 
             # Define function to format date
             def get_date(field_name_str: str) -> str | None:
@@ -226,19 +236,17 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             # Compose final project record schema
             return [
                 {
-                    "bank": settings.FMO_ABBREVIATION.upper(),
-                    "number": number,
-                    "name": name,
-                    "status": status,
-                    "disclosed_utc": disclosed_utc,
-                    "effective_utc": effective_utc,
-                    "closed_original_utc": closed_original_utc,
-                    "loan_amount": loan_amount,
-                    "loan_amount_currency": loan_amount_currency,
-                    "loan_amount_in_usd": None,
-                    "sectors": sectors,
                     "countries": countries,
-                    "companies": None,
+                    "date_disclosed": disclosed_utc,
+                    "date_effective": effective_utc,
+                    "date_planned_close": closed_original_utc,
+                    "name": name,
+                    "number": number,
+                    "sectors": sectors,
+                    "source": settings.FMO_ABBREVIATION.upper(),
+                    "status": status,
+                    "total_amount": total_amount,
+                    "total_amount_currency": total_amount_currency,
                     "url": url,
                 }
             ]

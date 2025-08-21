@@ -44,7 +44,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
         """
         # Request data file
         r = self._data_request_client.get(
-            self.download_url, use_random_user_agent=True, timeout_in_seconds=600
+            self.download_url,
+            use_random_user_agent=True,
+            timeout_in_seconds=600,
         )
 
         # Raise error if request failed
@@ -117,7 +119,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 .reset_index()
                 .rename(columns={"Project ID": "id"})
             )
-            projects_df = projects_df.merge(agg_sectors_df, how="left", on="id")
+            projects_df = projects_df.merge(
+                agg_sectors_df, how="left", on="id"
+            )
         except Exception as e:
             raise RuntimeError(
                 f"Error aggregating project sector data "
@@ -136,7 +140,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 .reset_index()
                 .rename(columns={"Project": "id"})
             )
-            projects_df = projects_df.merge(agg_financers_df, how="left", on="id")
+            projects_df = projects_df.merge(
+                agg_financers_df, how="left", on="id"
+            )
         except Exception as e:
             raise RuntimeError(
                 f"Error aggregating project financer data "
@@ -156,13 +162,15 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
         """
         try:
             # Remove child projects and projects that were dropped
-            df = df.query("supplementprojectflg != 'Y' and status != 'Dropped'")
+            df = df.query(
+                "supplementprojectflg != 'Y' and status != 'Dropped'"
+            )
 
             # Replace NaNs with None
             df = df.replace({np.nan: None})
 
             # Create bank column
-            df["bank"] = settings.WB_ABBREVIATION.upper()
+            df["source"] = settings.WB_ABBREVIATION.upper()
 
             # Create number column
             df["number"] = df["id"]
@@ -188,31 +196,33 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
                 return "|".join(types) if types else "TBD"
 
-            df["type"] = df.apply(get_finance_type, axis=1)
+            df["finance_types"] = df.apply(get_finance_type, axis=1)
 
             # Create approval date column
-            df["approved_utc"] = df["boardapprovaldate"].apply(
+            df["date_approved"] = df["boardapprovaldate"].apply(
                 lambda date: date[:10] if date else None
             )
 
             # Create approval date column
-            df["disclosed_utc"] = df["public_disclosure_date"].apply(
+            df["date_disclosed"] = df["public_disclosure_date"].apply(
                 lambda date: date[:10] if date else None
             )
 
             # Create effective date column
-            df["effective_utc"] = df["loan_effective_date"].apply(
+            df["date_effective"] = df["loan_effective_date"].apply(
                 lambda date: date[:10] if date else None
             )
 
             # Create closed date column
-            df["closed_utc"] = df["closingdate"].apply(
+            df["date_actual_close"] = df["closingdate"].apply(
                 lambda date: date[:10] if date else None
             )
 
             # Create total commitment columns
-            df["amount"] = df["amount_usd"] = df["curr_total_commitment"]
-            df["currency"] = "USD"
+            df["total_amount"] = df["total_amount_usd"] = df[
+                "curr_total_commitment"
+            ]
+            df["total_amount_currency"] = "USD"
 
             # Create countries column
             def correct_country_name(name: str) -> str:
@@ -240,7 +250,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
                 return name
 
-            df["countries"] = df["countryshortname"].apply(correct_country_name)
+            df["countries"] = df["countryshortname"].apply(
+                correct_country_name
+            )
 
             # Create sectors column
             df["sectors"] = df["Sectors"].apply(
@@ -257,17 +269,17 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 Returns:
                     The organization names as a pipe-delimited string.
                 """
-                companies = []
+                affiliates = []
                 if row["impagency"]:
-                    companies.append(row["impagency"])
+                    affiliates.append(row["impagency"])
                 if row["borrower"]:
-                    companies.append(row["borrower"])
+                    affiliates.append(row["borrower"])
                 if row["Financers"]:
-                    companies.extend(row["Financers"])
+                    affiliates.extend(row["Financers"])
 
-                return "|".join(companies).upper() if companies else None
+                return "|".join(affiliates).upper() if affiliates else None
 
-            df["companies"] = df.apply(aggregate_affiliates, axis=1)
+            df["affiliates"] = df.apply(aggregate_affiliates, axis=1)
 
             # Create URL column
             df["url"] = df["number"].apply(
@@ -277,21 +289,21 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
             # Subset records
             return df[
                 [
-                    "bank",
-                    "number",
-                    "name",
-                    "type",
-                    "status",
-                    "disclosed_utc",
-                    "approved_utc",
-                    "effective_utc",
-                    "closed_utc",
-                    "amount",
-                    "amount_usd",
-                    "currency",
+                    "affiliates",
                     "countries",
+                    "date_approved",
+                    "date_disclosed",
+                    "date_effective",
+                    "date_actual_close",
+                    "finance_types",
+                    "name",
+                    "number",
                     "sectors",
-                    "companies",
+                    "source",
+                    "status",
+                    "total_amount",
+                    "total_amount_usd",
+                    "total_amount_currency",
                     "url",
                 ]
             ]

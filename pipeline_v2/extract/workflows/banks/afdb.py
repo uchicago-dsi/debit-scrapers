@@ -2,7 +2,7 @@
 Data is partially retrieved by using a headless browser to download an Excel
 file of project records from the AFDB project search page. Then additional
 URLs to the AFDB API (not documented) are generated and requested to gather
-the remaining details for project organizations.
+the remaining details for project-related organizations.
 """
 
 # Standard library imports
@@ -97,34 +97,32 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         ]
 
         # Add bank column to DataFrame
-        df["bank"] = settings.AFDB_ABBREVIATION.upper()
+        df["source"] = settings.AFDB_ABBREVIATION.upper()
 
         # Add project URL column
-        df["url"] = df["identifier"].apply(lambda id: self.project_page_url.format(id))
+        df["url"] = df["identifier"].apply(
+            lambda id: self.project_page_url.format(id)
+        )
 
         # Calculate loan amount currency
-        df["loan_amount_currency"] = df["total_commitments (UA)"].apply(
+        df["total_amount_currency"] = df["total_commitments (UA)"].apply(
             lambda amount: "UA" if amount else None
         )
 
-        # Calculate loan amount in USD (all values in UA)
-        df["loan_amount_in_usd"] = None
-
         # Define column mapping
         col_map = {
-            "bank": "bank",
-            "identifier": "number",
-            "title": "name",
-            "activity_status": "status",
-            "Approval Date": "approved_utc",
-            "Signature Date": "signed_utc",
-            "Planned Completion Date": "planned_completed_utc",
-            "Completion Date": "completed_utc",
-            "total_commitments (UA)": "loan_amount",
-            "loan_amount_currency": "loan_amount_currency",
-            "loan_amount_in_usd": "loan_amount_in_usd",
-            "AfDB Sector": "sectors",
             "country": "countries",
+            "Completion Date": "date_actual_close",
+            "Approval Date": "date_approved",
+            "Planned Completion Date": "date_planned_close",
+            "Signature Date": "date_signed",
+            "title": "name",
+            "identifier": "number",
+            "AfDB Sector": "sectors",
+            "source": "source",
+            "activity_status": "status",
+            "total_commitments (UA)": "total_amount",
+            "total_amount_currency": "total_amount_currency",
             "url": "url",
         }
 
@@ -184,7 +182,9 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse the response JSON
         try:
-            orgs = "|".join(clean(org["organisation"]) for org in json.loads(payload))
+            orgs = "|".join(
+                clean(org["organisation"]) for org in json.loads(payload)
+            )
         except json.JSONDecodeError:
             raise RuntimeError(
                 f'Error parsing AFDB project details at "{url}". '
@@ -201,7 +201,7 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse the response
         return {
-            "bank": settings.AFDB_ABBREVIATION.upper(),
-            "companies": orgs,
+            "affiliates": orgs,
+            "source": settings.AFDB_ABBREVIATION.upper(),
             "url": self.project_page_url.format(project_id),
         }

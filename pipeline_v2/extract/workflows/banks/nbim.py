@@ -55,7 +55,9 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
         try:
             projects_df = None
 
-            for year in range(self.project_start_year, self.project_end_year + 1):
+            for year in range(
+                self.project_start_year, self.project_end_year + 1
+            ):
                 # Query API for projects in given year
                 projects_url = self.download_url.format(year)
                 r = requests.get(projects_url)
@@ -92,13 +94,13 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
 
                 # Update projects DataFrame
                 equities_df = pd.DataFrame(equities)
-                equities_df["type"] = "equities"
+                equities_df["finance_types"] = "equities"
 
                 fixed_income_df = pd.DataFrame(fixed_income)
-                fixed_income_df["type"] = "fixed-income"
+                fixed_income_df["finance_types"] = "fixed-income"
 
                 real_estate_df = pd.DataFrame(real_estate)
-                real_estate_df["type"] = "real-estate"
+                real_estate_df["finance_types"] = "real-estate"
 
                 year_df = pd.concat(
                     [equities_df, fixed_income_df, real_estate_df], sort=True
@@ -128,7 +130,7 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
         try:
             # Rename existing columns
             df = df.rename(
-                columns={"s": "sectors", "ic": "countries", "n": "companies"}
+                columns={"s": "sectors", "ic": "countries", "n": "affiliates"}
             )
 
             # Construct project URLs
@@ -145,37 +147,39 @@ class NbimDownloadWorkflow(ProjectDownloadWorkflow):
                     f"{self.investments_base_url}/"
                     f"{row['year']}/"
                     "investments/"
-                    f"{row['type']}/"
+                    f"{row['finance_types']}/"
                     f"{int(row['id'])}/"
-                    f"{quote(row['companies'])}"
+                    f"{quote(row['affiliates'])}"
                 )
 
-            df["url"] = df.agg(lambda row: create_project_url(row), axis="columns")
+            df["url"] = df.agg(
+                lambda row: create_project_url(row), axis="columns"
+            )
 
             # Define other new columns
-            df["bank"] = settings.NBIM_ABBREVIATION.upper()
+            df["source"] = settings.NBIM_ABBREVIATION.upper()
             df["number"] = df["id"].astype(int)
-            df["name"] = df["companies"]
+            df["name"] = df["affiliates"]
             df["status"] = None
-            df["effective_utc"] = df["year"]
-            df["amount"] = df["h"].str["v"]
-            df["currency"] = "NOK"
-            df["amount_usd"] = df["h"].str["vu"]
+            df["date_effective"] = df["year"]
+            df["total_amount"] = df["h"].str["v"]
+            df["total_amount_currency"] = "NOK"
+            df["total_amount_usd"] = df["h"].str["vu"]
 
             # Set final column schema
             col_mapping = {
-                "bank": "object",
-                "number": "object",
-                "name": "object",
-                "status": "object",
-                "effective_utc": "object",
-                "type": "object",
-                "amount": "Float64",
-                "currency": "object",
-                "amount_usd": "Float64",
-                "sectors": "object",
+                "affiliates": "object",
                 "countries": "object",
-                "companies": "object",
+                "date_effective": "object",
+                "finance_types": "object",
+                "name": "object",
+                "number": "object",
+                "sectors": "object",
+                "source": "object",
+                "status": "object",
+                "total_amount": "Float64",
+                "total_amount_currency": "object",
+                "total_amount_usd": "Float64",
                 "url": "object",
             }
 

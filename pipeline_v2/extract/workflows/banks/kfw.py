@@ -41,7 +41,9 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
         try:
             return pd.read_json(self.download_url)
         except Exception as e:
-            raise Exception(f"Error retrieving JSON project data from KFW. {e}")
+            raise Exception(
+                f"Error retrieving JSON project data from KFW. {e}"
+            )
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
         """Cleans KFW project records to conform to an expected schema.
@@ -57,7 +59,7 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
             df = df.replace({np.nan: None})
 
             # Set parent bank name
-            df["bank"] = settings.KFW_ABBREVIATION.upper()
+            df["source"] = settings.KFW_ABBREVIATION.upper()
 
             # Set project number
             df["number"] = df["projnr"]
@@ -66,19 +68,20 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
             df["name"] = df["title"]
 
             # Set date of last project update
-            df["last_updated_utc"] = df["hostDate"].apply(
-                lambda date: datetime.strptime(date, "%B %d, %Y").strftime("%Y-%m-%d")
-                if date
-                else None
+            df["date_last_updated"] = df["hostDate"].apply(
+                lambda date: (
+                    datetime.strptime(date, "%b %d, %Y").strftime("%Y-%m-%d")
+                    if date
+                    else None
+                )
             )
 
             # Set project finance type
-            df["type"] = df["finanzierungsinstrument"]
+            df["finance_types"] = df["finanzierungsinstrument"]
 
             # Set project finance amount and currency
-            df["amount"] = df["amount"] * 10**6
-            df["currency"] = "EUR"
-            df["amount_usd"] = None
+            df["total_amount"] = df["amount"] * 10**6
+            df["total_amount_currency"] = "EUR"
 
             # Set project sectors
             df["sectors"] = df["crscode2"]
@@ -86,15 +89,15 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
             # Set project countries
             df["countries"] = df["country"]
 
-            # Set project companies
-            def get_companies(row: pd.Series) -> str:
-                """Returns a pipe-delimited list of project companies.
+            # Set project affiliates
+            def get_affiliates(row: pd.Series) -> str:
+                """Returns a pipe-delimited list of project affiliates.
 
                 Args:
                     row: A row of data from the DataFrame.
 
                 Returns:
-                    The list of companies.
+                    The list of affiliates.
                 """
                 principal_map = {
                     "BMZ": "German Federal Ministry for Economic Coperation and Development (BMZ)",
@@ -111,7 +114,7 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                     ]
                 )
 
-            df["companies"] = df.apply(get_companies, axis=1)
+            df["affiliates"] = df.apply(get_affiliates, axis=1)
 
             # Set project URL
             def create_project_url(row: pd.Series):
@@ -129,22 +132,23 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                     f"{row['number']}.htm"
                 )
 
-            df["url"] = df.agg(lambda row: create_project_url(row), axis="columns")
+            df["url"] = df.agg(
+                lambda row: create_project_url(row), axis="columns"
+            )
 
             # Set final column schema
             col_mapping = {
-                "bank": "object",
-                "number": "object",
-                "name": "object",
-                "status": "object",
-                "type": "object",
-                "last_updated_utc": "object",
-                "amount": "Float64",
-                "currency": "object",
-                "amount_usd": "Float64",
-                "sectors": "object",
+                "affiliates": "object",
                 "countries": "object",
-                "companies": "object",
+                "date_last_updated": "object",
+                "finance_types": "object",
+                "name": "object",
+                "number": "object",
+                "sectors": "object",
+                "source": "object",
+                "status": "object",
+                "total_amount": "Float64",
+                "total_amount_currency": "object",
                 "url": "object",
             }
 

@@ -1,5 +1,5 @@
 # Retrieve base Python image
-FROM selenium/standalone-chrome
+FROM python:3.12-slim-bookworm
 
 # Switch to root user for Linux installations
 USER root
@@ -17,8 +17,11 @@ RUN apt-get install -y python3 python3-pip
 RUN pip install --upgrade pip
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-# Run Playwright install
+# Install Playwright
 RUN python3 -m playwright install
+
+# Install Playwright dependencies
+RUN python3 -m playwright install-deps
 
 # Copy remainder of code
 COPY . .

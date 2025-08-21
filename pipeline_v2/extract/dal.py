@@ -11,7 +11,7 @@ from extract.domain import (
     TaskInsertRequest,
     TaskUpdateRequest,
 )
-from extract.models import ExtractionJob, ExtractionTask
+from extract.models import ExtractionJob, ExtractionTask, ExtractedProject
 
 
 class ExtractionDbClient:
@@ -94,11 +94,15 @@ class ExtractionDbClient:
                 invocation_id=invocation_id, defaults=job
             )
         except Exception as e:
-            raise RuntimeError(f"Failed to update job within database. {e}") from None
+            raise RuntimeError(
+                f"Failed to update job within database. {e}"
+            ) from None
 
         return obj
 
-    def update_staged_project(self, project: StagedProjectUpsertRequest) -> Dict:
+    def update_staged_project(
+        self, project: StagedProjectUpsertRequest
+    ) -> Dict:
         """Updates a staged project in the database.
 
         Args:
@@ -107,25 +111,27 @@ class ExtractionDbClient:
         Returns:
             The updated project.
         """
-        # Isolate project bank and URL
-        bank = project.pop("bank")
+        # Isolate project data source and URL
+        source = project.pop("source")
         url = project.pop("url")
 
         # Confirm that project is unique
         try:
-            StagedProjectUpsertRequest.objects.get(bank=bank, url=url)
-        except StagedProjectUpsertRequest.DoesNotExist:
-            raise Exception(f"Project from bank {bank} with URL {url} does not exist.")
-        except StagedProjectUpsertRequest.MultipleObjectsReturned:
+            ExtractedProject.objects.get(source=source, url=url)
+        except ExtractedProject.DoesNotExist:
+            raise Exception(
+                f"Project from bank {source} with URL {url} does not exist."
+            )
+        except ExtractedProject.MultipleObjectsReturned:
             raise Exception(
                 "An unexpected error occurred. Project from bank "
-                f"{bank} with URL {url} is not unique."
+                f"{source} with URL {url} is not unique."
             )
 
         # Update project in database
         try:
-            obj, _ = StagedProjectUpsertRequest.objects.update_or_create(
-                bank=bank, url=url, defaults=project
+            obj, _ = ExtractedProject.objects.update_or_create(
+                source=source, url=url, defaults=project
             )
         except Exception as e:
             raise Exception(f"Failed to update project within database. {e}")
@@ -157,7 +163,9 @@ class ExtractionDbClient:
 
         # Update task in database
         try:
-            obj, _ = ExtractionTask.objects.update_or_create(id=task_id, defaults=task)
+            obj, _ = ExtractionTask.objects.update_or_create(
+                id=task_id, defaults=task
+            )
         except Exception as e:
             raise Exception(f"Failed to update task within database. {e}")
 

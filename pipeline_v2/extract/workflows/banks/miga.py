@@ -62,7 +62,9 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
             ]
             return result_pages
         except Exception as e:
-            self._logger.error(f"Failed to generate search result pages to crawl. {e}")
+            self._logger.error(
+                f"Failed to generate search result pages to crawl. {e}"
+            )
 
     def find_last_page(self) -> int:
         """Retrieves the number of the last page of development
@@ -159,12 +161,16 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
 
             # Scrape project page URLs belonging to MIGA only
             urls = []
-            for project in projects_div.find_all("h5", {"class": "page-title"}):
+            for project in projects_div.find_all(
+                "h5", {"class": "page-title"}
+            ):
                 href = project.find("a")["href"]
                 if href.startswith(self.ifc_disclosures_base_url):
                     continue
                 project_url = (
-                    href if "http" in href else self.miga_projects_base_url + href
+                    href
+                    if "http" in href
+                    else self.miga_projects_base_url + href
                 )
                 urls.append(project_url)
 
@@ -216,15 +222,17 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Extract and format project number
             number = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-project-id").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-project-id"
+                ).find("div", class_="field--item")
             )
             number = number.replace(",", "").replace(" ", ",")
 
             # Extract project status
             status = safe_nav(
-                lambda s: s.find("div", {"class": "field--name-field-project-status"})
+                lambda s: s.find(
+                    "div", {"class": "field--name-field-project-status"}
+                )
             )
 
             # Extract and format dislosure date
@@ -233,19 +241,23 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                     "div", class_="field--name-field-date-spg-closed"
                 ).find("div", class_="field--item")
             )
-            parsed_disclosed_utc = datetime.strptime(raw_disclosed_utc, "%B %d, %Y")
+            parsed_disclosed_utc = datetime.strptime(
+                raw_disclosed_utc, "%B %d, %Y"
+            )
             disclosed_utc = parsed_disclosed_utc.strftime("%Y-%m-%d")
 
             # Extract fiscal year
             fiscal_year = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-fiscal-year").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-fiscal-year"
+                ).find("div", class_="field--item")
             )
 
             # Extract and format project countries
             raw_countries = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-host-country")
+                lambda s: s.find(
+                    "div", class_="field--name-field-host-country"
+                )
             )
             raw_countries = re.sub("[\r\n\t]", " ", raw_countries)
             raw_countries = raw_countries.split("and")
@@ -264,9 +276,9 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Extract project sector
             sectors = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-sector").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-sector"
+                ).find("div", class_="field--item")
             )
 
             # Define function to determine multiplier
@@ -290,11 +302,15 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Extract and format guarantee amount
             raw_amount = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-gross-exposure-up-to")
+                lambda s: s.find(
+                    "div", class_="field--name-field-gross-exposure-up-to"
+                )
             )
             if raw_amount:
                 multiplier = get_multiplier(raw_amount)
-                leading_decimal = re.search(r"(\d+\.*\d*)", raw_amount).group(1)
+                leading_decimal = re.search(r"(\d+\.*\d*)", raw_amount).group(
+                    1
+                )
                 amount = float(leading_decimal) * multiplier
 
             # Determine currency
@@ -307,28 +323,29 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
             else:
                 currency = None
 
-            # Extract companies
+            # Extract affiliates
             guarantee_div = soup.find(
                 "div", class_="field--name-field-guarantee-holder-term"
             )
-            companies = "|".join(
-                div.text for div in guarantee_div.find_all("div", class_="field--item")
+            affiliates = "|".join(
+                div.text
+                for div in guarantee_div.find_all("div", class_="field--item")
             )
 
             return [
                 {
-                    "bank": settings.MIGA_ABBREVIATION.upper(),
-                    "number": number,
-                    "name": name,
-                    "status": status,
-                    "disclosed_utc": disclosed_utc,
-                    "effective_utc": fiscal_year,
-                    "amount": amount,
-                    "currency": currency,
-                    "amount_in_usd": amount if currency == "USD" else None,
-                    "sectors": sectors,
+                    "affiliates": affiliates,
                     "countries": countries,
-                    "companies": companies,
+                    "date_disclosed": disclosed_utc,
+                    "date_effective": fiscal_year,
+                    "name": name,
+                    "number": number,
+                    "sectors": sectors,
+                    "source": settings.MIGA_ABBREVIATION.upper(),
+                    "status": status,
+                    "total_amount": amount,
+                    "total_amount_currency": currency,
+                    "total_amount_usd": amount if currency == "USD" else None,
                     "url": url,
                 }
             ]

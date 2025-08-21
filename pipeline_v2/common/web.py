@@ -5,7 +5,7 @@ import json
 import random
 import time
 from tempfile import NamedTemporaryFile
-from typing import Callable, Dict, IO, List
+from typing import Callable, Dict, IO, Iterator, List
 
 # Third-party imports
 import playwright
@@ -42,7 +42,6 @@ class DataRequestClient:
         timeout_in_seconds: int = 60,
         custom_headers: Dict = None,
         stream: bool = False,
-        render_js: bool = False,
     ) -> requests.Response:
         """Makes an HTTP GET request against the given URL.
 
@@ -79,26 +78,30 @@ class DataRequestClient:
         Returns:
             The response object.
         """
+        # Implement random delay
         if max_random_delay < min_random_delay:
             raise ValueError(
                 "The minimum delay time must be less than the maximum time."
             )
-
         if use_random_delay:
             delay = random.randint(min_random_delay, max_random_delay)
             time.sleep(delay)
 
-        if use_random_user_agent and not custom_headers:
+        # Initialize HTTP headers
+        headers = {}
+        if use_random_user_agent:
             agent_idx = random.randint(0, len(self._user_agent_headers) - 1)
-            headers = {"User-Agent": self._user_agent_headers[agent_idx]}
-        elif custom_headers:
-            headers = custom_headers
-        else:
-            headers = None
+            headers["User-Agent"] = self._user_agent_headers[agent_idx]
+        if custom_headers:
+            headers = {**headers, **custom_headers}
 
+        # Initialize session
         s = HTMLSession()
 
-        return s.get(url, timeout=timeout_in_seconds, headers=headers, stream=stream)
+        # Fetch data
+        return s.get(
+            url, timeout=timeout_in_seconds, headers=headers, stream=stream
+        )
 
     def post(
         self,
@@ -144,8 +147,45 @@ class DataRequestClient:
         s = HTMLSession()
 
         return s.post(
-            url, data=data, json=json, timeout=timeout_in_seconds, headers=headers
+            url,
+            data=data,
+            json=json,
+            timeout=timeout_in_seconds,
+            headers=headers,
         )
+
+    def stream_chunks(
+        self, url: str, chunk_size: int = 65536
+    ) -> Iterator[bytes]:
+        """Streams data from the given URL as chunks.
+
+        Args:
+            url: The download link.
+
+            chunk_size: The size of each chunk in bytes. Defaults to 65536.
+
+        Yields:
+            A chunk of data until the stream is exhausted.
+        """
+        downloaded = 0
+        while True:
+            headers = {"Range": f"bytes={downloaded}-"}
+            try:
+                with self.get(url, custom_headers=headers, stream=True) as r:
+                    if not r.ok:
+                        raise RuntimeError(
+                            "Error fetching data. The request failed with "
+                            f'a "{r.status_code} - {r.reason}" status '
+                            f'code and the message "{r.text}".'
+                        )
+
+                    for chunk in r.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            downloaded += len(chunk)
+                            yield chunk
+                    return
+            except (requests.exceptions.ChunkedEncodingError, ConnectionError):
+                time.sleep(1)
 
 
 class HeadlessBrowser:

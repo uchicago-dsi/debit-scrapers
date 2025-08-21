@@ -68,7 +68,9 @@ class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
             return [self.projects_base_url + proj["path"] for proj in data]
 
         except Exception as e:
-            raise Exception(f"Failed to generate AIIB search pages to scrape. {e}")
+            raise Exception(
+                f"Failed to generate AIIB search pages to scrape. {e}"
+            )
 
 
 class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
@@ -120,9 +122,13 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         number = get_project_summary_field("PROJECT NUMBER")
         name = soup.find("h1", {"class": "project-name"}).text
         status = get_project_summary_field("STATUS")
+        disclosed = get_project_summary_field("CONCEPT REVIEW")
+        appraised = get_project_summary_field("APPRAISAL REVIEW/FINAL REVIEW")
         approved = get_project_summary_field("FINANCING APPROVAL")
         closed = get_project_summary_field("LOAN CLOSING/LAST DISBURSEMENT")
-        proposed_funding_amount = get_project_summary_field("PROPOSED FUNDING AMOUNT")
+        proposed_funding_amount = get_project_summary_field(
+            "PROPOSED FUNDING AMOUNT"
+        )
         approved_funding = get_project_summary_field("APPROVED FUNDING")
         sectors = get_project_summary_field("SECTOR")
         countries = get_project_summary_field("MEMBER")
@@ -139,9 +145,9 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 The contact information.
             """
             try:
-                contact_div = soup.find("h2", string=field_name).find_next_sibling(
-                    "div"
-                )
+                contact_div = soup.find(
+                    "h2", string=field_name
+                ).find_next_sibling("div")
                 contact_fields = []
                 nbsp = "\xa0"
                 for p in contact_div.find_all("p"):
@@ -173,10 +179,14 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 The parsed date string, or `None` if parsing fails.
             """
             try:
-                return datetime.strptime(date_str, "%B %d, %Y").strftime("%Y-%m-%d")
+                return datetime.strptime(date_str, "%B %d, %Y").strftime(
+                    "%Y-%m-%d"
+                )
             except Exception:
                 return None
 
+        disclosed_utc = parse_date(disclosed)
+        appraised_utc = parse_date(appraised)
         approved_utc = parse_date(approved)
         closed_original_utc = parse_date(closed)
 
@@ -185,7 +195,9 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             loan_amount_currency = loan_amount = None
         else:
             loan_str = (
-                proposed_funding_amount if proposed_funding_amount else approved_funding
+                proposed_funding_amount
+                if proposed_funding_amount
+                else approved_funding
             )
             loan_amount_currency = loan_str[:3]
             loan_amount_match = re.search(r"([\d,\.]+)", loan_str).groups(0)[0]
@@ -194,18 +206,19 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         # Compose final project record schema
         return [
             {
-                "bank": settings.AIIB_ABBREVIATION.upper(),
-                "number": number,
-                "name": name,
-                "status": status,
-                "approved_utc": approved_utc,
-                "closed_original_utc": closed_original_utc,
-                "loan_amount": loan_amount,
-                "loan_amount_currency": loan_amount_currency,
-                "loan_amount_in_usd": None,
-                "sectors": sectors,
+                "affiliates": companies,
                 "countries": countries,
-                "companies": companies,
+                "date_actual_close": closed_original_utc,
+                "date_approved": approved_utc,
+                "date_disclosed": disclosed_utc,
+                "date_under_appraisal": appraised_utc,
+                "name": name,
+                "number": number,
+                "sectors": sectors,
+                "source": settings.AIIB_ABBREVIATION.upper(),
+                "status": status,
+                "total_amount": loan_amount,
+                "total_amount_currency": loan_amount_currency,
                 "url": url,
             }
         ]

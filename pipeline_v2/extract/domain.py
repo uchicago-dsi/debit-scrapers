@@ -70,44 +70,71 @@ class TaskUpdateRequest(TypedDict):
 class StagedProjectUpsertRequest(TypedDict):
     """Represents a request to upsert astaged project record."""
 
-    bank: str
-    """The name of the development bank."""
+    affiliates: Optional[str]
+    "The organizations affiliated with the project. Pipe-delimited."
 
-    number: Optional[str]
-    """The project number."""
+    countries: Optional[str]
+    "The countries in which the project is located. Pipe-delimited."
+
+    date_actual_close: Optional[str]
+    "The actual end date for project funding. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_approved: Optional[str]
+    """The date the project funding was approved by the bank. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."""
+
+    date_disclosed: Optional[str]
+    """The date the project was disclosed to the public. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."""
+
+    date_effective: Optional[str]
+    "The date the project funding became effective. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_last_updated: Optional[str]
+    "The date the project details were last updated. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_submitted: Optional[str]
+    "The original projected end date for project funding. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_planned_close: Optional[str]
+    """The date the project was last updated. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."""
+
+    date_planned_effective: Optional[str]
+    "The estimated start date of the project funding. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_revised_close: Optional[str]
+    """The revised end date for project funding. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."""
+
+    date_signed: Optional[str]
+    "The date the project contract was signed by the bank. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."
+
+    date_under_appraisal: Optional[str]
+    """The date the project came under appraisal by the bank. Formatted as YYYY, YYYY-MM, or YYYY-MM-DD."""
+
+    finance_types: Optional[str]
+    """The funding types used for the project. Pipe-delimited."""
 
     name: Optional[str]
     """The project name."""
 
+    number: Optional[str]
+    """The project number."""
+
+    sectors: Optional[str]
+    """The economic sectors impacted by the project. Pipe-delimited."""
+
+    source: str
+    """The name of the development bank."""
+
     status: Optional[str]
     """The project status."""
 
-    year: Optional[int]
-    """The project year."""
+    total_amount: Optional[float]
+    """The project debt amount."""
 
-    month: Optional[int]
-    """The project month."""
+    total_amount_currency: Optional[str]
+    """The project debt amount currency."""
 
-    day: Optional[int]
-    """The project day."""
-
-    loan_amount: Optional[float]
-    """The project loan amount."""
-
-    loan_amount_in_usd: Optional[float]
-    """The project loan amount in USD."""
-
-    currency: Optional[str]
-    """The project loan amount currency."""
-
-    sectors: Optional[str]
-    """The project sectors."""
-
-    countries: Optional[str]
-    """The project countries."""
-
-    companies: Optional[str]
-    """The project companies."""
+    total_amount_usd: Optional[float]
+    """The project debt amount in USD."""
 
     url: str
     """The project URL."""

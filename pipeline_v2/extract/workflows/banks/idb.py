@@ -23,7 +23,9 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
     @property
     def download_url(self) -> str:
         """The URL containing all project records."""
-        return "https://wabi-us-east2-redirect.analysis.windows.net/export/xlsx"
+        return (
+            "https://wabi-us-east2-redirect.analysis.windows.net/export/xlsx"
+        )
 
     @property
     def project_page_url(self) -> str:
@@ -58,7 +60,9 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
             raise RuntimeError("Error parsing IDB download options into JSON.")
 
         # Fetch authentication token
-        r = self._data_request_client.get(self.token_url, use_random_user_agent=True)
+        r = self._data_request_client.get(
+            self.token_url, use_random_user_agent=True
+        )
 
         # Raise error if token not received successfully
         if not r.ok:
@@ -117,14 +121,18 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
         df = df.drop(df.tail(3).index)
 
         # Replace NaNs with None
-        df = df.replace({np.nan: None, "Not Defined": None, "1901-01-01": None})
+        df = df.replace(
+            {np.nan: None, "Not Defined": None, "1901-01-01": None}
+        )
 
         # Add bank column
         df["bank"] = "IDB"
 
         # Add loan amount in USD column
-        df["loan_amount_in_usd"] = df.apply(
-            lambda row: row["Approval Amount"] if row["Currency"] == "USD" else None,
+        df["total_amount_in_usd"] = df.apply(
+            lambda row: (
+                row["Approval Amount"] if row["Currency"] == "USD" else None
+            ),
             axis=1,
         )
 
@@ -144,15 +152,19 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
                 return None
 
             excluded = ["BANKWIDE", "HEADQUARTERS", "REGIONAL"]
-            parts = [p for p in val.split("; ") if p and p.upper() not in excluded]
+            parts = [
+                p for p in val.split("; ") if p and p.upper() not in excluded
+            ]
             return "|".join(parts)
 
         df["countries"] = df["Project Country"].apply(format_countries)
 
-        # Add companies column
-        df["companies"] = df.apply(
+        # Add project affiliates column
+        df["affiliates"] = df.apply(
             lambda row: "|".join(
-                elem for elem in [row["Borrower"], row["Executing Agency"]] if elem
+                elem
+                for elem in [row["Borrower"], row["Executing Agency"]]
+                if elem
             ),
             axis=1,
         )
@@ -164,18 +176,18 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
 
         # Finalize columns
         col_map = {
-            "bank": "bank",
-            "Project Number": "number",
-            "Project Name": "name",
-            "Status": "status",
-            "Approval Date": "approved_utc",
-            "Signature Date": "signed_utc",
-            "Approval Amount": "loan_amount",
-            "Currency": "loan_amount_currency",
-            "loan_amount_in_usd": "loan_amount_in_usd",
-            "Sector": "sectors",
+            "affiliates": "affiliates",
             "countries": "countries",
-            "companies": "companies",
+            "Approval Date": "date_approved",
+            "Signature Date": "date_signed",
+            "Project Name": "name",
+            "Project Number": "number",
+            "Sector": "sectors",
+            "bank": "source",
+            "Status": "status",
+            "Approval Amount": "total_amount",
+            "Currency": "total_amount_currency",
+            "total_amount_in_usd": "total_amount_usd",
             "url": "url",
         }
         df = df.rename(columns=col_map)[col_map.values()]

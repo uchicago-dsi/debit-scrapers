@@ -27,7 +27,7 @@ class ExtractionJob(models.Model):
     completed_at_utc = models.DateTimeField(null=True)
     """The end time of the job in UTC."""
 
-    result_storage_key = models.TextField()
+    results_storage_key = models.TextField(blank=True, default="")
     """The result file location in the configured Cloud Storage bucket."""
 
 
@@ -57,7 +57,9 @@ class ExtractionTask(models.Model):
     """The parent job."""
 
     status = models.CharField(
-        max_length=255, choices=StatusChoices.choices, default=StatusChoices.NOT_STARTED
+        max_length=255,
+        choices=StatusChoices.choices,
+        default=StatusChoices.NOT_STARTED,
     )
     """The status of the task."""
 
@@ -103,53 +105,105 @@ class ExtractedProject(models.Model):
             )
         ]
 
-    task = models.ForeignKey("extract.ExtractionTask", on_delete=models.CASCADE)
-    """The parent task."""
-
-    bank = models.CharField(max_length=255)
-    """The name of the development bank or financial institution."""
-
-    number = models.CharField(max_length=255, null=True)
-    """The unique identifier assigned to the project by the bank."""
-
-    name = models.TextField(blank=True, default="")
-    """The project name."""
-
-    status = models.CharField(max_length=50, null=True)
-    """The current project status."""
-
-    year = models.SmallIntegerField(null=True)
-    """ The year the project was approved."""
-
-    month = models.SmallIntegerField(null=True)
-    """The month the project was approved."""
-
-    day = models.SmallIntegerField(null=True)
-    """The day the project was approved."""
-
-    loan_amount = models.FloatField(null=True)
-    """The current loan amount."""
-
-    loan_amount_in_usd = models.FloatField(null=True)
-    """The current loan amount in USD, if provided."""
-
-    currency = models.CharField(max_length=50, null=True)
-    """The currency of the loan."""
-
-    sectors = models.TextField(null=True)
-    """The sectors impacted by the project."""
-
-    countries = models.TextField(null=True)
-    """The countries in which the project is located."""
-
-    companies = models.TextField(null=True)
-    """The companies involved in the project."""
-
-    created_at_utc = models.DateTimeField(auto_now_add=True, null=True)
+    created_at_utc = models.DateTimeField(auto_now_add=True)
     """The time at which the record was created in UTC."""
 
-    last_updated_at_utc = models.DateTimeField(auto_now=True, null=True)
+    last_updated_at_utc = models.DateTimeField(auto_now=True)
     """The time at which the record was last updated in UTC."""
 
-    url = models.URLField(db_column="url", null=True)
+    task = models.ForeignKey(
+        "extract.ExtractionTask", on_delete=models.CASCADE
+    )
+    """The parent task."""
+
+    affiliates = models.TextField(blank=True, default="")
+    """The organizations involved in the project. Pipe-delimited."""
+
+    countries = models.TextField(blank=True, default="")
+    """The countries in which the project is located. Pipe-delimited."""
+
+    date_actual_close = models.TextField(blank=True, default="")
+    """The actual end date for project funding.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_approved = models.TextField(blank=True, default="")
+    """The date the project funding was approved by the bank.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_disclosed = models.TextField(blank=True, default="")
+    """The date the project was disclosed to the public.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_effective = models.TextField(blank=True, default="")
+    """The date the project funding became effective.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_last_updated = models.TextField(blank=True, default="")
+    """The date the project details were last updated for the public.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_planned_close = models.TextField(blank=True, default="")
+    """The original projected end date for project funding.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_planned_effective = models.TextField(blank=True, default="")
+    """The estimated start date for project funding.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_revised_close = models.TextField(blank=True, default="")
+    """The revised end date for project funding.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_signed = models.TextField(blank=True, default="")
+    """The date the project contract was signed by the bank.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    date_under_appraisal = models.TextField(blank=True, default="")
+    """The date the project funding came under appraisal by the bank.
+    Formatted as YYYY, YYYY-MM, or YYYY-MM-DD.
+    """
+
+    finance_types = models.TextField(blank=True, default="")
+    """The funding types used for the project. Pipe-delimited."""
+
+    name = models.TextField(blank=True, default="")
+    """The project name, if any."""
+
+    number = models.CharField(max_length=255, blank=True, default="")
+    """The unique identifier assigned to the project by the bank, if any."""
+
+    sectors = models.TextField(blank=True, default="")
+    """The economic sectors impacted by the project. Pipe-delimited."""
+
+    source = models.CharField(max_length=255)
+    """The abbreviation of the parent data source."""
+
+    status = models.CharField(max_length=50, blank=True, default="")
+    """The current project status."""
+
+    total_amount = models.DecimalField(
+        null=True, decimal_places=2, max_digits=20
+    )
+    """The total amount of funding awarded to the project."""
+
+    total_amount_currency = models.CharField(
+        max_length=50, blank=True, default=""
+    )
+    """The currency of the loan."""
+
+    total_amount_usd = models.DecimalField(
+        null=True, decimal_places=2, max_digits=20
+    )
+    """The current loan amount in USD, if provided."""
+
+    url = models.URLField(blank=True, default="")
     """The URL to the project page on the bank's website."""

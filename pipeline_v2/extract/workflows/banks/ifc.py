@@ -63,9 +63,9 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
             # Determine number of downloads necessary to retrieve
             # all development project data
             num_projects = self.get_num_projects()
-            num_download_batches = (num_projects // self.num_projects_per_download) + (
-                1 if num_projects % self.num_projects_per_download > 0 else 0
-            )
+            num_download_batches = (
+                num_projects // self.num_projects_per_download
+            ) + (1 if num_projects % self.num_projects_per_download > 0 else 0)
 
             # Generate download URLs, specifying the number of
             # projects that can be obtained from IFC at once
@@ -76,12 +76,16 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
             download_urls = []
             for offset in range(start, end, increment):
                 query_str = self.search_api_query_string.format(offset, nrows)
-                download_urls.append(f"{self.search_api_base_url}?payload={query_str}")
+                download_urls.append(
+                    f"{self.search_api_base_url}?payload={query_str}"
+                )
 
             return download_urls
 
         except Exception as e:
-            raise RuntimeError(f"Failed to generate IFC project download URLs. {e}")
+            raise RuntimeError(
+                f"Failed to generate IFC project download URLs. {e}"
+            )
 
     def get_num_projects(self) -> int:
         """Retrieves the total number of development bank
@@ -120,7 +124,9 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
             results_metadata = r["SearchResult"]["data"]["results"]["header"]
             num_results = int(results_metadata["listInfo"]["totalRows"])
         except json.JSONDecodeError:
-            raise RuntimeError("Error parsing IFC project search results into JSON.")
+            raise RuntimeError(
+                "Error parsing IFC project search results into JSON."
+            )
         except (KeyError, TypeError):
             raise RuntimeError(
                 "The IFC project search results had an unexpected JSON schema."
@@ -184,7 +190,9 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         except json.JSONDecodeError:
             raise RuntimeError("Error parsing IFC project records into JSON.")
         except KeyError:
-            raise RuntimeError("The IFC project records had an unexpected JSON schema.")
+            raise RuntimeError(
+                "The IFC project records had an unexpected JSON schema."
+            )
 
         # Read records into Pandas DataFrame
         df = pd.DataFrame(projects)
@@ -208,10 +216,10 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "project_number": "number",
             "project_name": "name",
             "status_description": "status",
-            "investment": "loan_amount",
+            "investment": "total_amount",
             "industry_description": "sectors",
             "country_description": "countries",
-            "company_name": "companies",
+            "company_name": "affiliates",
             "approval_date": "approval_date",
             "disclosed_date": "disclosed_date",
             "estimated_start_date": "estimated_start_date",
@@ -222,7 +230,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         df = df.rename(columns=col_mapping)
 
         # Set bank name
-        df["bank"] = settings.IFC_ABBREVIATION.upper()
+        df["source"] = settings.IFC_ABBREVIATION.upper()
 
         # Correct country names
         def correct_country_name(name: str) -> str:
@@ -252,41 +260,44 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         df.loc[:, "countries"] = df["countries"].apply(correct_country_name)
 
-        # Extract loan amount value and currency type
-        def get_multiplier(loan_amount: str | float) -> float | None:
-            """Returns the multiplier for loan amounts.
+        # Extract investment amount value and currency type
+        def get_multiplier(amount: str | float) -> float | None:
+            """Returns the multiplier for investment amounts.
 
             Args:
-                loan_amount: The loan amount.
+                amount: The investment amount.
 
             Returns:
                 The multiplier.
             """
-            if isinstance(loan_amount, float) or not loan_amount:
+            if isinstance(amount, float) or not amount:
                 return None
-            elif "million" in loan_amount.lower():
+            elif "million" in amount.lower():
                 return 10**6
-            elif "billion" in loan_amount.lower():
+            elif "billion" in amount.lower():
                 return 10**9
             else:
                 return 1
 
-        df["multiplier"] = df["loan_amount"].apply(get_multiplier)
-        df["loan_amount_currency"] = df["loan_amount"].str.extract(r"\((.*?)\)")
-        df["loan_amount"] = df["loan_amount"].str.extract("(.*?) million")
-        df["loan_amount"] = pd.to_numeric(df["loan_amount"], errors="coerce")
-        df["loan_amount"] = df["loan_amount"] * df["multiplier"]
-        df["loan_amount_usd"] = df.apply(
-            lambda row: row["loan_amount"]
-            if row["loan_amount_currency"] == "USD"
-            else None,
+        df["multiplier"] = df["total_amount"].apply(get_multiplier)
+        df["total_amount_currency"] = df["total_amount"].str.extract(
+            r"\((.*?)\)"
+        )
+        df["total_amount"] = df["total_amount"].str.extract("(.*?) million")
+        df["total_amount"] = pd.to_numeric(df["total_amount"], errors="coerce")
+        df["total_amount"] = df["total_amount"] * df["multiplier"]
+        df["total_amount_usd"] = df.apply(
+            lambda row: (
+                row["total_amount"]
+                if row["total_amount_currency"] == "USD"
+                else None
+            ),
             axis=1,
         )
 
         # Parse date columns
         def parse_date(val: str) -> str:
-            """Parses a date column into a string
-            formatted as YYYY-MM-DD.
+            """Parses a date column into a string formatted as YYYY-MM-DD.
 
             Args:
                 date_col: The date column.
@@ -298,9 +309,11 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 return None
             return pd.to_datetime(val).strftime("%Y-%m-%d")
 
-        df["approved_utc"] = df["approval_date"].apply(parse_date)
-        df["disclosed_utc"] = df["disclosed_date"].apply(parse_date)
-        df["started_utc"] = df["estimated_start_date"].apply(parse_date)
+        df["date_approved"] = df["approval_date"].apply(parse_date)
+        df["date_disclosed"] = df["disclosed_date"].apply(parse_date)
+        df["date_planned_effective"] = df["estimated_start_date"].apply(
+            parse_date
+        )
 
         # Build project URLs using project name, number, and document type
         def generate_project_detail_url(row: pd.Series) -> str:
@@ -314,7 +327,9 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             """
             # Compose URL fragment containing project name
             regex = '[()"#/@;:<>{}`+=~|.!?,]'
-            substitute = row["name"].lower().replace(" ", "-").replace("---", "-")
+            substitute = (
+                row["name"].lower().replace(" ", "-").replace("---", "-")
+            )
             proj_name_url_frag = re.sub(regex, "", substitute)
 
             # Parse other needed fields into str types
@@ -328,19 +343,19 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Set final column schema
         cols_to_keep = [
-            "bank",
-            "number",
-            "name",
-            "status",
-            "approved_utc",
-            "disclosed_utc",
-            "started_utc",
-            "loan_amount",
-            "loan_amount_currency",
-            "loan_amount_usd",
-            "sectors",
+            "affiliates",
             "countries",
-            "companies",
+            "date_approved",
+            "date_disclosed",
+            "date_planned_effective",
+            "name",
+            "number",
+            "sectors",
+            "source",
+            "status",
+            "total_amount",
+            "total_amount_currency",
+            "total_amount_usd",
             "url",
         ]
         df = df[cols_to_keep]

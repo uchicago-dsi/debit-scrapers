@@ -20,6 +20,5 @@ pytest-django
 PyYAML
 requests
 requests_html
-selenium
 stream_unzip
 xlrd

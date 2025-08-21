@@ -60,7 +60,9 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             ]
             return result_pages
         except Exception as e:
-            raise Exception(f"Failed to generate ADB search result pages to crawl. {e}")
+            raise Exception(
+                f"Failed to generate ADB search result pages to crawl. {e}"
+            )
 
     def find_last_page(self) -> int:
         """Retrieves the number of the last page of
@@ -121,7 +123,9 @@ class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
             for project in projects_table.find_all("div", {"class": "item"}):
                 try:
                     link = project.find("a")
-                    project_page_urls.append(self.project_page_base_url + link["href"])
+                    project_page_urls.append(
+                        self.project_page_base_url + link["href"]
+                    )
                 except TypeError:
                     continue
 
@@ -176,6 +180,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         name = get_field("Project Name")
         number = get_field("Project Number")
         status = get_field("Project Status")
+        finance_types = get_field("Project Type / Modality of Assistance")
 
         # Extract and format countries
         country_label = table.find(string="Country / Economy")
@@ -220,7 +225,9 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 for r in rows:
                     loan_cell = r.find_all("td")[1]
                     multiplier = get_multiplier(loan_cell.text.upper())
-                    loan_str = re.search(r"([\d,\.]+)", loan_cell.text).groups(0)[0]
+                    loan_str = re.search(r"([\d,\.]+)", loan_cell.text).groups(
+                        0
+                    )[0]
                     fund_amount = float(loan_str.replace(",", "")) * multiplier
                     loan_amount += int(fund_amount)
             loan_amount = int(loan_amount)
@@ -231,7 +238,9 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         sector_names = sector_row.find_next_sibling("dd")
         sector_strongs = sector_names.find_all("strong", {"class": "sector"})
         sectors = (
-            None if not sector_strongs else "|".join(s.text for s in sector_strongs)
+            None
+            if not sector_strongs
+            else "|".join(s.text for s in sector_strongs)
         )
 
         # Extract companies
@@ -241,10 +250,14 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 agency_text = soup.find(string="Executing Agencies")
             parent = agency_text.find_parent()
             agency_cell = parent.find_next_siblings("dd")[0]
-            company_spans = agency_cell.find_all("span", {"class": "address-company"})
-            companies = "|".join(c.text.strip(" \n") for c in company_spans if c.text)
+            company_spans = agency_cell.find_all(
+                "span", {"class": "address-company"}
+            )
+            affiliates = "|".join(
+                c.text.strip(" \n") for c in company_spans if c.text
+            )
         except Exception:
-            companies = None
+            affiliates = None
 
         # Define local function to parse date string
         def parse_date(date_str):
@@ -259,9 +272,18 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             approval_text = soup.find(string="Approval")
             parent = approval_text.find_parent()
             approval_cell = parent.find_next_siblings("dd")[0]
-            approved_utc = parse_date(approval_cell.text)
+            date_approved = parse_date(approval_cell.text)
         except Exception:
-            approved_utc = None
+            date_approved = None
+
+        # Extract project appraisal date
+        try:
+            appraisal_text = soup.find(string="Concept Clearance")
+            parent = appraisal_text.find_parent()
+            appraisal_cell = parent.find_next_siblings("dd")[0]
+            date_under_appraisal = parse_date(appraisal_cell.text)
+        except Exception:
+            date_under_appraisal = None
 
         # Extract additional project dates
         try:
@@ -274,37 +296,39 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             ]
             values = [td.text.strip(" \n") for td in parent.find_all("td")]
             milestone_dict = dict(zip(labels, values))
-            signed_utc = parse_date(milestone_dict.get("Signing Date"))
-            effective_utc = parse_date(milestone_dict.get("Effectivity Date"))
-            closed_original_utc = parse_date(milestone_dict.get("Original"))
-            closed_revised_utc = parse_date(milestone_dict.get("Revised"))
-            closed_actual_utc = parse_date(milestone_dict.get("Actual"))
+            date_effective = parse_date(milestone_dict.get("Effectivity Date"))
+            date_planned_close = parse_date(milestone_dict.get("Original"))
+            date_revised_close = parse_date(milestone_dict.get("Revised"))
+            date_actual_close = parse_date(milestone_dict.get("Actual"))
+            date_signed = parse_date(milestone_dict.get("Signing Date"))
         except Exception:
-            signed_utc = None
-            effective_utc = None
-            closed_original_utc = None
-            closed_revised_utc = None
-            closed_actual_utc = None
+            date_effective = None
+            date_planned_close = None
+            date_revised_close = None
+            date_actual_close = None
+            date_signed = None
 
         # Compose final project record schema
         return [
             {
-                "bank": settings.ADB_ABBREVIATION.upper(),
-                "number": number,
-                "name": name,
-                "status": status,
-                "approved_utc": approved_utc,
-                "signed_utc": signed_utc,
-                "effective_utc": effective_utc,
-                "closed_original_utc": closed_original_utc,
-                "closed_revised_utc": closed_revised_utc,
-                "closed_actual_utc": closed_actual_utc,
-                "loan_amount": loan_amount,
-                "loan_amount_currency": "USD" if loan_amount else None,
-                "loan_amount_in_usd": loan_amount,
-                "sectors": sectors,
+                "affiliates": affiliates,
                 "countries": countries,
-                "companies": companies,
+                "date_actual_close": date_actual_close,
+                "date_approved": date_approved,
+                "date_effective": date_effective,
+                "date_planned_close": date_planned_close,
+                "date_revised_close": date_revised_close,
+                "date_signed": date_signed,
+                "date_under_appraisal": date_under_appraisal,
+                "finance_types": finance_types,
+                "name": name,
+                "number": number,
+                "sectors": sectors,
+                "source": settings.ADB_ABBREVIATION.upper(),
+                "status": status,
+                "total_amount": loan_amount,
+                "total_amount_currency": "USD" if loan_amount else None,
+                "total_amount_usd": loan_amount,
                 "url": url,
             }
         ]

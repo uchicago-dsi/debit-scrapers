@@ -154,7 +154,11 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         soup = BeautifulSoup(r.text, "html.parser")
 
         # Extract project name
-        name = soup.find("h1", class_="print-title-page").text.replace("\n", "").strip()
+        name = (
+            soup.find("h1", class_="print-title-page")
+            .text.replace("\n", "")
+            .strip()
+        )
 
         # Extract project sectors
         try:
@@ -179,7 +183,9 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             """
             try:
                 header_div = info_table.find("div", string=header)
-                val_div = header_div.find_parent().find_next_sibling().find("div")
+                val_div = (
+                    header_div.find_parent().find_next_sibling().find("div")
+                )
                 return val_div.text.strip()
             except AttributeError:
                 return None
@@ -214,7 +220,9 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             raw_companies = extract_table_value("Customer")
             companies_sans_details = re.sub(r"\([^)]*\)", "", raw_companies)
             formatted_companies = (
-                companies_sans_details.replace("\n", " ").replace("  ", " ").strip()
+                companies_sans_details.replace("\n", " ")
+                .replace("  ", " ")
+                .strip()
             )
             companies = "|".join(formatted_companies.split(", "))
         except (AttributeError, TypeError):
@@ -226,17 +234,15 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         # Compose final project record schema
         return [
             {
-                "bank": settings.PRO_ABBREVIATION.upper(),
-                "number": number,
-                "name": name,
-                "status": None,
-                "signed_utc": signed_utc,
-                "loan_amount": loan_amount,
-                "loan_amount_currency": loan_amount_currency,
-                "loan_amount_in_usd": None,
-                "sectors": sectors,
+                "affiliates": companies,
                 "countries": countries,
-                "companies": companies,
+                "date_signed": signed_utc,
+                "name": name,
+                "number": number,
+                "sectors": sectors,
+                "source": settings.PRO_ABBREVIATION.upper(),
+                "total_amount": loan_amount,
+                "total_amount_currency": loan_amount_currency,
                 "url": url,
             }
         ]

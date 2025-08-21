@@ -5,6 +5,7 @@ downloads all projects as JSON from a site endpoint.
 """
 
 # Standard library imports
+import warnings
 from logging import Logger
 
 # Third-party imports
@@ -50,7 +51,9 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
     @property
     def download_url(self) -> str:
         """The URL containing all project records."""
-        return "https://www3.dfc.gov/OPICProjects/Home/GetOPICActiveProjectList"
+        return (
+            "https://www3.dfc.gov/OPICProjects/Home/GetOPICActiveProjectList"
+        )
 
     def get_projects(self) -> pd.DataFrame:
         """Retrieves all development bank projects as JSON from
@@ -65,10 +68,13 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             The raw project records.
         """
         try:
-            response = requests.post(
-                url=self.download_url, json={"key": "value"}, verify=False
-            )
-            return pd.DataFrame.from_dict(response.json())
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    category=requests.packages.urllib3.exceptions.InsecureRequestWarning,
+                )
+                r = requests.post(url=self.download_url, verify=False)
+                return pd.DataFrame.from_dict(r.json())
         except Exception as e:
             raise Exception(
                 f"Error retrieving DFC projects from '{self.download_url}' "
@@ -97,13 +103,23 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                     The new values and their corresponding keys.
                 """
                 details = row["ProjectDetails"]
-                url = re.search(r"<a href='(.*)' target", details)
-                company = re.search(r"<b>(.*)</b>", details)
+
+                # Parse URL and project number from anchor tag
+                url_match = re.search(r"<a href='(.*)' target", details)
+                url = url_match.group(1) if url_match else None
+                number = (
+                    None if not url else url.replace(".pdf", "").split("/")[-1]
+                )
+
+                # Parse project affiliate and name in remaining HTML
+                affiliate = re.search(r"<b>(.*)</b>", details)
                 name = re.search(r"(?<=<br /><br />).*$", details)
+
                 return {
-                    "url": url.group(1) if url else None,
-                    "companies": company.group(1) if company else None,
+                    "number": number,
                     "name": name.group(0) if name else None,
+                    "affiliates": affiliate.group(1) if affiliate else None,
+                    "url": url,
                 }
 
             details_df = df.apply(
@@ -112,37 +128,30 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             df = pd.concat([df, details_df], axis=1)
 
             # Add new columns
-            df["bank"] = settings.DFC_ABBREVIATION.upper()
-            df["number"] = None
-            df["status"] = None
-            df["month"] = None
-            df["day"] = None
-            df["loan_amount"] = df["loan_amount_usd"] = df["OPICCommitment"]
-            df["loan_amount_currency"] = "USD"
+            df["source"] = settings.DFC_ABBREVIATION.upper()
+            df["total_amount"] = df["total_amount_usd"] = df["OPICCommitment"]
+            df["total_amount_currency"] = "USD"
 
             # Rename columns
             df = df.rename(
                 columns={
                     "Year": "year",
                     "Country": "countries",
-                    "ProjectType": "sectors",
+                    "ProjectType": "finance_types",
                 }
             )
 
             col_mapping = {
-                "bank": "object",
+                "source": "object",
                 "number": "object",
                 "name": "object",
-                "status": "object",
                 "year": "Int64",
-                "month": "Int64",
-                "day": "Int64",
-                "loan_amount": "Float64",
-                "loan_amount_currency": "object",
-                "loan_amount_usd": "Float64",
-                "sectors": "object",
+                "total_amount": "Float64",
+                "total_amount_currency": "object",
+                "total_amount_usd": "Float64",
+                "finance_types": "object",
                 "countries": "object",
-                "companies": "object",
+                "affiliates": "object",
                 "url": "object",
             }
 
@@ -154,7 +163,9 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             # Aggregate project financing records by URL. Loans
             # are summed, and the maximum date/year is used to
             # represent the time of the last update.
-            def concatenate_values(group: pd.DataFrame, col_name: str) -> str:
+            def concatenate_values(
+                group: pd.DataFrame, col_name: str, delimiter: str = "|"
+            ) -> str:
                 """Parses unique values from a given Pandas `GroupBy`
                 column and sorts them in ascending order. Produces
                 a formatted output string with commas as separators.
@@ -164,6 +175,9 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
                     col_name: The column for which to
                         concatenate values.
+
+                    delimiter: The string used to join values.
+                        Defaults to a pipe ("|").
 
                 Returns:
                     The concatenated values.
@@ -175,7 +189,7 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                     .unique()
                     .tolist()
                 )
-                return ". ".join(unique_values)
+                return delimiter.join(unique_values)
 
             aggregated_projects = []
             groups = df.groupby("url")
@@ -183,18 +197,19 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                 first = group.iloc[0]
                 aggregated_projects.append(
                     {
-                        "bank": first["bank"],
-                        "number": first["number"],
-                        "name": concatenate_values(group, "name"),
-                        "status": first["status"],
-                        "year": group["year"].max(),
-                        "month": first["month"],
-                        "day": first["day"],
-                        "loan_amount": group["loan_amount"].sum(),
-                        "loan_amount_currency": first["loan_amount_currency"],
-                        "sectors": concatenate_values(group, "sectors"),
+                        "affiliates": concatenate_values(group, "affiliates"),
                         "countries": concatenate_values(group, "countries"),
-                        "companies": concatenate_values(group, "companies"),
+                        "date_effective": str(group["year"].min()),
+                        "finance_types": concatenate_values(
+                            group, "finance_types"
+                        ),
+                        "name": concatenate_values(group, "name", ". "),
+                        "number": first["number"],
+                        "source": first["source"],
+                        "total_amount": group["total_amount"].sum(),
+                        "total_amount_currency": first[
+                            "total_amount_currency"
+                        ],
                         "url": name,
                     }
                 )

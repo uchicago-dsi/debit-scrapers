@@ -7,6 +7,7 @@ information on loan amounts, associated companies, and approval dates.
 
 # Standard library imports
 import json
+import numpy as np
 import os
 import re
 from typing import Dict, List, Tuple
@@ -47,7 +48,9 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             The raw project records.
         """
         # Fetch project data
-        r = self._data_request_client.get(self.download_url, use_random_user_agent=True)
+        r = self._data_request_client.get(
+            self.download_url, use_random_user_agent=True
+        )
 
         # Raise error if request failed
         if not r.ok:
@@ -63,7 +66,9 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Read data into Pandas DataFrame
         return pd.DataFrame(data[1:], columns=data[0] + ["Bumped Link"])
 
-    def clean_projects(self, df: pd.DataFrame) -> Tuple[List[str], pd.DataFrame]:
+    def clean_projects(
+        self, df: pd.DataFrame
+    ) -> Tuple[List[str], pd.DataFrame]:
         """Parses the set of raw project records to generate a
         clean, partial dataset and URLs to project pages.
 
@@ -73,19 +78,38 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         Returns:
             A two-item tuple consisting of the new URLs and cleaned records.
         """
+        # Add source column
+        df["source"] = settings.EBRD_ABBREVIATION.upper()
+
         # Drop rows without project ids
         df = df[~(df["Project ID"] == "") & ~(df["Project ID"].isna())]
 
+        # Replace NaN values with None
+        df = df.replace({np.nan: None})
+
+        # Parse publication date values to "YYYY-MM-DD" format
+        df["Date Disclosed"] = df["Publication date"].apply(
+            lambda x: (
+                None
+                if not x
+                else datetime.strptime(x, "%d %b %Y").strftime("%Y-%m-%d")
+            )
+        )
+
         # Adjust project statuses
         df["Project status"] = df["Project status"].apply(
-            lambda val: "Pending Approval" if val == "Passed Final Review" else val
+            lambda val: (
+                "Pending Approval" if val == "Passed Final Review" else val
+            )
         )
 
         # Correct project page URLs, which spread across two columns
         df["URL"] = df.apply(
-            lambda row: row["Bumped Link"]
-            if row["Bumped Link"]
-            else row["URL link to project"],
+            lambda row: (
+                row["Bumped Link"]
+                if row["Bumped Link"]
+                else row["URL link to project"]
+            ),
             axis=1,
         )
 
@@ -102,21 +126,20 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         urls = [row["URL"] for _, row in df.iterrows()]
 
         # Map rows to project records
-        records = [
-            {
-                "bank": "EBRD",
-                "number": row["Project ID"],
-                "name": row["Title"],
-                "status": row["Project status"],
-                "sectors": row["Sector"],
-                "countries": row["Country"],
-                "url": row["URL"],
-            }
-            for _, row in df.iterrows()
-        ]
+        col_map = {
+            "Country": "countries",
+            "Date Disclosed": "date_disclosed",
+            "Title": "name",
+            "Project ID": "number",
+            "Sector": "sectors",
+            "source": "source",
+            "Project status": "status",
+            "URL": "url",
+        }
+        df = df.rename(columns=col_map)[col_map.values()]
 
         # Return project URLs and data
-        return urls, records
+        return urls, df
 
 
 class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
@@ -128,7 +151,7 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         db_client: ExtractionDbClient,
         logger: Logger,
     ) -> None:
-        """Initializes a new instance of an `IdbResultsScrapeWorkflow`.
+        """Initializes a new instance of an `EbrdProjectPartialScrapeWorkflow`.
 
         Args:
             data_request_client: A client for making HTTP GET requests while
@@ -162,7 +185,7 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         Returns:
             The prompt.
         """
-        # Initialize search text componentss
+        # Initialize search text components
         components = []
 
         # Extract text of finance header
@@ -179,7 +202,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Extract text of client header
         client_header = [
             tag.find_parent("h2")
-            for tag in soup.find_all(string=re.compile(r"Client", re.IGNORECASE))
+            for tag in soup.find_all(
+                string=re.compile(r"Client", re.IGNORECASE)
+            )
             if tag.parent.name == "h2"
         ][0]
         components.append(client_header.text.strip("\r\n\t "))
@@ -276,13 +301,18 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         try:
             client_header = [
                 tag.find_parent("h2")
-                for tag in soup.find_all(string=re.compile(r"Client", re.IGNORECASE))
+                for tag in soup.find_all(
+                    string=re.compile(r"Client", re.IGNORECASE)
+                )
                 if tag.parent.name == "h2"
             ][0]
             client_content = [
                 sib
                 for sib in client_header.next_siblings
-                if not (isinstance(sib, NavigableString) and sib.strip("\r\n\t ") == "")
+                if not (
+                    isinstance(sib, NavigableString)
+                    and sib.strip("\r\n\t ") == ""
+                )
             ][0]
             companies = (
                 client_content.strip("\r\n\t ")
@@ -311,7 +341,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                 prompt = self._build_prompt(soup)
                 response = self._prompt_ai(prompt)
                 if response:
-                    companies = response["client"] if companies is None else companies
+                    companies = (
+                        response["client"] if companies is None else companies
+                    )
                     loan_amount_value = (
                         response["loan_amount"]
                         if loan_amount_value is None
@@ -328,14 +360,16 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Compose final project record schema
         return [
             {
-                "bank": settings.EBRD_ABBREVIATION.upper(),
-                "approved_utc": approved_utc,
-                "loan_amount": loan_amount_value,
-                "loan_amount_currency": loan_amount_currency,
-                "loan_amount_in_usd": loan_amount_value
-                if loan_amount_currency == "USD"
-                else None,
-                "companies": companies,
+                "affiliates": companies,
+                "date_approved": approved_utc,
+                "source": settings.EBRD_ABBREVIATION.upper(),
+                "total_amount": loan_amount_value,
+                "total_amount_currency": loan_amount_currency,
+                "total_amount_in_usd": (
+                    loan_amount_value
+                    if loan_amount_currency == "USD"
+                    else None
+                ),
                 "url": url,
             }
         ]

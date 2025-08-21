@@ -121,25 +121,9 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             loaded = json.load(f)
             return {entry["code"]: entry["name"] for entry in loaded["data"]}
 
-    def _stream_chunks(self, url: str) -> Iterator[bytes]:
-        """Streams data from the given URL as chunks.
-
-        Args:
-            url: The download link.
-
-        Yields:
-            A chunk of data until the stream is exhausted.
-        """
-        with self._data_request_client.get(url, stream=True) as r:
-            if not r.ok:
-                raise RuntimeError(
-                    "Error fetching data from EBRD. The request failed "
-                    f'with a "{r.status_code} - {r.reason}" status '
-                    f'code and the message "{r.text}".'
-                )
-            yield from r.iter_content(chunk_size=65536)
-
-    def _process_file(self, file: Iterator[bytes]) -> Tuple[List[str], List[Dict]]:
+    def _process_file(
+        self, file: Iterator[bytes]
+    ) -> Tuple[List[str], List[Dict]]:
         """Processes the given XML file containing UNDP projects and then
         scrapes the data for project records and URLs to additional
         project data accessible via API.
@@ -164,7 +148,8 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             # Skip child node if not a project activity
             if (
                 activity.tag != "iati-activity"
-                or "project" not in activity.find("iati-identifier").text.lower()
+                or "project"
+                not in activity.find("iati-identifier").text.lower()
             ):
                 continue
 
@@ -175,7 +160,9 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             name = activity.find("title/narrative").text
 
             # Parse and map the project status code
-            status = self._status_codes[activity.find("activity-status").get("code")]
+            status = self._status_codes[
+                activity.find("activity-status").get("code")
+            ]
 
             # Parse and map the project sectors
             sectors = (
@@ -189,12 +176,14 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 or None
             )
 
-            # Parse companies
-            companies = (
+            # Parse affiliates
+            affiliates = (
                 "|".join(
                     set(
                         narrative.text.upper()
-                        for narrative in activity.findall("participating-org/narrative")
+                        for narrative in activity.findall(
+                            "participating-org/narrative"
+                        )
                     )
                 )
                 or None
@@ -204,7 +193,9 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             countries = (
                 "|".join(
                     narrative.text
-                    for narrative in activity.findall("recipient-country/narrative")
+                    for narrative in activity.findall(
+                        "recipient-country/narrative"
+                    )
                 )
                 or None
             )
@@ -215,13 +206,13 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             # Compose and append partial project record
             projects.append(
                 {
-                    "bank": settings.UNDP_ABBREVIATION.upper(),
-                    "number": number,
-                    "name": name,
-                    "status": status,
-                    "sectors": sectors,
+                    "affiliates": affiliates,
                     "countries": countries,
-                    "companies": companies,
+                    "name": name,
+                    "number": number,
+                    "sectors": sectors,
+                    "source": settings.UNDP_ABBREVIATION.upper(),
+                    "status": status,
                     "url": url,
                 }
             )
@@ -255,7 +246,7 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
 
         # Perform a streaming unzip of UNDP ZIP file and process each XML file
         for file_name_bytes, _, unzipped_chunks in stream_unzip(
-            self._stream_chunks(url)
+            self._data_request_client.stream_chunks(url)
         ):
             file_name = file_name_bytes.decode("utf-8")
             if file_name.endswith("_projects.xml"):
@@ -263,7 +254,7 @@ class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 urls.extend(file_urls)
                 projects.extend(file_projects)
             else:
-                for chunk in unzipped_chunks:
+                for _ in unzipped_chunks:
                     pass
 
         return urls, projects
@@ -296,12 +287,11 @@ class UndpProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse project start date
         if project.get("start"):
-            start_date = datetime.strptime(project.get("start"), "%Y-%m-%d").date()
-            year = start_date.year
-            month = start_date.month
-            day = start_date.day
+            start_date_utc = datetime.strptime(
+                project.get("start"), "%Y-%m-%d"
+            )
         else:
-            year = month = day = None
+            start_date_utc = None
 
         # Parse project number
         number = project["project_id"]
@@ -312,13 +302,11 @@ class UndpProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Compose final project record schema
         return [
             {
-                "bank": settings.UNDP_ABBREVIATION.upper(),
-                "year": year,
-                "month": month,
-                "day": day,
-                "loan_amount": budget,
-                "loan_amount_currency": "USD",
-                "loan_amount_in_usd": budget,
+                "date_effective": start_date_utc,
+                "source": settings.UNDP_ABBREVIATION.upper(),
+                "total_amount": budget,
+                "total_amount_currency": "USD",
+                "total_amount_usd": budget,
                 "url": self.project_page_base_url.format(number),
             }
         ]

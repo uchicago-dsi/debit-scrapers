@@ -70,7 +70,9 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
             ]
             return result_page_urls
         except Exception as e:
-            raise Exception(f"Failed to generate search result pages to crawl. {e}")
+            raise Exception(
+                f"Failed to generate search result pages to crawl. {e}"
+            )
 
     def find_last_page(self) -> int:
         """Retrieves the number of the last page of
@@ -84,7 +86,8 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             first_results_page_url = self.search_results_base_url.format(
-                page_num=self.first_page_num, items_per_page=self.num_results_per_page
+                page_num=self.first_page_num,
+                items_per_page=self.num_results_per_page,
             )
             response = self._data_request_client.get(first_results_page_url)
             data = response.json()
@@ -169,7 +172,9 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             under_appraisal_utc = (
                 formatted_status_date if status == "Under appraisal" else None
             )
-            approved_utc = formatted_status_date if status == "Approved" else None
+            approved_utc = (
+                formatted_status_date if status == "Approved" else None
+            )
             signed_utc = (
                 formatted_status_date
                 if status not in ("Under appraisal", "Approved")
@@ -182,27 +187,26 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
         proposed_amt = float(proposed_amt) if proposed_amt else None
         financed_amt = float(financed_amt) if financed_amt else None
         amount = (
-            proposed_amt if status in ("Approved", "Under appraisal") else financed_amt
+            proposed_amt
+            if status in ("Approved", "Under appraisal")
+            else financed_amt
         )
 
         # Determine project url
         url = self.project_base_url.format(project_id=project["url"])
 
         return {
-            "bank": settings.EIB_ABBREVIATION.upper(),
-            "number": project["id"],
-            "name": project["title"],
-            "status": status,
-            "type": None,
-            "under_appraisal_utc": under_appraisal_utc,
-            "approved_utc": approved_utc,
-            "signed_utc": signed_utc,
-            "amount": amount,
-            "currency": "EUR",
-            "amount_in_usd": None,
-            "sectors": "|".join(sectors),
             "countries": "|".join(countries) if countries else None,
-            "companies": None,
+            "date_approved": approved_utc,
+            "date_under_appraisal": under_appraisal_utc,
+            "date_signed": signed_utc,
+            "name": project["title"],
+            "number": project["id"],
+            "source": settings.EIB_ABBREVIATION.upper(),
+            "status": status,
+            "total_amount": amount,
+            "total_amount_currency": "EUR",
+            "sectors": "|".join(sectors),
             "url": url,
         }
 
@@ -281,22 +285,26 @@ class EibProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Scrape project promoters and financial intermediaries
         try:
-            col_label_div = soup.find("div", string="Promoter - financial intermediary")
+            col_label_div = soup.find(
+                "div", string="Promoter - financial intermediary"
+            )
             header_row_div = col_label_div.find_parent(
                 "div", class_="eib-list__row eib-list__row--header"
             )
             body_row_div = header_row_div.find_next_sibling(
                 "div", class_="eib-list__row eib-list__row--body"
             )
-            promoter_col = body_row_div.find_all("div", class_="eib-list__column")[1]
+            promoter_col = body_row_div.find_all(
+                "div", class_="eib-list__column"
+            )[1]
             companies = promoter_col.text.strip()
         except (AttributeError, TypeError):
             companies = None
 
         return [
             {
-                "bank": settings.EIB_ABBREVIATION.upper(),
-                "companies": companies,
+                "affiliates": companies,
+                "source": settings.EIB_ABBREVIATION.upper(),
                 "url": url,
             }
         ]

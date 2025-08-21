@@ -30,8 +30,7 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
         return "https://deginvest-investments.de"
 
     def get_projects(self) -> pd.DataFrame:
-        """Retrieves all development bank projects as JSON from
-        DEG's website.
+        """Retrieves all development bank projects as JSON from DEG's website.
 
         Args:
             None
@@ -43,7 +42,9 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
             response = self._data_request_client.get(self.download_url)
             return pd.DataFrame.from_dict(response.json())
         except Exception as e:
-            raise Exception(f"Error retrieving or parsing DEG project JSON. {e}")
+            raise Exception(
+                f"Error retrieving or parsing DEG project JSON. {e}"
+            )
 
     def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
         """Cleans DEG project records to conform to an expected schema.
@@ -56,39 +57,41 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
         """
         try:
             # Parse date column
-            df["signed_utc"] = df["signingDate"].str[:10]
+            df["date_signed"] = df["signingDate"].str[:10]
 
             # Define additional columns
-            df["bank"] = settings.DEG_ABBREVIATION.upper()
+            df["source"] = settings.DEG_ABBREVIATION.upper()
             df["number"] = df["uid"]
             df["name"] = df["title"]
             df["status"] = None
-            df["loan_amount"] = df["financingSum"]
-            df["loan_amount_currency"] = df["currency"].str["code"]
-            df["loan_amount_usd"] = df.apply(
-                lambda row: row["financingSum"]
-                if row["currency"]["code"] == "USD"
-                else None,
+            df["total_amount"] = df["financingSum"]
+            df["total_amount_currency"] = df["currency"].str["code"]
+            df["total_amount_usd"] = df.apply(
+                lambda row: (
+                    row["financingSum"]
+                    if row["currency"]["code"] == "USD"
+                    else None
+                ),
                 axis=1,
             )
             df["sectors"] = df["sector"].str["title"]
             df["countries"] = df["country"].str["title"]
-            df["companies"] = df["customer"].str["title"]
+            df["affiliates"] = df["customer"].str["title"]
             df["url"] = self.project_detail_base_url + df["detailUrl"]
 
             # Set final column schema
             col_mapping = {
-                "bank": "object",
-                "number": "object",
-                "name": "object",
-                "status": "object",
-                "signed_utc": "object",
-                "loan_amount": "Float64",
-                "loan_amount_currency": "object",
-                "loan_amount_usd": "Float64",
-                "sectors": "object",
+                "affiliates": "object",
                 "countries": "object",
-                "companies": "object",
+                "date_signed": "object",
+                "name": "object",
+                "number": "object",
+                "sectors": "object",
+                "source": "object",
+                "status": "object",
+                "total_amount": "Float64",
+                "total_amount_currency": "object",
+                "total_amount_usd": "Float64",
                 "url": "object",
             }
             df = df[col_mapping.keys()].astype(col_mapping)

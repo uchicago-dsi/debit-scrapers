@@ -20,7 +20,10 @@ from extract.workflows.abstract import (
     ResultsScrapeWorkflow,
     SeedUrlsWorkflow,
 )
-from extract.workflows.registry import StarterWorkflowRegistry, WorkflowClassRegistry
+from extract.workflows.registry import (
+    StarterWorkflowRegistry,
+    WorkflowClassRegistry,
+)
 
 
 def load_url_params(file_name: str) -> List[List[str]]:
@@ -63,7 +66,9 @@ def pytest_generate_tests(metafunc) -> None:
     """
     # Seed URLs workflow
     if metafunc.function == TestWorkflows.test_generate_seed_urls:
-        params = StarterWorkflowRegistry.list(workflow_type=settings.SEED_URLS_WORKFLOW)
+        params = StarterWorkflowRegistry.list(
+            workflow_type=settings.SEED_URLS_WORKFLOW
+        )
         metafunc.parametrize("bank", params)
 
     # Download workflow
@@ -115,7 +120,9 @@ def pytest_generate_tests(metafunc) -> None:
 class TestWorkflows(ScraperFixturesMixin):
     """Tests workflows across all banks."""
 
-    def test_download(self, bank: str, data_request_client: DataRequestClient) -> None:
+    def test_download(
+        self, bank: str, data_request_client: DataRequestClient
+    ) -> None:
         """Asserts that downloading a data file from
         a URL does not result in an exception.
 
@@ -138,10 +145,15 @@ class TestWorkflows(ScraperFixturesMixin):
         )
 
         raw_projects = workflow.get_projects()
-        raw_projects.to_csv(f"./test_results/{bank}_raw_projects.csv", index=False)
+
+        raw_projects.to_csv(
+            f"./test_results/{bank}_raw_projects.csv", index=False
+        )
 
         clean_projects = workflow.clean_projects(raw_projects)
-        clean_projects.to_csv(f"./test_results/{bank}_clean_projects.csv", index=False)
+        clean_projects.to_csv(
+            f"./test_results/{bank}_clean_projects.csv", index=False
+        )
 
     def test_partial_download(
         self, bank: str, data_request_client: DataRequestClient
@@ -168,12 +180,16 @@ class TestWorkflows(ScraperFixturesMixin):
         )
 
         raw_projects = workflow.get_projects()
-        raw_projects.to_csv(f"./test_results/{bank}_raw_projects.csv", index=False)
+        raw_projects.to_csv(
+            f"./test_results/{bank}_raw_projects.csv", index=False
+        )
 
         urls, clean_projects = workflow.clean_projects(raw_projects)
         with open(f"./test_results/{bank}_urls.yaml", "w") as f:
             yaml.dump(urls, f, encoding="utf-8")
-        clean_projects.to_csv(f"./test_results/{bank}_projects.csv", index=False)
+        clean_projects.to_csv(
+            f"./test_results/{bank}_projects.csv", index=False
+        )
 
     def test_generate_seed_urls(
         self, bank: str, data_request_client: DataRequestClient
@@ -203,7 +219,10 @@ class TestWorkflows(ScraperFixturesMixin):
             yaml.dump(urls, f, encoding="utf-8")
 
     def test_project_page_scrape(
-        self, bank: str, project_page_url: str, data_request_client: DataRequestClient
+        self,
+        bank: str,
+        project_page_url: str,
+        data_request_client: DataRequestClient,
     ) -> None:
         """Asserts that scraping a project page for data
         does not result in an exception. Sleeps for three
@@ -232,7 +251,9 @@ class TestWorkflows(ScraperFixturesMixin):
         )
         time.sleep(3)
         project = workflow.scrape_project_page(project_page_url)
-        with open(f"./test_results/{bank}_project.yaml", "w", encoding="utf-8") as f:
+        with open(
+            f"./test_results/{bank}_project.yaml", "w", encoding="utf-8"
+        ) as f:
             yaml.dump(project, f, encoding="utf-8", allow_unicode=True)
 
     def test_project_partial_page_scrape(
@@ -272,7 +293,10 @@ class TestWorkflows(ScraperFixturesMixin):
             yaml.dump(objs, f, encoding="utf-8")
 
     def test_result_page_multi_scrape(
-        self, bank: str, results_page_url: str, data_request_client: DataRequestClient
+        self,
+        bank: str,
+        results_page_url: str,
+        data_request_client: DataRequestClient,
     ) -> None:
         """Asserts that scraping a project search results
         page to find project page URLs and partial project
@@ -302,11 +326,16 @@ class TestWorkflows(ScraperFixturesMixin):
         )
         time.sleep(3)
         urls, objs = workflow.scrape_results_page(results_page_url)
-        with open(f"./test_results/{bank}_result_page_multi_scrape.yaml", "w") as f:
+        with open(
+            f"./test_results/{bank}_result_page_multi_scrape.yaml", "w"
+        ) as f:
             yaml.dump({"urls": urls, "objs": objs}, f, encoding="utf-8")
 
     def test_result_page_scrape(
-        self, bank: str, results_page_url: str, data_request_client: DataRequestClient
+        self,
+        bank: str,
+        results_page_url: str,
+        data_request_client: DataRequestClient,
     ) -> None:
         """Asserts that scraping a project search results
         page to generate project page URLs does not result
