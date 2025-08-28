@@ -84,7 +84,7 @@ jobs:
           version: "0.8.13"
 
       - name: Install the project
-        working-directory: ${{ env.SRC_DIR }}
+        working-directory: ${{ env.INFRA_DIR }}
         run: uv sync --locked
 
       - name: Deploy infrastructure
