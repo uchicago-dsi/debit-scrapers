@@ -94,6 +94,7 @@ jobs:
           stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
           work-dir: ${{ env.INFRA_DIR }}
           cloud-url: ${{ env.BUCKET_URL}}
+          upsert: true
         env:
           DJANGO_PORT: ${{ vars.DJANGO_PORT }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
