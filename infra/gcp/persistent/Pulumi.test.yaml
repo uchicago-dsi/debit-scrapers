@@ -6,3 +6,8 @@ config:
       Environment: "Test"
       ManagedBy: "University of Chicago Data Science Institute (DSI)"
   gcp:region: us-central1
+  runtime:
+    name: python
+    options:
+      toolchain: uv
+      virtualenv: .venv
