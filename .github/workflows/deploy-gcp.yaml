@@ -84,9 +84,10 @@ jobs:
           version: "0.8.13"
 
       - name: Install the project
-        run: uv sync --locked --project ${{ env.SRC_DIR }}
+        working-directory: ${{ env.SRC_DIR }}
+        run: uv sync --locked
         env:
-          UV_PROJECT_ENVIRONMENT: /usr/bin
+          UV_PROJECT_ENVIRONMENT: /usr/bin/python3
 
       - name: Deploy infrastructure
         uses: pulumi/actions@v6
