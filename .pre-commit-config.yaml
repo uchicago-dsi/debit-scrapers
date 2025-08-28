@@ -18,8 +18,11 @@ repos:
     rev: v0.12.11
     hooks:
       - id: ruff-check
+        args: ["--verbose"]
+        files: ./src/pyproject.toml
       - id: ruff-format
         args: ["--verbose"]
+        files: ./src/pyproject.toml
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2
