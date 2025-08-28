@@ -83,7 +83,13 @@ django_secret = gcp.secretmanager.Secret(
     f"debit-{ENV}-secret-django-secret",
     secret_id=f"debit-{ENV}-secret-django-secret",
     replication=gcp.secretmanager.SecretReplicationArgs(
-        auto=gcp.secretmanager.SecretReplicationAutoArgs()
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -104,7 +110,13 @@ postgres_password = gcp.secretmanager.Secret(
     f"debit-{ENV}-secret-postgres-password",
     secret_id=f"debit-{ENV}-secret-postgres-password",
     replication=gcp.secretmanager.SecretReplicationArgs(
-        auto=gcp.secretmanager.SecretReplicationAutoArgs()
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -125,7 +137,13 @@ gemini_api_key = gcp.secretmanager.Secret(
     f"debit-{ENV}-secret-gemini-api-key",
     secret_id=f"debit-{ENV}-secret-gemini-api-key",
     replication=gcp.secretmanager.SecretReplicationArgs(
-        auto=gcp.secretmanager.SecretReplicationAutoArgs()
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -153,6 +171,7 @@ pulumi.export("gemini_api_key", gemini_api_key.name)
 data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-bucket-data",
     location=PROJECT_REGION,
+    uniform_bucket_level_access=True,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),

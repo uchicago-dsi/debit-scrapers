@@ -9,8 +9,17 @@
 # Originally written by Claude Sonnet 4, the script has been extended to apply the 
 # "Service Usage Admin Role" and has been edited for clarity and bug fixes.
 
+
+# ------------------------------------------------------------------------
+# SCRIPT CONFIGURATION
+# ------------------------------------------------------------------------
+
 # Configure exit on any error
 set -e
+
+# ------------------------------------------------------------------------
+# HELPER FUNCTIONS
+# ------------------------------------------------------------------------
 
 # Color codes for output
 RED='\033[0;31m'
@@ -73,6 +82,10 @@ confirm() {
     esac
 }
 
+# ------------------------------------------------------------------------
+# GCLOUD CLI SETUP
+# ------------------------------------------------------------------------
+
 # Check prerequisites
 print_header "Checking Prerequisites"
 
@@ -88,6 +101,10 @@ if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q
 fi
 
 print_status "gcloud CLI is installed and authenticated"
+
+# ------------------------------------------------------------------------
+# USER PROMPTS
+# ------------------------------------------------------------------------
 
 # Get configuration from user
 print_header "Configuration"
@@ -116,6 +133,10 @@ if ! confirm "Continue with this configuration?"; then
     exit 0
 fi
 
+# ------------------------------------------------------------------------
+# PROJECT SELECTION
+# ------------------------------------------------------------------------
+
 # Set the project
 print_header "Setting up Google Cloud Project"
 gcloud config set project "$PROJECT_ID"
@@ -124,6 +145,10 @@ gcloud config set project "$PROJECT_ID"
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 print_status "Project Number: $PROJECT_NUMBER"
 
+# ------------------------------------------------------------------------
+# API ACTIVATION
+# ------------------------------------------------------------------------
+
 # Enable required APIs
 print_header "Enabling required APIs..."
 print_status "Enabling IAM Credentials API..."
@@ -131,6 +156,10 @@ gcloud services enable iamcredentials.googleapis.com
 
 print_status "Enabling Security Token Service API..."
 gcloud services enable sts.googleapis.com
+
+# ------------------------------------------------------------------------
+# WORKLOAD IDENTITY POOL CONFIGUATION
+# ------------------------------------------------------------------------
 
 # Create Workload Identity Pool
 print_header "Creating Workload Identity Pool"
@@ -166,6 +195,10 @@ else
         --issuer-uri="https://token.actions.githubusercontent.com"
     print_status "OIDC Provider created successfully"
 fi
+
+# ------------------------------------------------------------------------
+# SERVICE ACCOUNT CONFIGURATION
+# ------------------------------------------------------------------------
 
 # Create Service Account
 print_header "Creating Service Account"
@@ -204,6 +237,13 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --role="roles/compute.admin" \
     --quiet
 
+# Apply "Cloud SQL Admin" role to permit service account to manage database resources during Pulumi deployment
+print_status "Adding Cloud SQL Admin role to service account..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/cloudsql.admin" \
+    --quiet
+
 # Apply "Secret Manager Admin" role to permit service account to manage secrets during Pulumi deployment
 print_status "Adding Secret Manager Admin role to service account..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
@@ -211,17 +251,20 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --role="roles/secretmanager.admin" \
     --quiet
 
+# ------------------------------------------------------------------------
+# WORKLOAD IDENTITY CONFIGURATION
+# ------------------------------------------------------------------------
+
 # Configure Workload Identity
 print_header "Configuring Workload Identity"
 
-REPO_PRINCIPAL="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_NAME/attribute.repository/$GITHUB_USERNAME/$REPO_NAME"
-
+# Allow GitHub repository to impersonate service account
 print_status "Allowing GitHub repository to impersonate service account..."
 gcloud iam service-accounts add-iam-policy-binding \
     "$SERVICE_ACCOUNT_EMAIL" \
     --project="$PROJECT_ID" \
     --role="roles/iam.workloadIdentityUser" \
-    --member="$REPO_PRINCIPAL"
+    --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_NAME/attribute.repository/$GITHUB_USERNAME/$REPO_NAME"
 
 # Get the Workload Identity Provider resource name
 WORKLOAD_IDENTITY_PROVIDER=$(gcloud iam workload-identity-pools providers describe "$PROVIDER_NAME" \
@@ -230,7 +273,11 @@ WORKLOAD_IDENTITY_PROVIDER=$(gcloud iam workload-identity-pools providers descri
     --workload-identity-pool="$POOL_NAME" \
     --format="value(name)")
 
-# Output configuration for GitHub Actions
+# ------------------------------------------------------------------------
+# SUMMARY
+# ------------------------------------------------------------------------
+
+# Print configuration for GitHub Actions
 print_header "Setup Complete!"
 
 print_status "Your Workload Identity Federation is now configured."
