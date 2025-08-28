@@ -34,11 +34,11 @@ from constants import (
 gcp_provider = gcp.Provider(
     f"debit-{ENV}-gcp-provider",
     default_labels={
-        "project": "Development Bank Investment Tracker (DeBIT)",
-        "organization": "Inclusive Development International (IDI)",
-        "environment": "Test",
-        "managed-by": "University of Chicago Data Science Institute (DSI)",
-        "automation": "Pulumi",
+        "project": "debit",
+        "organization": "idi",
+        "environment": "test",
+        "managed-by": "uchicago-dsi",
+        "automation": "pulumi",
     },
 )
 
