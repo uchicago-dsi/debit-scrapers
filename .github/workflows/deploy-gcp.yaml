@@ -9,6 +9,7 @@ env:
   BUCKET_REGION: ${{ vars.GCP_PROJECT_REGION }}
   BUCKET_URL: gs://${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-cloud-storage-${{ vars.GCP_PULUMI_BUCKET_NAME }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  INFRA_DIR: ./infra/gcp/persistent
   SRC_DIR: ./src
 
 jobs:
@@ -75,7 +76,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: "./infra/gcp/persistent/.python-version"
+          python-version-file: ${{ env.INFRA_DIR }}/.python-version
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
@@ -83,7 +84,7 @@ jobs:
           version: "0.8.13"
 
       - name: Install the project
-        run: uv sync --locked
+        run: uv sync --locked --project ${{ env.SRC_DIR }}
         env:
           UV_PROJECT_ENVIRONMENT: /usr/bin
 
@@ -92,7 +93,7 @@ jobs:
         with:
           command: up
           stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
-          work-dir: ./infra/gcp/persistent
+          work-dir: ${{ env.INFRA_DIR }}
           cloud-url: ${{ env.BUCKET_URL}}
         env:
           DJANGO_PORT: ${{ vars.DJANGO_PORT }}
