@@ -1,8 +1,0 @@
-env/
-README.md
-__pycache__
-*.pyc
-.pytest_cache
-.github
-*.egg-info
-*.md

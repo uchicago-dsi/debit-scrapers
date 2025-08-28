@@ -1,0 +1,8 @@
+config:
+  gcp:defaultLabels:
+    labels:
+      Project: "Development Bank Investment Tracker (DeBIT)"
+      Organization: "Inclusive Development International (IDI)"
+      Environment: "Test"
+      ManagedBy: "University of Chicago Data Science Institute (DSI)"
+  gcp:region: us-central1

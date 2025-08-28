@@ -1,6 +1,5 @@
 # Launches services for the DeBIT scraping pipeline
 # under a default network. Intended for local testing.
-#
 
 version: "3"
 services:
@@ -20,101 +19,10 @@ services:
     depends_on:
       - db
     logging:
-        driver: none
+      driver: none
     ports:
       - "443:443"
     env_file:
       - .env
     volumes:
       - ./server.local.json:/pgadmin4/servers.json
-  
-  # DJANGO API
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    container_name: debit-scrapers-api
-    depends_on:
-      - db
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - ./api:/src/api
-
-  # GOOGLE PUB/SUB EMULATOR
-  pubsub:
-    image: debit/debit-scrapers-pubsub
-    container_name: debit-scrapers-pubsub
-    ports:
-      - "8085:8085"
-    profiles:
-      - pipeline
-    env_file:
-      - .env
-
-  # QUEUE WORKFLOWS WEBHOOK
-  queue_workflows:
-    build:
-      context: .
-      dockerfile: ./pipeline/Dockerfile
-      args:
-        ENV: dev
-    command: "python3 ./pipeline/queue_workflows.py"
-    container_name: debit-scrapers-queue-func
-    depends_on:
-      - api
-      - pubsub
-    ports:
-      - "5000:5000"
-    profiles:
-      - pipeline
-    env_file:
-      - .env
-    volumes:
-      - ./pipeline:/src/pipeline
-
-  # RUN WORKFLOWS SERVICE
-  run_workflows:
-    build:
-      context: .
-      dockerfile: ./pipeline/Dockerfile
-      args:
-        ENV: dev
-    command: "python3 ./pipeline/run_workflows.py"
-    container_name: debit-scrapers-run-func
-    depends_on:
-      - api
-      - pubsub
-    ports:
-      - "5050:5050"
-    profiles:
-      - pipeline
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - ./pipeline:/src/pipeline
-
-  # TRANSFORM DATA WEBHOOK
-  transform_data:
-    build:
-      context: .
-      dockerfile: ./pipeline/Dockerfile
-      args:
-        ENV: dev
-    command: "python3 ./pipeline/transform_data.py"
-    container_name: debit-scrapers-transform-func
-    depends_on:
-      - api
-      - pubsub
-    ports:
-      - "5075:5075"
-    profiles:
-      - pipeline
-    env_file:
-      - .env
-    volumes:
-      - ./pipeline:/src/pipeline

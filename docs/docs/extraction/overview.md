@@ -20,7 +20,7 @@ Each microservice is designed to be idempotent, so the entire Cloud Workflow can
 
 1. A **[Google Cloud Scheduler](https://cloud.google.com/scheduler/docs/overview)** instance triggers an invocation of **[Google Cloud Workflows](https://cloud.google.com/workflows/docs/overview)**, a managed orchestration platform, once every two weeks.
 
-2. The Workflow spins up temporary infrastructure, including a Postgres database server on **[Google Cloud SQL](https://cloud.google.com/sql/docs/introduction)** and **[Google Cloud Pub/Sub](https://cloud.google.com/pubsub/docs/overview)** topics and subscriptions, if they don't already exist by calling a **[Google Cloud Run Job](https://cloud.google.com/run/docs/overview/what-is-cloud-run)** (**"Deploy Extraction Infrastructure"**).
+2. The Workflow spins up temporary infrastructure, including a Postgres database server on **[Google Cloud SQL](https://cloud.google.com/sql/docs/introduction)** and **[Google Cloud Task](https://cloud.google.com/tasks/docs/dual-overview)** queues, if they don't already exist by calling a **[Google Cloud Run Job](https://cloud.google.com/run/docs/overview/what-is-cloud-run)** (**"Deploy Extraction Infrastructure"**).
 
 3. The Workflow initializes the database by calling a Cloud Run Job (**"Initialize Database"**) to apply database migrations and install fixtures via Django management commands.
 

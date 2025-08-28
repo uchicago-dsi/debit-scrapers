@@ -1,0 +1,10 @@
+env/
+.venv/
+README.md
+__pycache__
+*.pyc
+.pytest_cache
+.github
+*.egg-info
+*.md
+pre-commit-config.yaml

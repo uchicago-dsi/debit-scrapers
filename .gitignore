@@ -99,4 +99,7 @@ target/
 # Development
 *credentials.dev.json
 
+# Data
+**/tests/results
+
 ### EOF

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Log script start
+echo "Starting setup script."
+
+# Configure script to exit when any command fails
+set -e
+
+# Monitor last executed command
+trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+
+# Log error message upon script exit
+trap '[ $? -eq 1 ] && echo "An unexpected error occurred."' EXIT
+
+# Parse command line arguments
+migrate=false
+extract_data=false
+run_server=false
+development=false
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --migrate) migrate=true; shift ;;
+        --extract-data) extract_data=true; shift ;;
+        --run-server) run_server=true; shift ;;
+        --development) development=true; shift ;;
+        *) echo "Unknown command line parameter received: $1"; exit 1 ;;
+    esac
+done
+
+# Perform model migrations if indicated 
+# (WARNING: Defaults to "yes" for all questions)
+if $migrate ; then
+    echo "Creating database migrations from Django models."
+    yes | ./manage.py makemigrations
+
+    echo "Applying migrations to database."
+    yes | ./manage.py migrate
+fi
+
+# Extract latest development project data if indicated
+if $extract_data ; then
+    echo "Orchestrating data extraction."
+    ./manage.py orchestrator
+fi
+
+# Log successful end of database setup
+echo "Database setup completed successfully."
+
+# Exit if not running server
+if ! $run_server ; then
+    exit 0
+fi
+
+# Otherwise, run server corresponding to environment
+if $development ; then
+    echo "Running default development server."
+    ./manage.py runserver 0.0.0.0:8000
+else 
+    echo "Running production server."
+    gunicorn config.wsgi
+fi
