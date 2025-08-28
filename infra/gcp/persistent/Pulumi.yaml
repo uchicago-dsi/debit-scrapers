@@ -1,0 +1,11 @@
+name: infra
+description: Infrastructure for the Development Bank Investment Tracker (DeBIT).
+runtime:
+  name: python
+  options:
+    toolchain: uv
+    virtualenv: .venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: gcp-python

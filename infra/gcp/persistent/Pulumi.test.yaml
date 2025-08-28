@@ -1,13 +1,9 @@
 config:
   gcp:defaultLabels:
     labels:
-      Project: "Development Bank Investment Tracker (DeBIT)"
-      Organization: "Inclusive Development International (IDI)"
-      Environment: "Test"
-      ManagedBy: "University of Chicago Data Science Institute (DSI)"
-  gcp:region: us-central1
-  runtime:
-    name: python
-    options:
-      toolchain: uv
-      virtualenv: .venv
+      project: "Development Bank Investment Tracker (DeBIT)"
+      organization: "Inclusive Development International (IDI)"
+      environment: "Test"
+      managed-by: "University of Chicago Data Science Institute (DSI)"
+      automation: "Pulumi"
+  gcp:region: "us-central1"
