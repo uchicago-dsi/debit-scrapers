@@ -26,9 +26,24 @@ from constants import (
     SRC_DIR,
 )
 
+# ------------------------------------------------------------------------
+# Provider
+# See: https://www.pulumi.com/registry/packages/gcp/api-docs/provider/
+# ------------------------------------------------------------------------
+
+gcp_provider = gcp.Provider(
+    f"debit-{ENV}-gcp-provider",
+    default_labels={
+        "project": "Development Bank Investment Tracker (DeBIT)",
+        "organization": "Inclusive Development International (IDI)",
+        "environment": "Test",
+        "managed-by": "University of Chicago Data Science Institute (DSI)",
+        "automation": "Pulumi",
+    },
+)
 
 # ------------------------------------------------------------------------
-# APIs
+# Projects
 # See: https://www.pulumi.com/registry/packages/gcp/api-docs/projects/
 # ------------------------------------------------------------------------
 
@@ -70,13 +85,17 @@ django_secret = gcp.secretmanager.Secret(
     replication=gcp.secretmanager.SecretReplicationArgs(
         auto=gcp.secretmanager.SecretReplicationAutoArgs()
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 django_secret_version = gcp.secretmanager.SecretVersion(
     f"debit-{ENV}-secret-version-django-secret",
     secret=django_secret.id,
     secret_data=DJANGO_SECRET_KEY,
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("django_secret_key", django_secret.name)
 
@@ -87,13 +106,17 @@ postgres_password = gcp.secretmanager.Secret(
     replication=gcp.secretmanager.SecretReplicationArgs(
         auto=gcp.secretmanager.SecretReplicationAutoArgs()
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 postgres_password_version = gcp.secretmanager.SecretVersion(
     f"debit-{ENV}-secret-version-postgres-password",
     secret=postgres_password.id,
     secret_data=POSTGRES_PASSWORD,
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("postgres_password", postgres_password.name)
 
@@ -104,13 +127,17 @@ gemini_api_key = gcp.secretmanager.Secret(
     replication=gcp.secretmanager.SecretReplicationArgs(
         auto=gcp.secretmanager.SecretReplicationAutoArgs()
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 gemini_api_key_version = gcp.secretmanager.SecretVersion(
     f"debit-{ENV}-secret-version-gemini-api-key",
     secret=gemini_api_key.id,
     secret_data=GEMINI_API_KEY,
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("gemini_api_key", gemini_api_key.name)
 
@@ -126,7 +153,9 @@ pulumi.export("gemini_api_key", gemini_api_key.name)
 data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-bucket-data",
     location=PROJECT_REGION,
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("data_bucket_name", data_bucket.name)
 pulumi.export("data_bucket_url", data_bucket.url)
@@ -146,7 +175,9 @@ pipeline_db = gcp.sql.DatabaseInstance(
     database_version="POSTGRES_17",
     settings=gcp.sql.DatabaseInstanceSettingsArgs(tier="db-f1-micro"),
     deletion_protection=False,
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("pipeline_db_name", pipeline_db.name)
 
@@ -187,8 +218,12 @@ extraction_repo = gcp.artifactregistry.Repository(
         ),
     ],
     format="DOCKER",
-    docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(immutable_tags=True),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
+        immutable_tags=True
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("extraction_repo", extraction_repo.name)
 
@@ -214,7 +249,9 @@ heavy_extract_image = docker.Image(
     registry=docker.RegistryArgs(
         server=pulumi.Output.concat(PROJECT_REGION, "-docker.pkg.dev"),
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("extraction_heavy_image", heavy_extract_image.image_name)
 
@@ -230,7 +267,9 @@ light_extract_image = docker.Image(
     registry=docker.RegistryArgs(
         server=pulumi.Output.concat(PROJECT_REGION, "-docker.pkg.dev"),
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("extraction_light_image", light_extract_image.image_name)
 
@@ -247,7 +286,9 @@ pulumi.export("extraction_light_image", light_extract_image.image_name)
 cloud_run_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-service-account-cloudrun",
     display_name="Cloud Run Service Account",
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("cloud_run_service_account", cloud_run_service_account.email)
 
@@ -261,8 +302,12 @@ for secret_id in [
         f"debit-{ENV}-cloudrun-secret-access-{secret_id}",
         secret_id=secret_id,
         role="roles/secretmanager.secretAccessor",
-        member=pulumi.Output.concat("serviceAccount:", cloud_run_service_account.email),
-        opts=pulumi.ResourceOptions(depends_on=enabled_services),
+        member=pulumi.Output.concat(
+            "serviceAccount:", cloud_run_service_account.email
+        ),
+        opts=pulumi.ResourceOptions(
+            depends_on=enabled_services, provider=gcp_provider
+        ),
     )
 
 # Grant account access to Cloud SQL
@@ -270,8 +315,14 @@ gcp.projects.IAMBinding(
     f"debit-{ENV}-cloudrun-cloudsql-access",
     project=PROJECT_ID,
     role="roles/cloudsql.client",
-    members=[pulumi.Output.concat("serviceAccount:", cloud_run_service_account.email)],
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    members=[
+        pulumi.Output.concat(
+            "serviceAccount:", cloud_run_service_account.email
+        )
+    ],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # Grant account access to Cloud Storage bucket
@@ -279,15 +330,21 @@ gcp.storage.BucketIAMMember(
     f"debit-{ENV}-cloudrun-storage-access",
     bucket=data_bucket.name,
     role="roles/storage.objectAdmin",
-    member=pulumi.Output.concat("serviceAccount:", cloud_run_service_account.email),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloud_run_service_account.email
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # Configure custom service account for Cloud Tasks
 cloud_tasks_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-service-account-cloud-tasks",
     display_name="Cloud Tasks Service Account",
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("cloud_tasks_service_account", cloud_tasks_service_account.email)
 
@@ -295,17 +352,25 @@ pulumi.export("cloud_tasks_service_account", cloud_tasks_service_account.email)
 cloud_scheduler_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-service-account-cloud-scheduler",
     display_name="Cloud Scheduler Service Account",
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
-pulumi.export("cloud_scheduler_service_account", cloud_scheduler_service_account.email)
+pulumi.export(
+    "cloud_scheduler_service_account", cloud_scheduler_service_account.email
+)
 
 # Configure custom service account for Cloud Workflows
 cloud_workflow_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-service-account-cloud-workflows",
     display_name="Cloud Workflow Service Account",
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
-pulumi.export("cloud_workflow_service_account", cloud_workflow_service_account.email)
+pulumi.export(
+    "cloud_workflow_service_account", cloud_workflow_service_account.email
+)
 
 # endregion
 
@@ -365,7 +430,9 @@ shared_template_container_args = dict(
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="POSTGRES_HOST",
-            value=pulumi.Output.concat("/cloudsql/", pipeline_db.connection_name),
+            value=pulumi.Output.concat(
+                "/cloudsql/", pipeline_db.connection_name
+            ),
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="POSTGRES_PASSWORD",
@@ -421,7 +488,9 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
         min_instance_count=0,
         max_instance_count=2,
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("heavy_cloud_run_service", heavy_cloud_run_service.name)
 
@@ -452,7 +521,9 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
         min_instance_count=0,
         max_instance_count=80,
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("light_cloud_run_service", light_cloud_run_service.name)
 
@@ -481,12 +552,16 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
                     limits={"memory": "256Mi", "cpu": "1"}
                 ),
-                service_account=shared_template_container_args["service_account"],
+                service_account=shared_template_container_args[
+                    "service_account"
+                ],
                 volume_mounts=shared_template_container_args["volume-mounts"],
             )
         ],
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("orchestrator_cloud_run_job", orchestrator_cloud_run_job.name)
 
@@ -507,7 +582,9 @@ for idx, config in enumerate(QUEUE_CONFIG):
         )
     )
     chosen_host = chosen_uri.apply(
-        lambda val: val.replace("https://", "").replace("http://", "").split("/")[0]
+        lambda val: val.replace("https://", "")
+        .replace("http://", "")
+        .split("/")[0]
     )
 
     # Create queue
@@ -542,7 +619,9 @@ for idx, config in enumerate(QUEUE_CONFIG):
         stackdriver_logging_config=gcp.cloudtasks.QueueStackdriverLoggingConfigArgs(
             sampling_ratio=1.0
         ),
-        opts=pulumi.ResourceOptions(depends_on=enabled_services),
+        opts=pulumi.ResourceOptions(
+            depends_on=enabled_services, provider=gcp_provider
+        ),
     )
     pulumi.export(f"{config['source']}-queue", queue.name)
 
@@ -553,8 +632,12 @@ for idx, config in enumerate(QUEUE_CONFIG):
         location=PROJECT_REGION,
         project=PROJECT_ID,
         role="roles/cloudtasks.enqueuer",
-        member=pulumi.Output.concat("serviceAccount:", cloud_run_service_account.email),
-        opts=pulumi.ResourceOptions(depends_on=enabled_services),
+        member=pulumi.Output.concat(
+            "serviceAccount:", cloud_run_service_account.email
+        ),
+        opts=pulumi.ResourceOptions(
+            depends_on=enabled_services, provider=gcp_provider
+        ),
     )
 
 # Grant Cloud Tasks service account access to invoke Cloud Run services
@@ -564,8 +647,12 @@ gcp.cloudrunv2.ServiceIamMember(
     location=PROJECT_REGION,
     project=PROJECT_ID,
     role="roles/run.invoker",
-    member=pulumi.Output.concat("serviceAccount:", cloud_tasks_service_account.email),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloud_tasks_service_account.email
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 gcp.cloudrunv2.ServiceIamMember(
@@ -574,8 +661,12 @@ gcp.cloudrunv2.ServiceIamMember(
     location=PROJECT_REGION,
     project=PROJECT_ID,
     role="roles/run.invoker",
-    member=pulumi.Output.concat("serviceAccount:", cloud_tasks_service_account.email),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloud_tasks_service_account.email
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # Grant Cloud Tasks service agent permission to mint OIDC tokens for account
@@ -588,7 +679,9 @@ gcp.serviceaccount.IAMMember(
         gcp.organizations.get_project().number,
         "@gcp-sa-cloudtasks.iam.gserviceaccount.com",
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # endregion
@@ -625,7 +718,9 @@ extraction_workflow = gcp.workflows.Workflow(
         project_region=PROJECT_REGION,
         job_name=orchestrator_cloud_run_job.name,
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("extraction_workflow", extraction_workflow.name)
 
@@ -635,9 +730,13 @@ gcp.projects.IAMBinding(
     project=PROJECT_ID,
     role="roles/run.developer",
     members=[
-        pulumi.Output.concat("serviceAccount:", cloud_workflow_service_account.email)
+        pulumi.Output.concat(
+            "serviceAccount:", cloud_workflow_service_account.email
+        )
     ],
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
@@ -646,9 +745,13 @@ gcp.projects.IAMBinding(
     project=PROJECT_ID,
     role="roles/workflows.invoker",
     members=[
-        pulumi.Output.concat("serviceAccount:", cloud_scheduler_service_account.email)
+        pulumi.Output.concat(
+            "serviceAccount:", cloud_scheduler_service_account.email
+        )
     ],
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 
 # endregion
@@ -687,7 +790,9 @@ scheduled_job = gcp.cloudscheduler.Job(
             scope="https://www.googleapis.com/auth/cloud-platform",
         ),
     ),
-    opts=pulumi.ResourceOptions(depends_on=enabled_services),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
 )
 pulumi.export("scheduled_job", scheduled_job.name)
 

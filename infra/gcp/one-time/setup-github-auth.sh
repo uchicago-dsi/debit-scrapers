@@ -93,8 +93,8 @@ print_status "gcloud CLI is installed and authenticated"
 print_header "Configuration"
 
 PROJECT_ID=$(get_input "Enter your Google Cloud Project ID" "$(gcloud config get-value project 2>/dev/null)")
-GITHUB_USERNAME=$(get_input "Enter the GitHub username or organization housing the repository")
-REPO_NAME=$(get_input "Enter your GitHub repository name")
+GITHUB_USERNAME=$(get_input "Enter the GitHub username or organization housing the repository" "uchicago-dsi")
+REPO_NAME=$(get_input "Enter your GitHub repository name" "debit-scrapers")
 
 # Optional customization
 POOL_NAME=$(get_input "Workload Identity Pool name" "github-actions-pool")
@@ -195,6 +195,13 @@ print_status "Adding Service Usage Admin role to service account..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/serviceusage.serviceUsageAdmin" \
+    --quiet
+
+# Apply "Compute Admin" role to permit service account to view and manage compute resources during Pulumi deployment
+print_status "Adding Compute Admin role to service account..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/compute.admin" \
     --quiet
 
 # Configure Workload Identity
