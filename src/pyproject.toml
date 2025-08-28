@@ -40,6 +40,9 @@ playwright = [
     "playwright>=1.54.0",
 ]
 
+[tool.ruff]
+required-version = "0.12.8"
+
 [tool.ruff.lint]
 extend-select = [
   # by default, ruff enables all F and a subset of E rules
@@ -84,6 +87,6 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 dev-dependencies = [
   "pytest>=8.4.1",
   "pytest-django>=4.11.1",
-  "ruff>=0.12.10",
+  "ruff>=0.12.8",
   "pre-commit>=4.3.0",
 ]

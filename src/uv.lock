@@ -265,7 +265,7 @@ dev = [
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-django", specifier = ">=4.11.1" },
-    { name = "ruff", specifier = ">=0.12.10" },
+    { name = "ruff", specifier = ">=0.12.8" },
 ]
 
 [[package]]
