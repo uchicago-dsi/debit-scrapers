@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           args: check
-          src: $SRC_DIR
+          src: ${{ env.SRC_DIR}}
 
   scan:
     name: Scan for Secrets
@@ -43,6 +43,7 @@ jobs:
   deploy:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
+    needs: [lint, scan]
     environment: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
     permissions:
       id-token: write
@@ -92,7 +93,7 @@ jobs:
           command: up
           stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
           work-dir: ./infra/gcp/persistent
-          cloud-url: $BUCKET_URL
+          cloud-url: ${{ env.BUCKET_URL}}
         env:
           DJANGO_PORT: ${{ vars.DJANGO_PORT }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
