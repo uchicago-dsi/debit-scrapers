@@ -211,12 +211,12 @@ pulumi.export("pipeline_db_name", pipeline_db.name)
 
 # region
 
-# Create a Docker image repository for data extraction
-extraction_repo = gcp.artifactregistry.Repository(
-    f"debit-{ENV}-repo-extract",
-    repository_id=f"debit-{ENV}-repo-extract",
+# Create a Docker image repository for data extraction with a browser
+extraction_repo_heavy = gcp.artifactregistry.Repository(
+    f"debit-{ENV}-repo-extract-heavy",
+    repository_id=f"debit-{ENV}-repo-extract-heavy",
     location=PROJECT_REGION,
-    description="Holds Docker images for data extraction.",
+    description="Holds Docker images for data extraction using browser automation.",
     cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
             id="keep-heavy",
@@ -224,18 +224,30 @@ extraction_repo = gcp.artifactregistry.Repository(
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
                 keep_count=1,
             ),
-            condition=gcp.artifactregistry.RepositoryCleanupPolicyConditionArgs(
-                tag_prefixes=["heavy"],
-            ),
-        ),
+        )
+    ],
+    format="DOCKER",
+    docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
+        immutable_tags=True
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("extraction_repo_heavy", extraction_repo_heavy.name)
+
+# Create a Docker image repository for data extraction without a browser
+extraction_repo_light = gcp.artifactregistry.Repository(
+    f"debit-{ENV}-repo-extract-light",
+    repository_id=f"debit-{ENV}-repo-extract-light",
+    location=PROJECT_REGION,
+    description="Holds Docker images for data extraction without browser automation.",
+    cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
             id="keep-light",
             action="KEEP",
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
                 keep_count=1,
-            ),
-            condition=gcp.artifactregistry.RepositoryCleanupPolicyConditionArgs(
-                tag_prefixes=["light"],
             ),
         ),
     ],
@@ -247,22 +259,19 @@ extraction_repo = gcp.artifactregistry.Repository(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
-pulumi.export("extraction_repo", extraction_repo.name)
-
-# Compose the base name for data extraction images
-base_extraction_image_name = pulumi.Output.concat(
-    PROJECT_REGION,
-    "-docker.pkg.dev/",
-    PROJECT_ID,
-    "/",
-    extraction_repo.repository_id,
-    "/data-extraction",
-)
+pulumi.export("extraction_repo_light", extraction_repo_light.name)
 
 # Build and push "heavy" image
 heavy_extract_image = docker.Image(
     f"debit-{ENV}-image-extract-heavy",
-    image_name=pulumi.Output.concat(base_extraction_image_name, ":heavy"),
+    image_name=pulumi.Output.concat(
+        PROJECT_REGION,
+        "-docker.pkg.dev/",
+        PROJECT_ID,
+        "/",
+        extraction_repo_heavy.repository_id,
+        "/heavy",
+    ),
     build=docker.DockerBuildArgs(
         context=SRC_DIR.as_posix(),
         dockerfile="Dockerfile.heavy",
@@ -280,7 +289,14 @@ pulumi.export("extraction_heavy_image", heavy_extract_image.image_name)
 # Build and push "light" image
 light_extract_image = docker.Image(
     f"debit-{ENV}-image-extract-light",
-    image_name=pulumi.Output.concat(base_extraction_image_name, ":light"),
+    image_name=pulumi.Output.concat(
+        PROJECT_REGION,
+        "-docker.pkg.dev/",
+        PROJECT_ID,
+        "/",
+        extraction_repo_light.repository_id,
+        "/light",
+    ),
     build=docker.DockerBuildArgs(
         context=SRC_DIR.as_posix(),
         dockerfile="Dockerfile.light",
@@ -306,7 +322,7 @@ pulumi.export("extraction_light_image", light_extract_image.image_name)
 
 # Configure custom service account for Cloud Run
 cloud_run_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-service-account-cloudrun",
+    f"debit-{ENV}-account-cloudrun",
     display_name="Cloud Run Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -362,7 +378,7 @@ gcp.storage.BucketIAMMember(
 
 # Configure custom service account for Cloud Tasks
 cloud_tasks_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-service-account-cloud-tasks",
+    f"debit-{ENV}-account-cloud-tasks",
     display_name="Cloud Tasks Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -372,7 +388,7 @@ pulumi.export("cloud_tasks_service_account", cloud_tasks_service_account.email)
 
 # Configure custom service account for Cloud Scheduler
 cloud_scheduler_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-service-account-cloud-scheduler",
+    f"debit-{ENV}-account-cloud-scheduler",
     display_name="Cloud Scheduler Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -384,7 +400,7 @@ pulumi.export(
 
 # Configure custom service account for Cloud Workflows
 cloud_workflow_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-service-account-cloud-workflows",
+    f"debit-{ENV}-account-cloud-workflows",
     display_name="Cloud Workflow Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -693,7 +709,7 @@ gcp.cloudrunv2.ServiceIamMember(
 
 # Grant Cloud Tasks service agent permission to mint OIDC tokens for account
 gcp.serviceaccount.IAMMember(
-    f"debit-{ENV}-cloud-tasks-service-agent-minting-access",
+    f"debit-{ENV}-cloud-tasks-agent-minting-access",
     service_account_id=cloud_tasks_service_account.name,
     role="roles/iam.serviceAccountOpenIdTokenCreator",
     member=pulumi.Output.concat(
