@@ -361,7 +361,7 @@ gcp.storage.BucketIAMMember(
 
 # Configure custom service account for Cloud Tasks
 cloud_tasks_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-sa-cloud-tasks",
+    f"debit-{ENV}-sa-tasks",
     display_name="Cloud Tasks Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -376,7 +376,7 @@ cloud_tasks_service_account_email = cloud_tasks_service_account.email.apply(
 
 # Configure custom service account for Cloud Scheduler
 cloud_scheduler_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-sa-cloud-scheduler",
+    f"debit-{ENV}-sa-scheduler",
     display_name="Cloud Scheduler Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -395,7 +395,7 @@ cloud_scheduler_service_account_email = (
 
 # Configure custom service account for Cloud Workflows
 cloud_workflow_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-sa-cloud-workflows",
+    f"debit-{ENV}-sa-workflows",
     display_name="Cloud Workflow Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -680,7 +680,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
 
 # Grant Cloud Tasks service account access to invoke Cloud Run services
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-cloud-tasks-cloudrun-heavy-access",
+    f"debit-{ENV}-tasks-cloudrun-heavy-access",
     name=heavy_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -692,7 +692,7 @@ gcp.cloudrunv2.ServiceIamMember(
 )
 
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-cloud-tasks-cloudrun-light-access",
+    f"debit-{ENV}-tasks-cloudrun-light-access",
     name=light_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -705,7 +705,7 @@ gcp.cloudrunv2.ServiceIamMember(
 
 # Grant Cloud Tasks service agent permission to mint OIDC tokens for account
 gcp.serviceaccount.IAMMember(
-    f"debit-{ENV}-cloud-tasks-agent-minting-access",
+    f"debit-{ENV}-tasks-agent-minting-access",
     service_account_id=cloud_tasks_service_account.name,
     role="roles/iam.serviceAccountOpenIdTokenCreator",
     member=pulumi.Output.concat(
