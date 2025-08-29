@@ -5,8 +5,9 @@ import os
 import pathlib
 
 # Declare filepaths
-ROOT_DIR = pathlib.Path(__file__).resolve().parents[2]
+ROOT_DIR = pathlib.Path(__file__).resolve().parents[3]
 SRC_DIR = ROOT_DIR / "src"
+print(SRC_DIR)
 
 # Declare constants
 DJANGO_ALLOWED_HOST = ".run.app"
