@@ -453,7 +453,7 @@ shared_template_container_args = dict(
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="ENV",
-            value=ENV,
+            value="prod" if ENV == "p" else "test",
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="GEMINI_API_KEY",
@@ -503,7 +503,7 @@ shared_template_container_args = dict(
 
 # Create Cloud Run service running data extraction pipeline with browser
 heavy_cloud_run_service = gcp.cloudrunv2.Service(
-    f"debit-{ENV}-cloudrun-worker-heavy",
+    f"debit-{ENV}-runsvc-heavy",
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
     location=PROJECT_REGION,
     template=gcp.cloudrunv2.ServiceTemplateArgs(
@@ -536,7 +536,7 @@ pulumi.export("heavy_cloud_run_service", heavy_cloud_run_service.name)
 
 # Create Cloud Run service running data extraction pipeline without browser
 light_cloud_run_service = gcp.cloudrunv2.Service(
-    f"debit-{ENV}-cloudrun-worker-light",
+    f"debit-{ENV}-runsvc-light",
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
     location=PROJECT_REGION,
     template=gcp.cloudrunv2.ServiceTemplateArgs(
@@ -569,7 +569,7 @@ pulumi.export("light_cloud_run_service", light_cloud_run_service.name)
 
 # Create Cloud Run Job serving as orchestrator
 orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
-    f"debit-{ENV}-cloudrun-job-extract-data",
+    f"debit-{ENV}-runjob-extract",
     location=PROJECT_REGION,
     parallelism=1,
     template=gcp.cloudrunv2.JobTemplateArgs(
@@ -667,7 +667,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
 
     # Grant Cloud Run service account permission to enqueue tasks in queue
     gcp.cloudtasks.QueueIamMember(
-        f"debit-{ENV}-{config['source']}-queue-access",
+        f"debit-{ENV}-{config['source']}-enqueuer",
         name=queue.name,
         location=PROJECT_REGION,
         project=PROJECT_ID,
@@ -680,7 +680,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
 
 # Grant Cloud Tasks service account access to invoke Cloud Run services
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-tasks-cloudrun-heavy-access",
+    f"debit-{ENV}-runsvc-heavy-invoker",
     name=heavy_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -692,7 +692,7 @@ gcp.cloudrunv2.ServiceIamMember(
 )
 
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-tasks-cloudrun-light-access",
+    f"debit-{ENV}-runsvc-light-invoker",
     name=light_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -705,7 +705,7 @@ gcp.cloudrunv2.ServiceIamMember(
 
 # Grant Cloud Tasks service agent permission to mint OIDC tokens for account
 gcp.serviceaccount.IAMMember(
-    f"debit-{ENV}-tasks-agent-minting-access",
+    f"debit-{ENV}-tasks-minter",
     service_account_id=cloud_tasks_service_account.name,
     role="roles/iam.serviceAccountOpenIdTokenCreator",
     member=pulumi.Output.concat(
@@ -746,7 +746,6 @@ extraction_workflow = gcp.workflows.Workflow(
                         body: {{}}
                         url: "https://run.googleapis.com/v2/projects/{project_id}/locations/{project_region}/jobs/{job_name}:run"
                     result: response
-
         """,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,

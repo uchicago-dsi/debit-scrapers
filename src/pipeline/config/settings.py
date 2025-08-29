@@ -10,7 +10,7 @@ from pathlib import Path
 # SERVER
 # ________________________________________________________________________
 
-DEBUG = os.environ["ENV"] != "PROD"
+DEBUG = os.environ["ENV"].lower() != "prod"
 
 # ________________________________________________________________________
 # FILE PATHS
@@ -23,8 +23,12 @@ EXTRACT_CONFIG_DIR = EXTRACT_DIR / "config"
 EXTRACT_TEST_DIR = EXTRACT_DIR / "tests"
 EXTRACT_TEST_RESULT_DIR = EXTRACT_TEST_DIR / "results"
 
-IATI_ACTIVITY_SECTOR_FPATH = EXTRACT_CONFIG_DIR / "iati_activity_sector_codes.json"
-IATI_ACTIVITY_STATUS_FPATH = EXTRACT_CONFIG_DIR / "iati_activity_status_codes.json"
+IATI_ACTIVITY_SECTOR_FPATH = (
+    EXTRACT_CONFIG_DIR / "iati_activity_sector_codes.json"
+)
+IATI_ACTIVITY_STATUS_FPATH = (
+    EXTRACT_CONFIG_DIR / "iati_activity_status_codes.json"
+)
 IDB_DOWNLOAD_OPTIONS_FPATH = EXTRACT_CONFIG_DIR / "idb_download_options.json"
 USER_AGENT_HEADERS_FPATH = EXTRACT_CONFIG_DIR / "user_agent_headers.json"
 

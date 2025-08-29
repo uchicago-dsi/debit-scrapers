@@ -103,7 +103,7 @@ QUEUE_CONFIG = [
 try:
     DJANGO_PORT = os.environ["DJANGO_PORT"]
     DJANGO_SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-    ENV = os.environ["ENV"]
+    ENV = "p" if os.environ["ENV"] == "prod" else "t"
     EXTRACTION_PIPELINE_MAX_WAIT = os.environ["EXTRACTION_PIPELINE_MAX_WAIT"]
     EXTRACTION_PIPELINE_POLLING_INTERVAL = os.environ[
         "EXTRACTION_PIPELINE_POLLING_INTERVAL"
