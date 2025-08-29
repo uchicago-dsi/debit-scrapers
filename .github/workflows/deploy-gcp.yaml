@@ -60,6 +60,9 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}
 
+      - name: Set up Docker
+        run: gcloud auth configure-docker ${{ vars.GCP_PROJECT_REGION }}-docker.pkg.dev --quiet
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
