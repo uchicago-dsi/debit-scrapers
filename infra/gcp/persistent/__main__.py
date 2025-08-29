@@ -322,13 +322,15 @@ cloud_run_service_account_email = cloud_run_service_account.email.apply(
 )
 
 # Grant account access to secrets
-for secret_id in [
-    django_secret.secret_id,
-    gemini_api_key.secret_id,
-    postgres_password.secret_id,
-]:
+for idx, secret_id in enumerate(
+    (
+        django_secret.secret_id,
+        gemini_api_key.secret_id,
+        postgres_password.secret_id,
+    )
+):
     gcp.secretmanager.SecretIamMember(
-        secret_id.apply(lambda id: f"debit-{ENV}-run-access-{id}"),
+        f"debit-{ENV}-run-sct-access-{idx}",
         secret_id=secret_id,
         role="roles/secretmanager.secretAccessor",
         member=cloud_run_service_account_email,
@@ -339,7 +341,7 @@ for secret_id in [
 
 # Grant account access to Cloud SQL
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-cloudrun-cloudsql-access",
+    f"debit-{ENV}-run-sql-access",
     project=PROJECT_ID,
     role="roles/cloudsql.client",
     members=[cloud_run_service_account_email],
@@ -350,7 +352,7 @@ gcp.projects.IAMBinding(
 
 # Grant account access to Cloud Storage bucket
 gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-cloudrun-storage-access",
+    f"debit-{ENV}-run-stg-access",
     bucket=data_bucket.name,
     role="roles/storage.objectAdmin",
     member=cloud_run_service_account_email,
@@ -680,7 +682,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
 
 # Grant Cloud Tasks service account access to invoke Cloud Run services
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-runsvc-heavy-invoker",
+    f"debit-{ENV}-tasks-runheavy",
     name=heavy_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -692,7 +694,7 @@ gcp.cloudrunv2.ServiceIamMember(
 )
 
 gcp.cloudrunv2.ServiceIamMember(
-    f"debit-{ENV}-runsvc-light-invoker",
+    f"debit-{ENV}-tasks-runlight",
     name=light_cloud_run_service.name,
     location=PROJECT_REGION,
     project=PROJECT_ID,
@@ -728,7 +730,7 @@ gcp.serviceaccount.IAMMember(
 # region
 
 extraction_workflow = gcp.workflows.Workflow(
-    f"debit-{ENV}-workflow-extraction",
+    f"debit-{ENV}-flows-extract",
     region=PROJECT_REGION,
     description="Triggers a Cloud Run Job for orchestrating data extraction.",
     service_account=cloud_workflow_service_account.email,
@@ -759,7 +761,7 @@ pulumi.export("extraction_workflow", extraction_workflow.name)
 
 # Grant Cloud Workflow permission to invoke Cloud Run Jobs
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-flows-cloudrun-access",
+    f"debit-{ENV}-flows-run-access",
     project=PROJECT_ID,
     role="roles/run.developer",
     members=[cloud_workflow_service_account_email],
@@ -770,7 +772,7 @@ gcp.projects.IAMBinding(
 
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-scheduler-flows-access",
+    f"debit-{ENV}-sch-flows-access",
     project=PROJECT_ID,
     role="roles/workflows.invoker",
     members=[cloud_scheduler_service_account_email],
@@ -789,7 +791,7 @@ gcp.projects.IAMBinding(
 # region
 
 scheduled_job = gcp.cloudscheduler.Job(
-    f"debit-{ENV}-scheduled-extraction-job",
+    f"debit-{ENV}-sch-extract",
     description="A scheduled job to extract data.",
     region=PROJECT_REGION,
     schedule=EXTRACTION_PIPELINE_SCHEDULE,
@@ -819,6 +821,6 @@ scheduled_job = gcp.cloudscheduler.Job(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
-pulumi.export("scheduled_job", scheduled_job.name)
+pulumi.export("extraction_scheduled_job", scheduled_job.name)
 
 # endregion
