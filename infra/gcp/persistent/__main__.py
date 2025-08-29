@@ -268,7 +268,7 @@ heavy_extract_image = docker.Image(
         lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/heavy"
     ),
     build=docker.DockerBuildArgs(
-        context="../../../src",
+        context=SRC_DIR.as_posix(),
         dockerfile="Dockerfile.heavy",
         platform="linux/amd64",
     ),
