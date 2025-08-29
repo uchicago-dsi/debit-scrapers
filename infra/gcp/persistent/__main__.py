@@ -214,6 +214,7 @@ pulumi.export("pipeline_db_name", pipeline_db.name)
 # Create a Docker image repository for data extraction
 extraction_repo = gcp.artifactregistry.Repository(
     f"debit-{ENV}-repo-extract",
+    repository_id=f"debit-{ENV}-repo-extract",
     location=PROJECT_REGION,
     description="Holds Docker images for data extraction.",
     cleanup_policies=[
