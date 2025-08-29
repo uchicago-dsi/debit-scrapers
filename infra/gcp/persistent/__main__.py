@@ -395,7 +395,7 @@ cloud_scheduler_service_account_email = (
 
 # Configure custom service account for Cloud Workflows
 cloud_workflow_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-sa-workflows",
+    f"debit-{ENV}-sa-flows",
     display_name="Cloud Workflow Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -760,7 +760,7 @@ pulumi.export("extraction_workflow", extraction_workflow.name)
 
 # Grant Cloud Workflow permission to invoke Cloud Run Jobs
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-workflows-cloudrun-access",
+    f"debit-{ENV}-flows-cloudrun-access",
     project=PROJECT_ID,
     role="roles/run.developer",
     members=[cloud_workflow_service_account_email],
@@ -771,7 +771,7 @@ gcp.projects.IAMBinding(
 
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-scheduler-workflows-access",
+    f"debit-{ENV}-scheduler-flows-access",
     project=PROJECT_ID,
     role="roles/workflows.invoker",
     members=[cloud_scheduler_service_account_email],
