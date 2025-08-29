@@ -230,6 +230,13 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --role="roles/serviceusage.serviceUsageAdmin" \
     --quiet
 
+# Apply "Artifact Registry Admin" role to permit service account to manage Docker images during Pulumi deployment
+print_status "Adding Artifact Registry Admin role to service account..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/artifactregistry.admin" \
+    --quiet
+
 # Apply "Compute Admin" role to permit service account to manage compute resources during Pulumi deployment
 print_status "Adding Compute Admin role to service account..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
