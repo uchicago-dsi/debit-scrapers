@@ -192,7 +192,9 @@ pipeline_db = gcp.sql.DatabaseInstance(
     f"debit-{ENV}-db-pipeline",
     region=PROJECT_REGION,
     database_version="POSTGRES_17",
-    settings=gcp.sql.DatabaseInstanceSettingsArgs(tier="db-f1-micro"),
+    settings=gcp.sql.DatabaseInstanceSettingsArgs(
+        edition="ENTERPRISE", tier="db-f1-micro"
+    ),
     deletion_protection=False,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
