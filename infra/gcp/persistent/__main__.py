@@ -328,7 +328,7 @@ for secret_id in [
     postgres_password.secret_id,
 ]:
     gcp.secretmanager.SecretIamMember(
-        f"debit-{ENV}-cloudrun-secret-access-{secret_id}",
+        secret_id.apply(lambda id: f"debit-{ENV}-run-access-{id}"),
         secret_id=secret_id,
         role="roles/secretmanager.secretAccessor",
         member=cloud_run_service_account_email,
