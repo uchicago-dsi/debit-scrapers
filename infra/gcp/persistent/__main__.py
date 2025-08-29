@@ -269,7 +269,7 @@ heavy_extract_image = docker.Image(
     ),
     build=docker.DockerBuildArgs(
         context=SRC_DIR.as_posix(),
-        dockerfile="Dockerfile.heavy",
+        dockerfile=(SRC_DIR / "Dockerfile.heavy").as_posix(),
         platform="linux/amd64",
     ),
     registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
@@ -287,7 +287,7 @@ light_extract_image = docker.Image(
     ),
     build=docker.DockerBuildArgs(
         context=SRC_DIR.as_posix(),
-        dockerfile="Dockerfile.light",
+        dockerfile=(SRC_DIR / "Dockerfile.light").as_posix(),
         platform="linux/amd64",
     ),
     registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
