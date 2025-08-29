@@ -760,7 +760,7 @@ pulumi.export("extraction_workflow", extraction_workflow.name)
 
 # Grant Cloud Workflow permission to invoke Cloud Run Jobs
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-cloudworkflows-cloudrun-access",
+    f"debit-{ENV}-workflows-cloudrun-access",
     project=PROJECT_ID,
     role="roles/run.developer",
     members=[cloud_workflow_service_account_email],
@@ -771,7 +771,7 @@ gcp.projects.IAMBinding(
 
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
 gcp.projects.IAMBinding(
-    f"debit-{ENV}-cloud-scheduler-cloudworkflows-access",
+    f"debit-{ENV}-scheduler-workflows-access",
     project=PROJECT_ID,
     role="roles/workflows.invoker",
     members=[cloud_scheduler_service_account_email],

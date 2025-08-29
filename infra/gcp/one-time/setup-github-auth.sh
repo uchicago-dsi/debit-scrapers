@@ -216,47 +216,24 @@ fi
 # Add IAM roles to service account to enable deployment with Pulumi
 print_header "Configuring IAM Roles"
 
-# Apply "Storage Admin" role to permit service account to create bucket holding Pulumi state
-print_status "Adding Storage Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/storage.admin" \
-    --quiet
+declare -A ROLES=(
+  ["roles/storage.admin"]="Storage Admin"
+  ["roles/serviceusage.serviceUsageAdmin"]="Service Usage Admin"
+  ["roles/iam.serviceAccountCreator"]="Service Account Creator"
+  ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
+  ["roles/artifactregistry.admin"]="Artifact Registry Admin"
+  ["roles/compute.admin"]="Compute Admin"
+  ["roles/cloudsql.admin"]="Cloud SQL Admin"
+  ["roles/secretmanager.admin"]="Secret Manager Admin"
+)
 
-# Apply "Service Usage Admin" role to permit service account to enable APIs during Pulumi deployment
-print_status "Adding Service Usage Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/serviceusage.serviceUsageAdmin" \
-    --quiet
-
-# Apply "Artifact Registry Admin" role to permit service account to manage Docker images during Pulumi deployment
-print_status "Adding Artifact Registry Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/artifactregistry.admin" \
-    --quiet
-
-# Apply "Compute Admin" role to permit service account to manage compute resources during Pulumi deployment
-print_status "Adding Compute Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/compute.admin" \
-    --quiet
-
-# Apply "Cloud SQL Admin" role to permit service account to manage database resources during Pulumi deployment
-print_status "Adding Cloud SQL Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/cloudsql.admin" \
-    --quiet
-
-# Apply "Secret Manager Admin" role to permit service account to manage secrets during Pulumi deployment
-print_status "Adding Secret Manager Admin role to service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/secretmanager.admin" \
-    --quiet
+for ROLE in "${!ROLES[@]}"; do
+  print_status "Adding ${ROLES[$ROLE]} role to service account..."
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+      --role="$ROLE" \
+      --quiet
+done
 
 # ------------------------------------------------------------------------
 # WORKLOAD IDENTITY CONFIGURATION
