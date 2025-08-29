@@ -5,7 +5,7 @@ import os
 import pathlib
 
 # Declare filepaths
-ROOT_DIR = pathlib.Path(__file__).resolve().parents[1]
+ROOT_DIR = pathlib.Path(__file__).resolve().parents[3]
 SRC_DIR = ROOT_DIR / "src"
 
 # Declare constants
