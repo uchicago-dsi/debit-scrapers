@@ -514,13 +514,14 @@ shared_template_container_args = dict(
 heavy_cloud_run_service = gcp.cloudrunv2.Service(
     f"debit-{ENV}-runsvc-heavy",
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
+    launch_stage="BETA",
     location=PROJECT_REGION,
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         containers=[
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
                 image=heavy_extract_image.image_name,
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    limits={"memory": "4Gi", "cpu": "1"}
+                    cpu_idle=True, limits={"memory": "4Gi", "cpu": "1"}
                 ),
                 **shared_template_container_args,
             )
@@ -543,13 +544,14 @@ pulumi.export("heavy_cloud_run_service", heavy_cloud_run_service.name)
 light_cloud_run_service = gcp.cloudrunv2.Service(
     f"debit-{ENV}-runsvc-light",
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
+    launch_stage="BETA",
     location=PROJECT_REGION,
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         containers=[
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
                 image=light_extract_image.image_name,
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    limits={"memory": "256Mi", "cpu": "1"}
+                    cpu_idle=True, limits={"memory": "256Mi", "cpu": "1"}
                 ),
                 **shared_template_container_args,
             )
