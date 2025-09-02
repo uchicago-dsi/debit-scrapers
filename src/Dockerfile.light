@@ -37,4 +37,4 @@ RUN uv sync --frozen --no-dev
 EXPOSE 8000
 
 # Run bash script on container start
-CMD ["bash", "setup.sh", "--migrate", "--run-server"]
+CMD ["bash", "setup.sh", "--run-server"]

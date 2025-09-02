@@ -502,6 +502,16 @@ shared_template_container_args = dict(
     ports=gcp.cloudrunv2.ServiceTemplateContainerPortsArgs(
         container_port=DJANGO_PORT,
     ),
+    startup_probe=gcp.cloudrun.ServiceTemplateSpecContainerStartupProbeArgs(
+        http_get=gcp.cloudrun.ServiceTemplateSpecContainerStartupProbeHttpGetArgs(
+            path="/",
+            port=DJANGO_PORT,
+        ),
+        initial_delay_seconds=0,
+        period_seconds=30,
+        timeout_seconds=300,
+        failure_threshold=10,
+    ),
     volume_mounts=[
         gcp.cloudrunv2.ServiceTemplateContainerVolumeMountArgs(
             name="cloudsql",
@@ -551,7 +561,7 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
                 image=light_extract_image.image_name,
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    cpu_idle=True, limits={"memory": "256Mi", "cpu": "1"}
+                    cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
                 ),
                 **shared_template_container_args,
             )
@@ -573,6 +583,7 @@ pulumi.export("light_cloud_run_service", light_cloud_run_service.name)
 # Create Cloud Run Job serving as orchestrator
 orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
     f"debit-{ENV}-runjob-extract",
+    launch_stage="BETA",
     location=PROJECT_REGION,
     parallelism=1,
     template=gcp.cloudrunv2.JobTemplateArgs(
@@ -593,7 +604,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                 image=light_extract_image.image_name,
                 ports=shared_template_container_args["ports"],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    limits={"memory": "256Mi", "cpu": "1"}
+                    cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
                 ),
                 service_account=shared_template_container_args[
                     "service_account"
