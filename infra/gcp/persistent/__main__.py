@@ -536,6 +536,7 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
         manual_instance_count=20,
+        scaling_mode="MANUAL",
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -569,6 +570,7 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
         manual_instance_count=20,
+        scaling_mode="MANUAL",
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

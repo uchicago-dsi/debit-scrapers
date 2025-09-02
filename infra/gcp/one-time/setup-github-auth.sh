@@ -220,11 +220,14 @@ declare -A ROLES=(
   ["roles/storage.admin"]="Storage Admin"
   ["roles/serviceusage.serviceUsageAdmin"]="Service Usage Admin"
   ["roles/iam.serviceAccountCreator"]="Service Account Creator"
+  ["roles/iam.serviceAccountUser"]="Service Account User"
   ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
   ["roles/artifactregistry.admin"]="Artifact Registry Admin"
   ["roles/compute.admin"]="Compute Admin"
   ["roles/cloudsql.admin"]="Cloud SQL Admin"
   ["roles/secretmanager.admin"]="Secret Manager Admin"
+  ["roles/cloudscheduler.admin"]="Cloud Scheduler Admin"
+  ["roles/run.admin"]="Cloud Run Admin"
 )
 
 for ROLE in "${!ROLES[@]}"; do
