@@ -609,23 +609,25 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
     deletion_protection=False,
     launch_stage="BETA",
     location=PROJECT_REGION,
-    parallelism=1,
     template=gcp.cloudrunv2.JobTemplateArgs(
+        parallelism=1,
+        template=gcp.cloudrunv2.JobTemplateTemplateArgs(
+            containers=[
+                gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
+                    envs=[*shared_template_container_args["envs"]],
+                    image=light_extract_image.image_name,
+                    ports=shared_template_container_args["ports"],
+                    resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                        cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
+                    ),
+                    volume_mounts=shared_template_container_args[
+                        "volume-mounts"
+                    ],
+                )
+            ],
+            service_account=cloud_run_service_account_email,
+        ),
         **shared_template_args,
-        containers=[
-            gcp.cloudrunv2.ServiceTemplateContainerArgs(
-                envs=[*shared_template_container_args["envs"]],
-                image=light_extract_image.image_name,
-                ports=shared_template_container_args["ports"],
-                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
-                ),
-                service_account=shared_template_container_args[
-                    "service_account"
-                ],
-                volume_mounts=shared_template_container_args["volume-mounts"],
-            )
-        ],
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
