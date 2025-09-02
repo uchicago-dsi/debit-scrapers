@@ -1,7 +1,7 @@
 """Custom middleware used throughout the Django project."""
 
 # Standard library imports
-from typing import Callable
+from collections.abc import Callable
 
 # Third-party imports
 from django.http import HttpRequest, HttpResponse
