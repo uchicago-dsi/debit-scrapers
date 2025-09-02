@@ -326,7 +326,7 @@ cloud_run_service_account = gcp.serviceaccount.Account(
 pulumi.export("cloud_run_service_account", cloud_run_service_account.email)
 
 # Store reference to service account email
-cloud_run_service_account_email = cloud_run_service_account.email.apply(
+cloud_run_service_account_member = cloud_run_service_account.email.apply(
     lambda email: f"serviceAccount:{email}"
 )
 
@@ -342,7 +342,7 @@ for idx, secret_id in enumerate(
         f"debit-{ENV}-run-sct-access-{idx}",
         secret_id=secret_id,
         role="roles/secretmanager.secretAccessor",
-        member=cloud_run_service_account_email,
+        member=cloud_run_service_account_member,
         opts=pulumi.ResourceOptions(
             depends_on=enabled_services, provider=gcp_provider
         ),
@@ -353,7 +353,7 @@ gcp.projects.IAMBinding(
     f"debit-{ENV}-run-sql-access",
     project=PROJECT_ID,
     role="roles/cloudsql.client",
-    members=[cloud_run_service_account_email],
+    members=[cloud_run_service_account_member],
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -364,7 +364,7 @@ gcp.storage.BucketIAMMember(
     f"debit-{ENV}-run-stg-access",
     bucket=data_bucket.name,
     role="roles/storage.objectAdmin",
-    member=cloud_run_service_account_email,
+    member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -381,7 +381,7 @@ cloud_tasks_service_account = gcp.serviceaccount.Account(
 pulumi.export("cloud_tasks_service_account", cloud_tasks_service_account.email)
 
 # Store reference to service account email
-cloud_tasks_service_account_email = cloud_tasks_service_account.email.apply(
+cloud_tasks_service_account_member = cloud_tasks_service_account.email.apply(
     lambda email: f"serviceAccount:{email}"
 )
 
@@ -398,7 +398,7 @@ pulumi.export(
 )
 
 # Store reference to service account email
-cloud_scheduler_service_account_email = (
+cloud_scheduler_service_account_member = (
     cloud_scheduler_service_account.email.apply(
         lambda email: f"serviceAccount:{email}"
     )
@@ -417,7 +417,7 @@ pulumi.export(
 )
 
 # Store reference to service account email
-cloud_workflow_service_account_email = (
+cloud_workflow_service_account_member = (
     cloud_workflow_service_account.email.apply(
         lambda email: f"serviceAccount:{email}"
     )
@@ -707,7 +707,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                     ],
                 )
             ],
-            service_account=cloud_run_service_account_email,
+            service_account=cloud_run_service_account.email,
             timeout=shared_template_args["timeout"],
             volumes=shared_template_args["volumes"],
         ),
@@ -785,7 +785,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
         location=PROJECT_REGION,
         project=PROJECT_ID,
         role="roles/cloudtasks.enqueuer",
-        member=cloud_run_service_account_email,
+        member=cloud_run_service_account_member,
         opts=pulumi.ResourceOptions(
             depends_on=enabled_services, provider=gcp_provider
         ),
@@ -798,7 +798,7 @@ gcp.cloudrunv2.ServiceIamMember(
     location=PROJECT_REGION,
     project=PROJECT_ID,
     role="roles/run.invoker",
-    member=cloud_tasks_service_account_email,
+    member=cloud_tasks_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -810,7 +810,7 @@ gcp.cloudrunv2.ServiceIamMember(
     location=PROJECT_REGION,
     project=PROJECT_ID,
     role="roles/run.invoker",
-    member=cloud_tasks_service_account_email,
+    member=cloud_tasks_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -875,7 +875,7 @@ gcp.projects.IAMBinding(
     f"debit-{ENV}-flows-run-access",
     project=PROJECT_ID,
     role="roles/run.developer",
-    members=[cloud_workflow_service_account_email],
+    members=[cloud_workflow_service_account_member],
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -886,7 +886,7 @@ gcp.projects.IAMBinding(
     f"debit-{ENV}-sch-flows-access",
     project=PROJECT_ID,
     role="roles/workflows.invoker",
-    members=[cloud_scheduler_service_account_email],
+    members=[cloud_scheduler_service_account_member],
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
