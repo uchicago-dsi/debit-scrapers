@@ -528,11 +528,6 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
         max_instance_request_concurrency=2,
         **shared_template_args,
     ),
-    traffics=[
-        gcp.cloudrunv2.ServiceTrafficArgs(
-            percent=100,
-        )
-    ],
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
         manual_instance_count=20,
@@ -562,11 +557,6 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
         max_instance_request_concurrency=100,
         **shared_template_args,
     ),
-    traffics=[
-        gcp.cloudrunv2.ServiceTrafficArgs(
-            percent=100,
-        )
-    ],
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
         manual_instance_count=20,
