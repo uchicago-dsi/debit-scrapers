@@ -82,7 +82,9 @@ def _populate_temp_table(
             yield mapped
 
     tsv_file = _create_tsv_file(yield_record_values())
-    cursor.copy_from(tsv_file, "temp", columns=tuple(temp_table_col_names), null="None")
+    cursor.copy_from(
+        tsv_file, "temp", columns=tuple(temp_table_col_names), null="None"
+    )
 
 
 def _insert_from_temp_table(
@@ -124,7 +126,9 @@ def _dictfetchall(cursor: CursorWrapper) -> list[dict]:
         The rows.
     """
     desc = cursor.description
-    return [dict(zip([col[0] for col in desc], row)) for row in cursor.fetchall()]
+    return [
+        dict(zip([col[0] for col in desc], row)) for row in cursor.fetchall()
+    ]
 
 
 def _upsert_from_temp_table(
@@ -157,7 +161,9 @@ def _upsert_from_temp_table(
     dest_fields_str = ", ".join(dest_table_fields)
     temp_fields_str = ", ".join(f"temp.{f}" for f in dest_table_fields)
     update_fields_str = ", ".join(update_table_fields)
-    excl_update_fields_str = ", ".join(f"excluded.{f}" for f in update_table_fields)
+    excl_update_fields_str = ", ".join(
+        f"excluded.{f}" for f in update_table_fields
+    )
     row_str = "ROW" if len(update_table_fields) == 1 else ""
     cursor.execute(
         f"""
@@ -175,7 +181,7 @@ def _upsert_from_temp_table(
 
 def bulk_insert_records(
     records: list[Any], dest_table_name: str, dest_table_fields: list[str]
-) -> list[int]:
+) -> list[dict]:
     """Performs a bulk insert and returns the newly-created records' ids.
 
     NOTE: At the time of writing, it is not possible to return ids
@@ -196,7 +202,9 @@ def bulk_insert_records(
     with connection.cursor() as cursor:
         with _setup_teardown_temp_tables(cursor, dest_table_name):
             _populate_temp_table(cursor, records, dest_table_fields)
-            return _insert_from_temp_table(cursor, dest_table_name, dest_table_fields)
+            return _insert_from_temp_table(
+                cursor, dest_table_name, dest_table_fields
+            )
 
 
 def bulk_upsert_records(

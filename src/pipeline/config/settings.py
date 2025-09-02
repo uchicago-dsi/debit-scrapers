@@ -10,7 +10,7 @@ from pathlib import Path
 # SERVER
 # ________________________________________________________________________
 
-DEBUG = os.environ["ENV"].lower() != "prod"
+DEBUG = os.environ["ENV"].lower() == "dev"
 
 # ________________________________________________________________________
 # FILE PATHS
@@ -68,7 +68,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -163,6 +163,14 @@ LOGGING = {
 # region CUSTOM SETTINGS
 
 # ________________________________________________________________________
+# ORCHESTRATION
+# ________________________________________________________________________
+
+MAX_TASK_RETRIES = int(os.environ["MAX_TASK_RETRIES"])
+MAX_WAIT_IN_MINUTES = int(os.environ["MAX_WAIT_IN_MINUTES"])
+POLLING_INTERVAL_IN_MINUTES = int(os.environ["POLLING_INTERVAL_IN_MINUTES"])
+
+# ________________________________________________________________________
 # WORKFLOW TYPES
 # ________________________________________________________________________
 
@@ -197,5 +205,13 @@ PRO_ABBREVIATION = "pro"
 UNDP_ABBREVIATION = "undp"
 WB_ABBREVIATION = "wb"
 
+# ________________________________________________________________________
+# GOOGLE CLOUD PLATFORM
+# ________________________________________________________________________
+
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+
+GOOGLE_CLOUD_PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT_ID"]
+GOOGLE_CLOUD_PROJECT_REGION = os.environ["GOOGLE_CLOUD_PROJECT_REGION"]
 
 # endregion

@@ -20,3 +20,13 @@ run-scrapers-bash:
 		--env-file $(env_path) \
 		--rm $(project_name) \
 		bash
+
+run-scraper-network:
+	cd $(current_abs_path)
+	docker compose up --build
+
+tear-down-scraper-network:
+	cd $(current_abs_path)
+	docker compose down
+	sudo chown -R $(USER) pgdata
+	rm -R pgdata

@@ -37,6 +37,30 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
         """The base URL for a FMO project search results webpage."""
         return "https://www.fmo.nl/worldmap?page={}"
 
+    def _find_last_page(self) -> int:
+        """Retrieves the number of the last search results page.
+
+        Args:
+            `None`
+
+        Returns:
+            The page number.
+        """
+        try:
+            first_page_url = self.search_results_base_url.format(
+                self.first_page_num
+            )
+            html = self._data_request_client.get(first_page_url).text
+            soup = BeautifulSoup(html, "html.parser")
+
+            pager = soup.find("div", {"class": "pbuic-pager-container"})
+            last_page_num = int(pager.find_all("a")[-2]["href"].split("=")[-1])
+            return last_page_num
+        except Exception as e:
+            raise RuntimeError(
+                f"Error retrieving last page number. {e}"
+            ) from None
+
     def generate_seed_urls(self) -> list[str]:
         """Generates the first set of URLs to scrape.
 
@@ -47,7 +71,7 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
             The unique list of search result pages.
         """
         try:
-            last_page_num = self.find_last_page()
+            last_page_num = self._find_last_page()
             results_page_urls = [
                 self.search_results_base_url.format(n)
                 for n in range(1, last_page_num + 1)
@@ -57,26 +81,6 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
             raise RuntimeError(
                 f"Failed to generate search result pages to crawl. {e}"
             ) from None
-
-    def find_last_page(self) -> int:
-        """Retrieves the number of the last search results page.
-
-        Args:
-            `None`
-
-        Returns:
-            The page number.
-        """
-        try:
-            first_page_url = self.search_results_base_url.format(self.first_page_num)
-            html = self._data_request_client.get(first_page_url).text
-            soup = BeautifulSoup(html, "html.parser")
-
-            pager = soup.find("div", {"class": "pbuic-pager-container"})
-            last_page_num = int(pager.find_all("a")[-2]["href"].split("=")[-1])
-            return last_page_num
-        except Exception as e:
-            raise RuntimeError(f"Error retrieving last page number. {e}") from None
 
 
 class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
@@ -97,7 +101,9 @@ class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
             soup = BeautifulSoup(source, "html.parser")
             urls = [
                 proj["href"]
-                for proj in soup.find_all("a", {"class": "ProjectList__projectLink"})
+                for proj in soup.find_all(
+                    "a", {"class": "ProjectList__projectLink"}
+                )
             ]
             return urls
         except Exception as e:
@@ -120,7 +126,7 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """
         try:
             # Extract project number from URL
-            number = url.split("/")[-1] if url else None
+            number = url.split("/")[-1] if url else ""
 
             # Fetch webpage HTML
             r = self._data_request_client.get(url)
@@ -147,7 +153,7 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 )
                 status = status_span.text.split(":")[-1].strip()
             except Exception:
-                status = None
+                status = ""
 
             # Create project detail lookup
             detail_div = soup.find("div", class_="ProjectDetail__aside--right")
@@ -160,7 +166,7 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             try:
                 sectors = "|".join(detail_lookup["Sector"].split(", "))
             except Exception:
-                sectors = None
+                sectors = ""
 
             # Extract project countries
             try:
@@ -171,7 +177,7 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 if uses_formal_name:
                     countries = f"{name_parts[1].strip()} {name_parts[0]}"
             except Exception:
-                countries = None
+                countries = ""
 
             # Define local function to get multiplier
             def get_multiplier(amount_str: str) -> float | None:
@@ -197,21 +203,26 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             try:
                 financing = detail_lookup["Total FMO financing"]
                 if financing and financing != "n.a.":
-                    total_amount_currency, total_amount, _ = financing.split(" ")
-                    total_amount = float(total_amount) * get_multiplier(financing)
+                    total_amount_currency, total_amount, _ = financing.split(
+                        " "
+                    )
+                    total_amount = float(total_amount) * get_multiplier(
+                        financing
+                    )
                 else:
-                    total_amount_currency = total_amount = None
+                    raise Exception()
             except Exception:
-                total_amount_currency = total_amount = None
+                total_amount = None
+                total_amount_currency = ""
 
             # Define function to format date
-            def get_date(field_name_str: str) -> str | None:
+            def get_date(field_name_str: str) -> str:
                 try:
                     raw_date = detail_lookup[field_name_str]
                     parsed_date = datetime.strptime(raw_date, "%m/%d/%Y")
                     return parsed_date.strftime("%Y-%m-%d")
                 except Exception:
-                    return None
+                    return ""
 
             # Parse date to retrieve year, month, and day
             disclosed_utc = get_date("Publication date")
@@ -237,4 +248,6 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             ]
 
         except Exception as e:
-            raise RuntimeError(f"Error scraping project page '{url}'. {e}") from None
+            raise RuntimeError(
+                f"Error scraping project page '{url}'. {e}"
+            ) from None

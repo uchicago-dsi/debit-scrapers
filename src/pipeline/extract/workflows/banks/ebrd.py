@@ -47,7 +47,9 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             The raw project records.
         """
         # Fetch project data
-        r = self._data_request_client.get(self.download_url, use_random_user_agent=True)
+        r = self._data_request_client.get(
+            self.download_url, use_random_user_agent=True
+        )
         if not r.ok:
             raise RuntimeError(
                 "Error fetching data from EBRD. The request failed "
@@ -61,7 +63,9 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Read data into Pandas DataFrame
         return pd.DataFrame(data[1:], columns=data[0] + ["Bumped Link"])
 
-    def clean_projects(self, df: pd.DataFrame) -> tuple[list[str], pd.DataFrame]:
+    def clean_projects(
+        self, df: pd.DataFrame
+    ) -> tuple[list[str], pd.DataFrame]:
         """Parses project records and URLs to project pages from the raw data.
 
         Args:
@@ -76,25 +80,31 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Drop rows without project ids
         df = df[~(df["Project ID"] == "") & ~(df["Project ID"].isna())]
 
-        # Replace NaN values with None
-        df = df.replace({np.nan: None})
+        # Replace NaN values with empty strings
+        df = df.replace({np.nan: ""})
 
         # Parse publication date values to "YYYY-MM-DD" format
         df["Date Disclosed"] = df["Publication date"].apply(
-            lambda x: (
-                None if not x else datetime.strptime(x, "%d %b %Y").strftime("%Y-%m-%d")
+            lambda val: (
+                ""
+                if not val
+                else datetime.strptime(val, "%d %b %Y").strftime("%Y-%m-%d")
             )
         )
 
         # Adjust project statuses
         df["Project status"] = df["Project status"].apply(
-            lambda val: ("Pending Approval" if val == "Passed Final Review" else val)
+            lambda val: (
+                "Pending Approval" if val == "Passed Final Review" else val
+            )
         )
 
         # Correct project page URLs, which spread across two columns
         df["URL"] = df.apply(
             lambda row: (
-                row["Bumped Link"] if row["Bumped Link"] else row["URL link to project"]
+                row["Bumped Link"]
+                if row["Bumped Link"]
+                else row["URL link to project"]
             ),
             axis=1,
         )
@@ -153,11 +163,11 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         """
         super().__init__(data_request_client, db_client, logger)
         try:
-            api_key = os.environ["GEMINI_API_KEY"]
-        except KeyError:
+            api_key = settings.GEMINI_API_KEY
+        except AttributeError:
             raise RuntimeError(
                 "Failed to instantiate EbrdProjectScrapeWorkflow. "
-                "Gemini API key not found in environmental variables."
+                "Gemini API key not found in project settings."
             ) from None
         self._gemini_client = genai.Client(api_key=api_key)
 
@@ -187,7 +197,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Extract text of client header
         client_header = [
             tag.find_parent("h2")
-            for tag in soup.find_all(string=re.compile(r"Client", re.IGNORECASE))
+            for tag in soup.find_all(
+                string=re.compile(r"Client", re.IGNORECASE)
+            )
             if tag.parent.name == "h2"
         ][0]
         components.append(client_header.text.strip("\r\n\t "))
@@ -231,7 +243,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         try:
             payload = json.loads(match.group(1))
         except Exception:
-            raise ValueError("Could not parse JSON from response text.") from None
+            raise ValueError(
+                "Could not parse JSON from response text."
+            ) from None
 
         # Otherwise, validate JSON schema and return
         if "loan_amount" not in payload:
@@ -274,27 +288,32 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             parsed_date = datetime.strptime(date_section.text, "%d %b %Y")
             approved_utc = parsed_date.strftime("%Y-%m-%d")
         except AttributeError:
-            approved_utc = None
+            approved_utc = ""
 
         # Parse client information field for company names
         try:
             client_header = [
                 tag.find_parent("h2")
-                for tag in soup.find_all(string=re.compile(r"Client", re.IGNORECASE))
+                for tag in soup.find_all(
+                    string=re.compile(r"Client", re.IGNORECASE)
+                )
                 if tag.parent.name == "h2"
             ][0]
             client_content = [
                 sib
                 for sib in client_header.next_siblings
-                if not (isinstance(sib, NavigableString) and sib.strip("\r\n\t ") == "")
+                if not (
+                    isinstance(sib, NavigableString)
+                    and sib.strip("\r\n\t ") == ""
+                )
             ][0]
             companies = (
                 client_content.strip("\r\n\t ")
                 if isinstance(client_content, NavigableString)
-                else None
+                else ""
             )
         except (AttributeError, IndexError):
-            companies = None
+            companies = ""
 
         # Parse loan amount field to retrieve value and currency type
         try:
@@ -307,7 +326,8 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             loan_amount_currency, loan_amount_value = loan_amount.split()
             loan_amount_value = int(float(loan_amount_value.replace(",", "")))
         except (AttributeError, ValueError):
-            loan_amount_currency = loan_amount_value = None
+            loan_amount_value = None
+            loan_amount_currency = ""
 
         # Fallback to AI if rule-based webscraping fails
         if not companies or not loan_amount_value or not loan_amount_currency:
@@ -315,7 +335,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                 prompt = self._build_prompt(soup)
                 response = self._prompt_ai(prompt)
                 if response:
-                    companies = response["client"] if companies is None else companies
+                    companies = (
+                        response["client"] if not companies else companies
+                    )
                     loan_amount_value = (
                         response["loan_amount"]
                         if loan_amount_value is None
@@ -323,7 +345,7 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                     )
                     loan_amount_currency = (
                         response["currency"]
-                        if loan_amount_currency is None
+                        if not loan_amount_currency
                         else loan_amount_currency
                     )
             except Exception as e:
@@ -339,8 +361,10 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                 "source": settings.EBRD_ABBREVIATION.upper(),
                 "total_amount": loan_amount_value,
                 "total_amount_currency": loan_amount_currency,
-                "total_amount_in_usd": (
-                    loan_amount_value if loan_amount_currency == "USD" else None
+                "total_amount_usd": (
+                    loan_amount_value
+                    if loan_amount_currency == "USD"
+                    else None
                 ),
                 "url": url,
             }

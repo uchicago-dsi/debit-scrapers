@@ -1,28 +1,59 @@
 # Launches services for the DeBIT scraping pipeline
 # under a default network. Intended for local testing.
 
-version: "3"
 services:
   # POSTGRES DATABASE
-  db:
+  postgres:
     image: postgres
     container_name: debit-scrapers-database
     volumes:
       - ./pgdata:/var/lib/postgresql/data
     env_file:
-      - .env
+      - ./src/.env.dev
 
   # PGADMIN DATABASE GUI
   pgadmin:
     image: dpage/pgadmin4
     container_name: debit-scrapers-pgadmin
     depends_on:
-      - db
+      - postgres
     logging:
       driver: none
     ports:
       - "443:443"
     env_file:
-      - .env
+      - ./src/.env.dev
     volumes:
       - ./server.local.json:/pgadmin4/servers.json
+
+  # SCRAPER SERVICE
+  scraper:
+    build:
+      context: src
+      dockerfile: Dockerfile.heavy
+    container_name: debit-scrapers-worker
+    command: ["bash", "setup.sh", "--run-server", "--development"]
+    depends_on:
+      - postgres
+    env_file:
+      - ./src/.env.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/src
+
+  # ORCHESTRATOR SERVICE
+  orchestrator:
+    build:
+      context: src
+      dockerfile: Dockerfile.light
+    container_name: debit-scrapers-orchestrator
+    command: ["bash", "setup.sh", "--migrate", "--extract-data"]
+    depends_on:
+      - postgres
+    env_file:
+      - ./src/.env.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src:/src

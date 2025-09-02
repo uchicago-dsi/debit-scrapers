@@ -1,130 +1,335 @@
 """Permits CRUD database operations for entities related to data extraction."""
 
 # Standard library imports
+from dataclasses import asdict
+from datetime import datetime, UTC
+
+# Third-party imports
+from django.conf import settings
+from django.db.models import Q
+from django.forms.models import model_to_dict
 
 # Application imports
-from common.database import bulk_insert_records
-from extract.domain import (
-    JobUpdateRequest,
-    StagedProjectUpsertRequest,
-    TaskInsertRequest,
-    TaskUpdateRequest,
-)
+from extract.domain import ProjectUpsertRequest, TaskUpsertRequest
 from extract.models import ExtractedProject, ExtractionJob, ExtractionTask
 
 
 class DatabaseClient:
     """A database client for use throughout the application."""
 
-    def bulk_create_staged_projects(
-        self, projects: list[StagedProjectUpsertRequest]
-    ) -> list[dict]:
-        """Bulk inserts staged project records while ignoring conflicts.
+    def bulk_upsert_projects(self, projects: list[dict]) -> list[dict]:
+        """Bulk upserts project records.
 
         Raises:
             `RuntimeError` if the operation fails.
 
         Args:
-            projects: The project records associated with the task.
+            projects: The project records.
 
         Returns:
-            A representation of the created projects.
+            A representation of the newly upserted projects.
         """
+        # Abort upsert if no projects provided
+        if not projects:
+            return []
+
+        # Manually add timestamp fields
+        # NOTE: Bulk operations don't call Model.save(), so
+        # the auto_now and auto_now_add fields aren't updated.
         try:
-            return bulk_insert_records(
-                projects,
-                "extracted_project",
-                ["job_id", "status", "source", "workflow_type", "url"],
+            mapped = []
+            for project in projects:
+                now = datetime.now(tz=UTC)
+                project["created_at_utc"] = project.get("created_at_utc", now)
+                project["last_updated_at_utc"] = now
+                safe_project = asdict(ProjectUpsertRequest(**project))
+                mapped.append(ExtractedProject(**safe_project))
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to prepare projects for bulk upsert. {e}"
+            ) from None
+
+        # Bulk upsert projects (i.e., create new records and update conflicts)
+        try:
+            unique_fields = ["source", "url"]
+            update_fields = [
+                "affiliates",
+                "countries",
+                "date_actual_close",
+                "date_approved",
+                "date_disclosed",
+                "date_effective",
+                "date_last_updated",
+                "date_planned_close",
+                "date_planned_effective",
+                "date_revised_close",
+                "date_signed",
+                "date_under_appraisal",
+                "finance_types",
+                "name",
+                "number",
+                "sectors",
+                "status",
+                "total_amount",
+                "total_amount_currency",
+                "total_amount_usd",
+            ]
+            upserted = ExtractedProject.objects.bulk_create(
+                mapped,
+                update_conflicts=True,
+                update_fields=update_fields,
+                unique_fields=unique_fields,
             )
         except Exception as e:
             raise RuntimeError(
-                f"Failed to create a new task in the database. {e}"
+                f"Failed to bulk upsert projects in the database. {e}"
             ) from None
 
-    def bulk_create_tasks(self, tasks: list[TaskInsertRequest]) -> list[dict]:
-        """Bulk inserts task records while ignoring conflicts.
+        # Return dictionary representations of upserted projects
+        return [model_to_dict(obj) for obj in upserted]
+
+    def bulk_upsert_tasks(self, tasks: list[TaskUpsertRequest]) -> list[dict]:
+        """Bulk upserts task records while managing conflicts.
 
         Raises:
             `RuntimeError` if the operation fails.
 
         Args:
-            tasks: The tasks to insert.
+            tasks: The tasks to upsert.
 
         Returns:
-            The newly-created database rows, to be used as messages.
+            The database representation of the newly-created or updated tasks.
         """
+        # Abort upsert if no tasks provided
+        if not tasks:
+            return []
+
+        # Manually add timestamp fields
+        # NOTE: Bulk operations don't call Model.save(),
+        # so the auto_now_add field isn't updated.
         try:
-            return bulk_insert_records(
-                tasks,
-                "extraction_task",
-                ["job_id", "status", "source", "workflow_type", "url"],
+            mapped = []
+            for task in tasks:
+                now = datetime.now(tz=UTC)
+                task["created_at_utc"] = task.get("created_at_utc", now)
+                mapped.append(ExtractionTask(**task))
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to prepare tasks for bulk upsert. {e}"
+            ) from None
+
+        # Attempt to upsert tasks
+        try:
+            upserted = ExtractionTask.objects.bulk_create(
+                objs=mapped,
+                update_conflicts=True,
+                update_fields=["status"],
+                unique_fields=["job_id", "source", "workflow_type", "url"],
             )
         except Exception as e:
             raise RuntimeError(
-                f"Failed to create a new task in the database. {e}"
+                f"Failed to bulk upsert task(s) into the database. {e}"
             ) from None
 
-    def update_job(self, job: JobUpdateRequest) -> dict:
-        """Updates a job in the database and returns the new representation.
+        # Return dictionary representations of upserted tasks
+        return [model_to_dict(task) for task in upserted]
+
+    def cancel_outstanding_tasks(
+        self, job_pk: int, excluded_sources: list[str]
+    ) -> None:
+        """Cancels outstanding tasks for the given job.
 
         Args:
-            job: The job to update.
+            job_pk: The unique identifier of the job.
+
+            excluded_sources: A list of data sources to exclude.
 
         Returns:
-            The newly-updated job.
+            `None`
         """
-        # Isolate invocation id
-        invocation_id = job.pop("invocation_id")
+        ExtractionTask.objects.filter(
+            job_id=job_pk,
+            status__in=[
+                ExtractionTask.StatusChoices.IN_PROGRESS,
+                ExtractionTask.StatusChoices.NOT_STARTED,
+            ],
+        ).exclude(source__in=excluded_sources).update(
+            status=ExtractionTask.StatusChoices.CANCELLED
+        )
 
-        # Confirm that job is unique
+    def get_or_create_job(self) -> tuple[int, str, bool]:
+        """Gets or creates a new job in the database for the current date.
+
+        NOTE: The date is expressed in YYYY-MM-DD format and uses UTC.
+
+        Args:
+            `None`
+
+        Returns:
+            A three-item tuple consisting of the job primary key
+                and date as well as a boolean indicating whether
+                the job was created.
+        """
+        now = datetime.now(tz=UTC).strftime("%Y-%m-%d")
+        job, created = ExtractionJob.objects.get_or_create(date=now)
+        return job.id, job.date, created
+
+    def count_outstanding_tasks(self, job_pk: int) -> int:
+        """Counts the number of outstanding tasks for the given job.
+
+        Args:
+            job_pk: The unique identifier of the job.
+
+        Returns:
+            The number of outstanding tasks.
+        """
+        # Compose query filters
+        belongs_to_job = Q(job_id=job_pk)
+        eligible_for_retry = Q(
+            status=ExtractionTask.StatusChoices.ERROR,
+        ) & Q(retry_count__lt=settings.MAX_TASK_RETRIES)
+        pending = Q(
+            status__in=[
+                ExtractionTask.StatusChoices.NOT_STARTED,
+                ExtractionTask.StatusChoices.IN_PROGRESS,
+            ]
+        )
+
+        # Query database for outstanding tasks and take count
+        return ExtractionTask.objects.filter(
+            belongs_to_job & (eligible_for_retry | pending)
+        ).count()
+
+    def mark_job_completed(self, pk: int) -> None:
+        """Marks a job as completed in the database.
+
+        Args:
+            pk: The unique identifier of the job.
+
+        Returns:
+            `None`
+        """
+        # Fetch job corresponding to given primary key
         try:
-            ExtractionJob.objects.get(invocation_id=invocation_id)
+            job = ExtractionJob.objects.get(pk=pk)
         except ExtractionJob.DoesNotExist:
             raise RuntimeError(
-                "An unexpected error occurred. Job wih given"
-                f'invocation id "{invocation_id}" does not exist.'
-            ) from None
-        except ExtractionJob.MultipleObjectsReturned:
-            raise RuntimeError(
-                "An unexpected error occurred. Job with given"
-                f'invocation id "{invocation_id}" is not unique.'
+                f'Job with given id "{pk}" does not exist.'
             ) from None
 
-        # Update job in database
+        # Attempt to mark job as completed
         try:
-            obj, _ = ExtractionJob.objects.update_or_create(
-                invocation_id=invocation_id, defaults=job
-            )
+            job.completed_at_utc = datetime.now(UTC)
+            job.save()
         except Exception as e:
-            raise RuntimeError(f"Failed to update job within database. {e}") from None
+            raise RuntimeError(
+                f'Failed to update completed job "{pk}" within database. {e}'
+            ) from None
 
-        return obj
-
-    def update_staged_project(self, project: StagedProjectUpsertRequest) -> dict:
-        """Updates a staged project in the database.
+    def mark_task_failure(self, pk: int, error: str, retry_count: int) -> None:
+        """Marks a task as failed in the database.
 
         Args:
-            project: The project to update.
+            pk: The unique identifier of the task.
+
+            error: The exception message.
+
+            retry_count: The number of times the task has been attempted.
 
         Returns:
-            The updated project.
+            `None`
+        """
+        # Fetch task corresponding to given primary key
+        try:
+            task = ExtractionTask.objects.get(pk=pk)
+        except ExtractionTask.DoesNotExist:
+            raise RuntimeError(
+                f'Task with given id "{pk}" does not exist.'
+            ) from None
+
+        # Attempt to mark task as failed
+        try:
+            task.status = ExtractionTask.StatusChoices.ERROR
+            task.retry_count = retry_count
+            task.last_error = error
+            task.failed_at_utc = datetime.now(UTC)
+            task.save()
+        except Exception as e:
+            raise RuntimeError(
+                f'Failed to update failed task "{pk}" within database. {e}'
+            ) from None
+
+    def mark_task_pending(self, pk: int) -> None:
+        """Marks a task as pending in the database.
+
+        Args:
+            pk: The unique identifier of the task.
+
+        Returns:
+            `None`
+        """
+        # Fetch task corresponding to given primary key
+        try:
+            task = ExtractionTask.objects.get(pk=pk)
+        except ExtractionTask.DoesNotExist:
+            raise RuntimeError(
+                f'Task with given id "{pk}" does not exist.'
+            ) from None
+
+        # Attempt to mark task as pending
+        try:
+            task.status = ExtractionTask.StatusChoices.IN_PROGRESS
+            task.started_at_utc = datetime.now(UTC)
+            task.save()
+        except Exception as e:
+            raise RuntimeError(
+                f'Failed to update pending task "{pk}" within database. {e}'
+            ) from None
+
+    def mark_task_success(self, pk: int, retry_count: int) -> None:
+        """Marks a task as successful in the database.
+
+        Args:
+            pk: The unique identifier of the task.
+
+            retry_count: The number of times the task has been attempted.
+
+        Returns:
+            `None`
+        """
+        # Fetch task corresponding to given primary key
+        try:
+            task = ExtractionTask.objects.get(pk=pk)
+        except ExtractionTask.DoesNotExist:
+            raise RuntimeError(
+                f'Task with given id "{pk}" does not exist.'
+            ) from None
+
+        # Attempt to mark task as successful
+        try:
+            task.status = ExtractionTask.StatusChoices.COMPLETED
+            task.retry_count = retry_count
+            task.completed_at_utc = datetime.now(UTC)
+            task.save()
+        except Exception as e:
+            raise RuntimeError(
+                f'Failed to update successful task "{pk}" within database. {e}'
+            ) from None
+
+    def patch_project(self, project: dict) -> dict:
+        """Updates select fields of a project in the database.
+
+        Args:
+            project: A representation of the project update.
+                Expected to have `source` and `url` fields
+                as well as one or more data fields.
+
+        Returns:
+            The database representation of the updated project.
         """
         # Isolate project data source and URL
         source = project.pop("source")
         url = project.pop("url")
-
-        # Confirm that project is unique
-        try:
-            ExtractedProject.objects.get(source=source, url=url)
-        except ExtractedProject.DoesNotExist:
-            raise RuntimeError(
-                f"Project from bank {source} with URL {url} does not exist."
-            ) from None
-        except ExtractedProject.MultipleObjectsReturned:
-            raise RuntimeError(
-                "An unexpected error occurred. Project from bank "
-                f"{source} with URL {url} is not unique."
-            ) from None
 
         # Update project in database
         try:
@@ -136,37 +341,47 @@ class DatabaseClient:
                 f"Failed to update project within database. {e}"
             ) from None
 
-        return obj
+        return model_to_dict(obj)
 
-    def update_task(self, task: TaskUpdateRequest) -> dict:
-        """Updates a task in the database.
+    def reset_tasks(
+        self, job_id: int, sources: list[str], force_restart: bool = False
+    ) -> list[dict]:
+        """Resets tasks for the given job and data sources.
+
+        If `force_restart` is `True`, all tasks will be reset,
+        regardless of their current status. Otherwise, only tasks
+        in a potentially non-terminal state (e.g., "Not Started",
+        "In Progress", or "Error") will be reset. Resetting a task
+        entails setting its status to "Not Started".
 
         Args:
-            task: The task to update.
+            job_id: The unique identifier of the job.
+
+            sources: The data sources.
+
+            force_restart: Whether all tasks should be reset.
+                Defaults to `False`.
 
         Returns:
-            The updated task.
+            The database representation of the reset tasks.
         """
-        # Isolate task id
-        task_id = task.pop("id")
+        # Determine which tasks should be reset
+        queryset = (
+            ExtractionTask.objects.filter(job_id=job_id, source__in=sources)
+            if force_restart
+            else ExtractionTask.objects.filter(
+                job_id=job_id,
+                source__in=sources,
+                status__in=[
+                    ExtractionTask.StatusChoices.NOT_STARTED,
+                    ExtractionTask.StatusChoices.IN_PROGRESS,
+                    ExtractionTask.StatusChoices.ERROR,
+                ],
+            )
+        )
 
-        # Confirm that task is unique
-        try:
-            ExtractionTask.objects.get(id=task_id)
-        except ExtractionTask.DoesNotExist:
-            raise RuntimeError(
-                f"Task with given id {task_id} does not exist."
-            ) from None
-        except ExtractionTask.MultipleObjectsReturned:
-            raise RuntimeError(
-                "An unexpected error occurred. Task with "
-                f"given id {task_id} is not unique."
-            ) from None
+        # Reset tasks
+        queryset.update(status=ExtractionTask.StatusChoices.NOT_STARTED)
 
-        # Update task in database
-        try:
-            obj, _ = ExtractionTask.objects.update_or_create(id=task_id, defaults=task)
-        except Exception as e:
-            raise RuntimeError(f"Failed to update task within database. {e}") from None
-
-        return obj
+        # Return dictionary representations of reset tasks
+        return [model_to_dict(task) for task in queryset]

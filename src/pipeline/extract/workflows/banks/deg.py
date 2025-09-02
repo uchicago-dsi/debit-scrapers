@@ -73,12 +73,14 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
             df["source"] = settings.DEG_ABBREVIATION.upper()
             df["number"] = df["uid"]
             df["name"] = df["title"]
-            df["status"] = None
+            df["status"] = ""
             df["total_amount"] = df["financingSum"]
             df["total_amount_currency"] = df["currency"].str["code"]
             df["total_amount_usd"] = df.apply(
                 lambda row: (
-                    row["financingSum"] if row["currency"]["code"] == "USD" else None
+                    row["financingSum"]
+                    if row["currency"]["code"] == "USD"
+                    else None
                 ),
                 axis=1,
             )
@@ -105,7 +107,13 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
             df = df[col_mapping.keys()].astype(col_mapping)
 
             # Replace NaN values with None
-            return df.replace({np.nan: None})
+            df = df.replace({np.nan: None})
+
+            # Replace None values with empty strings for string columns
+            cols = [k for k, v in col_mapping.items() if v == "object"]
+            df[cols] = df[cols].replace({None: ""})
+
+            return df
 
         except Exception as e:
             raise RuntimeError(f"Error cleaning DEG projects. {e}") from None

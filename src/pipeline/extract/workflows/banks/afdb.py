@@ -8,6 +8,7 @@ the remaining details for project-related organizations.
 
 # Standard library imports
 import json
+import numpy as np
 from pathlib import Path
 from typing import Any
 
@@ -80,14 +81,16 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
 
         return df
 
-    def clean_projects(self, df: pd.DataFrame) -> tuple[list[str], list[dict]]:
-        """Cleans project records to conform to an expected schema.
+    def clean_projects(
+        self, df: pd.DataFrame
+    ) -> tuple[list[str], pd.DataFrame]:
+        """Cleans project records and parses the next set of URLs to crawl.
 
         Args:
             df: The raw project records.
 
         Returns:
-            The cleaned records.
+            A two-item tuple consisting of the new URLs and cleaned records.
         """
         # Parse the project ids to build URLs to project organization pages
         urls = [
@@ -99,7 +102,9 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         df["source"] = settings.AFDB_ABBREVIATION.upper()
 
         # Add project URL column
-        df["url"] = df["identifier"].apply(lambda id: self.project_page_url.format(id))
+        df["url"] = df["identifier"].apply(
+            lambda id: self.project_page_url.format(id)
+        )
 
         # Calculate loan amount currency
         df["total_amount_currency"] = df["total_commitments (UA)"].apply(
@@ -126,6 +131,12 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Rename columns
         df = df.rename(columns=col_map)
 
+        # Replace NaN values with empty strings
+        df = df.replace({np.nan: ""})
+
+        # Replace empty strings with None in numeric columns
+        df["total_amount"] = df["total_amount"].replace({"": None})
+
         # Subset columns
         df = df[col_map.values()]
 
@@ -136,7 +147,7 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
     """Requests select AFDB project data using the API."""
 
     @property
-    def project_page_url(self) -> str:
+    def project_page_base_url(self) -> str:
         """The base URL for an AFDB project page."""
         return "https://mapafrica.afdb.org/en/projects/46002-{}"
 
@@ -179,7 +190,9 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse the response JSON
         try:
-            orgs = "|".join(clean(org["organisation"]) for org in json.loads(payload))
+            orgs = "|".join(
+                clean(org["organisation"]) for org in json.loads(payload)
+            )
         except json.JSONDecodeError:
             raise RuntimeError(
                 f'Error parsing AFDB project details at "{url}". '
@@ -195,8 +208,10 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         project_id = url.split("/")[-2].split("46002-")[-1]
 
         # Parse the response
-        return {
-            "affiliates": orgs,
-            "source": settings.AFDB_ABBREVIATION.upper(),
-            "url": self.project_page_url.format(project_id),
-        }
+        return [
+            {
+                "affiliates": orgs,
+                "source": settings.AFDB_ABBREVIATION.upper(),
+                "url": self.project_page_base_url.format(project_id),
+            }
+        ]

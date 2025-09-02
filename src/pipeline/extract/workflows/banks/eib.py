@@ -45,30 +45,7 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
         """The base URL for a search results payload provided by EIB's API."""
         return "https://www.eib.org/page-provider/projects/list?pageNumber={page_num}&itemPerPage={items_per_page}&pageable=true&sortColumn=id"
 
-    def generate_seed_urls(self) -> list[str]:
-        """Generates the first set of URLs to scrape.
-
-        Args:
-            `None`
-
-        Returns:
-            The unique list of search result pages.
-        """
-        try:
-            last_page_num = self.find_last_page()
-            result_page_urls = [
-                self.search_results_base_url.format(
-                    page_num=n, items_per_page=self.num_results_per_page
-                )
-                for n in range(self.first_page_num, last_page_num + 1)
-            ]
-            return result_page_urls
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to generate search result pages to crawl. {e}"
-            ) from None
-
-    def find_last_page(self) -> int:
+    def _find_last_page(self) -> int:
         """Retrieves the number of the last search results page.
 
         Args:
@@ -94,6 +71,29 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
             raise RuntimeError(
                 "Error determining last page number from API "
                 f'payload retrieved from "{first_results_page_url}". {e}'
+            ) from None
+
+    def generate_seed_urls(self) -> list[str]:
+        """Generates the first set of URLs to scrape.
+
+        Args:
+            `None`
+
+        Returns:
+            The unique list of search result pages.
+        """
+        try:
+            last_page_num = self._find_last_page()
+            result_page_urls = [
+                self.search_results_base_url.format(
+                    page_num=n, items_per_page=self.num_results_per_page
+                )
+                for n in range(self.first_page_num, last_page_num + 1)
+            ]
+            return result_page_urls
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to generate search result pages to crawl. {e}"
             ) from None
 
 
@@ -134,7 +134,7 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 The formatted name.
             """
             if not name or name is np.nan:
-                return None
+                return ""
 
             name_parts = name.split(",")
             num_formal_name_parts = 2
@@ -164,29 +164,33 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             parsed_status_date = datetime.strptime(status_date, "%d/%m/%Y")
             formatted_status_date = parsed_status_date.strftime("%Y-%m-%d")
             under_appraisal_utc = (
-                formatted_status_date if status == "Under appraisal" else None
+                formatted_status_date if status == "Under appraisal" else ""
             )
-            approved_utc = formatted_status_date if status == "Approved" else None
+            approved_utc = (
+                formatted_status_date if status == "Approved" else ""
+            )
             signed_utc = (
                 formatted_status_date
                 if status not in ("Under appraisal", "Approved")
-                else None
+                else ""
             )
         else:
-            under_appraisal_utc = approved_utc = signed_utc = None
+            under_appraisal_utc = approved_utc = signed_utc = ""
 
         # Determine loan amount
         proposed_amt = float(proposed_amt) if proposed_amt else None
         financed_amt = float(financed_amt) if financed_amt else None
         amount = (
-            proposed_amt if status in ("Approved", "Under appraisal") else financed_amt
+            proposed_amt
+            if status in ("Approved", "Under appraisal")
+            else financed_amt
         )
 
         # Determine project url
         url = self.project_base_url.format(project_id=project["url"])
 
         return {
-            "countries": "|".join(countries) if countries else None,
+            "countries": "|".join(countries) if countries else "",
             "date_approved": approved_utc,
             "date_under_appraisal": under_appraisal_utc,
             "date_signed": signed_utc,
@@ -227,7 +231,9 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
         try:
             projects = r.json()
         except json.JSONDecodeError:
-            raise RuntimeError("Error parsing EIB projects into JSON.") from None
+            raise RuntimeError(
+                "Error parsing EIB projects into JSON."
+            ) from None
 
         # Map project records and extract URLs
         try:
@@ -272,17 +278,21 @@ class EibProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Scrape project promoters and financial intermediaries
         try:
-            col_label_div = soup.find("div", string="Promoter - financial intermediary")
+            col_label_div = soup.find(
+                "div", string="Promoter - financial intermediary"
+            )
             header_row_div = col_label_div.find_parent(
                 "div", class_="eib-list__row eib-list__row--header"
             )
             body_row_div = header_row_div.find_next_sibling(
                 "div", class_="eib-list__row eib-list__row--body"
             )
-            promoter_col = body_row_div.find_all("div", class_="eib-list__column")[1]
+            promoter_col = body_row_div.find_all(
+                "div", class_="eib-list__column"
+            )[1]
             companies = promoter_col.text.strip()
         except (AttributeError, TypeError):
-            companies = None
+            companies = ""
 
         return [
             {

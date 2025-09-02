@@ -11,10 +11,14 @@ from django.views import View
 
 # Application imports
 from common.http import DataRequestClient
-from common.logger import LoggerFactory
 from common.tasks import TaskQueueFactory
 from extract.dal import DatabaseClient
 from extract.workflows.registry import WorkflowClassRegistry
+
+# Instantiate global variables
+db_client = DatabaseClient()
+data_request_client = DataRequestClient()
+queue_client = TaskQueueFactory.get()
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -33,16 +37,12 @@ class GoogleCloudTasksView(View):
         Returns:
             A JSON response indicating the status of the task processing.
         """
-        # Initialize logger and required clients
-        logger = LoggerFactory.get_logger("WORKER")
-        db_client = DatabaseClient()
-        data_request_client = DataRequestClient()
-        queue_client = TaskQueueFactory.get()
-
         # Parse request headers
         try:
             message_id = request.headers["X-CloudTasks-TaskName"]
-            num_retries = int(request.headers["X-CloudTasks-TaskExecutionCount"])
+            num_retries = int(
+                request.headers["X-CloudTasks-TaskExecutionCount"]
+            )
         except KeyError as e:
             return JsonResponse(
                 {"error": f'Missing expected HTTP request header "{e}"'},
@@ -63,19 +63,14 @@ class GoogleCloudTasksView(View):
             workflow_type = payload["workflow_type"]
             url = payload["url"]
         except json.JSONDecodeError as e:
-            return JsonResponse({"error": f"Unable to parse JSON. {e}"}, status=400)
+            return JsonResponse(
+                {"error": f"Unable to parse JSON. {e}"}, status=400
+            )
         except KeyError as e:
             return JsonResponse(
                 {"error": f'Missing expected request body attribute "{e}"'},
                 status=400,
             )
-
-        # Log request
-        logger.info(
-            f'Received request to process task "{task_id}" from '
-            f'job "{job_id}" for workflow "{source}-{workflow_type}". '
-            f"Number of previous attempts: {num_retries}"
-        )
 
         # Instantiate appropriate workflow class from registry
         try:
@@ -108,6 +103,8 @@ class GoogleCloudTasksView(View):
                 url,
             )
         except Exception as e:
-            return JsonResponse({"error": f"Error running workflow. {e}"}, status=500)
+            return JsonResponse(
+                {"error": f"Error running workflow. {e}"}, status=500
+            )
 
         return HttpResponse(status=200)

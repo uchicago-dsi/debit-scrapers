@@ -84,7 +84,7 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                 lambda date: (
                     datetime.strptime(date, "%b %d, %Y").strftime("%Y-%m-%d")
                     if date
-                    else None
+                    else ""
                 )
             )
 
@@ -144,7 +144,9 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                     f"{row['number']}.htm"
                 )
 
-            df["url"] = df.agg(lambda row: create_project_url(row), axis="columns")
+            df["url"] = df.agg(
+                lambda row: create_project_url(row), axis="columns"
+            )
 
             # Set final column schema
             col_mapping = {
@@ -162,7 +164,15 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                 "url": "object",
             }
 
-            return df[col_mapping.keys()].astype(col_mapping)
+            df = df[col_mapping.keys()].astype(col_mapping)
+
+            # Replace None with empty strings for string data columns
+            cols = [k for k, v in col_mapping.items() if v == "object"]
+            df[cols] = df[cols].replace({None: ""})
+
+            return df
 
         except Exception as e:
-            raise RuntimeError(f"Error cleaning KFW project data. {e}") from None
+            raise RuntimeError(
+                f"Error cleaning KFW project data. {e}"
+            ) from None

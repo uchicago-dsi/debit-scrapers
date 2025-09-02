@@ -27,6 +27,9 @@ COPY pyproject.toml uv.lock  ./
 # Install exact Python dependencies, including Playwright, without installing project
 RUN uv sync --frozen --no-install-project --extra playwright
 
+# Install Playwright
+RUN uv run playwright install
+
 # Install Playwright dependencies
 RUN uv run playwright install-deps
 
@@ -40,4 +43,4 @@ RUN uv sync --frozen --no-dev
 EXPOSE 8080
 
 # Run bash script on container start
-CMD ["uv", "run", "./pipeline/manage.py", "runserver", "0.0.0.0:8080"]
+CMD ["bash", "setup.sh", "--migrate", "--run-server"]

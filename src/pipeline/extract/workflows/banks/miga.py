@@ -41,26 +41,7 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
         """The base URL for a MIGA project search results webpage."""
         return "https://www.miga.org/projects?page={}"
 
-    def generate_seed_urls(self) -> list[str]:
-        """Generates the first set of URLs to scrape.
-
-        Args:
-            `None`
-
-        Returns:
-            The unique list of search result pages.
-        """
-        try:
-            last_page_num = self.find_last_page()
-            result_pages = [
-                self.search_results_base_url.format(page_num)
-                for page_num in range(last_page_num + 1)
-            ]
-            return result_pages
-        except Exception as e:
-            self._logger.error(f"Failed to generate search result pages to crawl. {e}")
-
-    def find_last_page(self) -> int:
+    def _find_last_page(self) -> int:
         """Retrieves the number of the last search results page.
 
         Args:
@@ -95,6 +76,27 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
             self._logger.error(
                 "Error retrieving last page number at "
                 f"'{self.search_results_base_url}'. {e}"
+            )
+
+    def generate_seed_urls(self) -> list[str]:
+        """Generates the first set of URLs to scrape.
+
+        Args:
+            `None`
+
+        Returns:
+            The unique list of search result pages.
+        """
+        try:
+            last_page_num = self._find_last_page()
+            result_pages = [
+                self.search_results_base_url.format(page_num)
+                for page_num in range(last_page_num + 1)
+            ]
+            return result_pages
+        except Exception as e:
+            self._logger.error(
+                f"Failed to generate search result pages to crawl. {e}"
             )
 
 
@@ -149,18 +151,24 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
 
             # Scrape project page URLs belonging to MIGA only
             urls = []
-            for project in projects_div.find_all("h5", {"class": "page-title"}):
+            for project in projects_div.find_all(
+                "h5", {"class": "page-title"}
+            ):
                 href = project.find("a")["href"]
                 if href.startswith(self.ifc_disclosures_base_url):
                     continue
                 project_url = (
-                    href if "http" in href else self.miga_projects_base_url + href
+                    href
+                    if "http" in href
+                    else self.miga_projects_base_url + href
                 )
                 urls.append(project_url)
 
             return urls
         except Exception as e:
-            self._logger.error(f"Error scraping project page URLs from '{url}'. {e}")
+            self._logger.error(
+                f"Error scraping project page URLs from '{url}'. {e}"
+            )
 
 
 class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
@@ -192,27 +200,29 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
             soup = BeautifulSoup(r.text, "html.parser")
 
             # Define local helper function to identify page elements
-            def safe_nav(func: Callable) -> str | None:
+            def safe_nav(func: Callable) -> str:
                 try:
                     html = func(soup)
                     return html.text.strip()
                 except AttributeError:
-                    return None
+                    return ""
 
             # Extract project name
             name = safe_nav(lambda s: s.find("h1"))
 
             # Extract and format project number
             number = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-project-id").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-project-id"
+                ).find("div", class_="field--item")
             )
             number = number.replace(",", "").replace(" ", ",")
 
             # Extract project status
             status = safe_nav(
-                lambda s: s.find("div", {"class": "field--name-field-project-status"})
+                lambda s: s.find(
+                    "div", {"class": "field--name-field-project-status"}
+                )
             )
 
             # Extract and format dislosure date
@@ -221,19 +231,23 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                     "div", class_="field--name-field-date-spg-closed"
                 ).find("div", class_="field--item")
             )
-            parsed_disclosed_utc = datetime.strptime(raw_disclosed_utc, "%B %d, %Y")
+            parsed_disclosed_utc = datetime.strptime(
+                raw_disclosed_utc, "%B %d, %Y"
+            )
             disclosed_utc = parsed_disclosed_utc.strftime("%Y-%m-%d")
 
             # Extract fiscal year
             fiscal_year = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-fiscal-year").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-fiscal-year"
+                ).find("div", class_="field--item")
             )
 
             # Extract and format project countries
             raw_countries = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-host-country")
+                lambda s: s.find(
+                    "div", class_="field--name-field-host-country"
+                )
             )
             raw_countries = re.sub("[\r\n\t]", " ", raw_countries)
             raw_countries = raw_countries.split("and")
@@ -241,7 +255,9 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
             num_formal_name_parts = 2
             for country in raw_countries:
                 name_parts = country.split(",")
-                uses_formal_country_name = len(name_parts) == num_formal_name_parts
+                uses_formal_country_name = (
+                    len(name_parts) == num_formal_name_parts
+                )
                 if uses_formal_country_name:
                     formatted_countries.append(
                         f"{name_parts[1].strip()} {name_parts[0].strip()}"
@@ -253,13 +269,13 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Extract project sector
             sectors = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-sector").find(
-                    "div", class_="field--item"
-                )
+                lambda s: s.find(
+                    "div", class_="field--name-field-sector"
+                ).find("div", class_="field--item")
             )
 
             # Define function to determine multiplier
-            def get_multiplier(amount_str: str) -> float | None:
+            def get_multiplier(amount_str: str) -> float:
                 """Returns a multiplier for loan amounts.
 
                 Args:
@@ -268,8 +284,6 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 Returns:
                     The multiplier.
                 """
-                if not amount_str:
-                    return None
                 if "MILLION" in amount_str.upper():
                     return 10**6
                 elif "BILLION" in amount_str.upper():
@@ -279,29 +293,34 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
             # Extract and format guarantee amount
             raw_amount = safe_nav(
-                lambda s: s.find("div", class_="field--name-field-gross-exposure-up-to")
+                lambda s: s.find(
+                    "div", class_="field--name-field-gross-exposure-up-to"
+                )
             )
             if raw_amount:
                 multiplier = get_multiplier(raw_amount)
-                leading_decimal = re.search(r"(\d+\.*\d*)", raw_amount).group(1)
+                leading_decimal = re.search(r"(\d+\.*\d*)", raw_amount).group(
+                    1
+                )
                 amount = float(leading_decimal) * multiplier
 
             # Determine currency
             if not raw_amount:
-                currency = None
+                currency = ""
             elif raw_amount.startswith("$EUR") or raw_amount.startswith("€"):
                 currency = "EUR"
             elif raw_amount.startswith("$"):
                 currency = "USD"
             else:
-                currency = None
+                currency = ""
 
             # Extract affiliates
             guarantee_div = soup.find(
                 "div", class_="field--name-field-guarantee-holder-term"
             )
             affiliates = "|".join(
-                div.text for div in guarantee_div.find_all("div", class_="field--item")
+                div.text
+                for div in guarantee_div.find_all("div", class_="field--item")
             )
 
             return [

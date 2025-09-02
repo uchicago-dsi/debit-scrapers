@@ -118,7 +118,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 .reset_index()
                 .rename(columns={"Project ID": "id"})
             )
-            projects_df = projects_df.merge(agg_sectors_df, how="left", on="id")
+            projects_df = projects_df.merge(
+                agg_sectors_df, how="left", on="id"
+            )
         except Exception as e:
             raise RuntimeError(
                 f"Error aggregating project sector data "
@@ -140,7 +142,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 .reset_index()
                 .rename(columns={"Project": "id"})
             )
-            projects_df = projects_df.merge(agg_financers_df, how="left", on="id")
+            projects_df = projects_df.merge(
+                agg_financers_df, how="left", on="id"
+            )
         except Exception as e:
             raise RuntimeError(
                 f"Error aggregating project financer data "
@@ -160,7 +164,9 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
         """
         try:
             # Remove child projects and projects that were dropped
-            df = df.query("supplementprojectflg != 'Y' and status != 'Dropped'")
+            df = df.query(
+                "supplementprojectflg != 'Y' and status != 'Dropped'"
+            )
 
             # Replace NaNs with None
             df = df.replace({np.nan: None})
@@ -196,27 +202,31 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
             # Create approval date column
             df["date_approved"] = df["boardapprovaldate"].apply(
-                lambda date: date[:10] if date else None
+                lambda date: date[:10] if date else ""
             )
 
             # Create approval date column
             df["date_disclosed"] = df["public_disclosure_date"].apply(
-                lambda date: date[:10] if date else None
+                lambda date: date[:10] if date else ""
             )
 
             # Create effective date column
             df["date_effective"] = df["loan_effective_date"].apply(
-                lambda date: date[:10] if date else None
+                lambda date: date[:10] if date else ""
             )
 
             # Create closed date column
             df["date_actual_close"] = df["closingdate"].apply(
-                lambda date: date[:10] if date else None
+                lambda date: date[:10] if date else ""
             )
 
             # Create total commitment columns
-            df["total_amount"] = df["total_amount_usd"] = df["curr_total_commitment"]
-            df["total_amount_currency"] = "USD"
+            df["total_amount"] = df["total_amount_usd"] = df[
+                "curr_total_commitment"
+            ]
+            df["total_amount_currency"] = df["total_amount"].apply(
+                lambda val: "USD" if val else ""
+            )
 
             # Create countries column
             def correct_country_name(name: str) -> str:
@@ -237,7 +247,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                     The formatted name.
                 """
                 if not name:
-                    return None
+                    return ""
 
                 num_formal_name_parts = 2
                 name_parts = name.split(",")
@@ -247,11 +257,13 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
 
                 return name
 
-            df["countries"] = df["countryshortname"].apply(correct_country_name)
+            df["countries"] = df["countryshortname"].apply(
+                correct_country_name
+            )
 
             # Create sectors column
             df["sectors"] = df["Sectors"].apply(
-                lambda lst: "|".join(lst) if lst else None
+                lambda lst: "|".join(lst) if lst else ""
             )
 
             # Create companies column
@@ -272,7 +284,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 if row["Financers"]:
                     affiliates.extend(row["Financers"])
 
-                return "|".join(affiliates).upper() if affiliates else None
+                return "|".join(affiliates).upper() if affiliates else ""
 
             df["affiliates"] = df.apply(aggregate_affiliates, axis=1)
 
@@ -282,7 +294,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
             )
 
             # Subset records
-            return df[
+            df = df[
                 [
                     "affiliates",
                     "countries",
@@ -303,5 +315,26 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 ]
             ]
 
+            # Replace None with empty strings in string data columns
+            cols = [
+                "affiliates",
+                "countries",
+                "date_approved",
+                "date_disclosed",
+                "date_effective",
+                "date_actual_close",
+                "finance_types",
+                "name",
+                "number",
+                "sectors",
+                "status",
+                "total_amount_currency",
+            ]
+            df[cols] = df[cols].replace({None: ""})
+
+            return df
+
         except Exception as e:
-            raise RuntimeError(f"Error cleaning World Bank Project data. {e}") from None
+            raise RuntimeError(
+                f"Error cleaning World Bank Project data. {e}"
+            ) from None

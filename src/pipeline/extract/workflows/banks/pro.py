@@ -147,7 +147,11 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         soup = BeautifulSoup(r.text, "html.parser")
 
         # Extract project name
-        name = soup.find("h1", class_="print-title-page").text.replace("\n", "").strip()
+        name = (
+            soup.find("h1", class_="print-title-page")
+            .text.replace("\n", "")
+            .strip()
+        )
 
         # Extract project sectors
         try:
@@ -155,13 +159,13 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 tag.text.strip() for tag in soup.find_all("a", class_="fr-tag")
             )
         except AttributeError:
-            sectors = None
+            sectors = ""
 
         # Get reference to project info table
         info_table = soup.find("div", class_="info-setup")
 
         # Define local function to extract table values
-        def extract_table_value(header: str) -> str | None:
+        def extract_table_value(header: str) -> str:
             """Extracts a value from a table.
 
             Args:
@@ -172,10 +176,12 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             """
             try:
                 header_div = info_table.find("div", string=header)
-                val_div = header_div.find_parent().find_next_sibling().find("div")
+                val_div = (
+                    header_div.find_parent().find_next_sibling().find("div")
+                )
                 return val_div.text.strip()
             except AttributeError:
-                return None
+                return ""
 
         # Extract project signature date from table
         try:
@@ -183,35 +189,41 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             parsed_date = datetime.strptime(raw_date, "%B %d %Y")
             signed_utc = parsed_date.strftime("%Y-%m-%d")
         except (AttributeError, TypeError):
-            signed_utc = None
+            signed_utc = ""
 
         # Extract project loan amount from table
         try:
             raw_loan_amount = extract_table_value("Financing amount (Euro)")
-            loan_amount = float(raw_loan_amount)
+            parsed_loan_amount = raw_loan_amount.replace(" ", "").replace(
+                ",", "."
+            )
+            loan_amount = float(parsed_loan_amount)
             loan_amount_currency = "EUR"
-        except (AttributeError, TypeError):
-            loan_amount = loan_amount_currency = None
+        except (AttributeError, ValueError):
+            loan_amount = None
+            loan_amount_currency = ""
 
         # Extract project countries from table
         try:
             raw_countries = extract_table_value("Location")
             countries = "|".join(raw_countries.split(", "))
             if not countries:
-                countries = None
+                countries = ""
         except (AttributeError, TypeError):
-            countries = None
+            countries = ""
 
         # Extract project companies from table
         try:
             raw_companies = extract_table_value("Customer")
             companies_sans_details = re.sub(r"\([^)]*\)", "", raw_companies)
             formatted_companies = (
-                companies_sans_details.replace("\n", " ").replace("  ", " ").strip()
+                companies_sans_details.replace("\n", " ")
+                .replace("  ", " ")
+                .strip()
             )
             companies = "|".join(formatted_companies.split(", "))
         except (AttributeError, TypeError):
-            companies = None
+            companies = ""
 
         # Extract project number from table
         number = extract_table_value("Project number")

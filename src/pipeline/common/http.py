@@ -1,11 +1,13 @@
 """Classes for issuing HTTP requests."""
 
 # Standard library imports
+import json
 import random
 import time
 from collections.abc import Iterator
 
 # Third-party imports
+from django.conf import settings
 import requests
 from requests_html import HTMLSession
 
@@ -13,16 +15,17 @@ from requests_html import HTMLSession
 class DataRequestClient:
     """A wrapper for the `requests` library."""
 
-    def __init__(self, user_agent_headers: list[str]) -> None:
+    def __init__(self) -> None:
         """Initializes a new instance of a `DataRequestClient`.
 
         Args:
-            user_agent_headers: The user agent headers in HTTP requests.
+            `None`
 
         Returns:
             `None`
         """
-        self._user_agent_headers = user_agent_headers
+        with open(settings.USER_AGENT_HEADERS_FPATH) as f:
+            self._user_agent_headers = json.load(f)
 
     def get(
         self,
@@ -159,7 +162,9 @@ class DataRequestClient:
             verify=verify,
         )
 
-    def stream_chunks(self, url: str, chunk_size: int = 65536) -> Iterator[bytes]:
+    def stream_chunks(
+        self, url: str, chunk_size: int = 65536
+    ) -> Iterator[bytes]:
         """Streams data from the given URL as chunks.
 
         Args:

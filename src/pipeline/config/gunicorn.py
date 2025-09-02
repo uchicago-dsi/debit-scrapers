@@ -10,11 +10,13 @@ workers = 2
 bind = "0.0.0.0:8000"
 # Restart workers when code changes (development only!)
 reload = False
-# Write access and error info to /var/log
-accesslog = errorlog = "/var/log/gunicorn/dev.log"
+# Write access and error info to console
+accesslog = errorlog = "-"
 # Redirect stdout/stderr to log file
 capture_output = True
 # PID file so you can easily fetch process ID
 pidfile = "/var/run/gunicorn/dev.pid"
 # Daemonize the Gunicorn process (detach & enter background)
-daemon = True
+daemon = False
+# Set the timeout in seconds
+timeout = 900

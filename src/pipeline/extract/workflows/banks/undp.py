@@ -54,7 +54,9 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             `None`
         """
         # Initialize attributes
-        super().__init__(data_request_client, msg_queue_client, db_client, logger)
+        super().__init__(
+            data_request_client, msg_queue_client, db_client, logger
+        )
 
         # Load IATI status codes
         self._status_codes = self._load_iati_codelist(
@@ -115,7 +117,8 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             # Skip child node if not a project activity
             if (
                 activity.tag != "iati-activity"
-                or "project" not in activity.find("iati-identifier").text.lower()
+                or "project"
+                not in activity.find("iati-identifier").text.lower()
             ):
                 continue
 
@@ -126,38 +129,35 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             name = activity.find("title/narrative").text
 
             # Parse and map the project status code
-            status = self._status_codes[activity.find("activity-status").get("code")]
+            status = self._status_codes[
+                activity.find("activity-status").get("code")
+            ]
 
             # Parse and map the project sectors
-            sectors = (
-                "|".join(
-                    [
-                        self._sector_codes[sector.get("code")]
-                        for sector in activity.findall("sector")
-                        if sector.get("vocabulary") == "1"
-                    ]
-                )
-                or None
+            sectors = "|".join(
+                [
+                    self._sector_codes[sector.get("code")]
+                    for sector in activity.findall("sector")
+                    if sector.get("vocabulary") == "1"
+                ]
             )
 
             # Parse affiliates
-            affiliates = (
-                "|".join(
-                    {
-                        narrative.text.upper()
-                        for narrative in activity.findall("participating-org/narrative")
-                    }
-                )
-                or None
+            affiliates = "|".join(
+                {
+                    narrative.text.upper()
+                    for narrative in activity.findall(
+                        "participating-org/narrative"
+                    )
+                }
             )
 
             # Parse countries
-            countries = (
-                "|".join(
-                    narrative.text
-                    for narrative in activity.findall("recipient-country/narrative")
+            countries = "|".join(
+                narrative.text
+                for narrative in activity.findall(
+                    "recipient-country/narrative"
                 )
-                or None
             )
 
             # Build URL to project webpage
@@ -215,7 +215,9 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
 
         return pd.DataFrame(projects)
 
-    def clean_projects(self, df: pd.DataFrame) -> tuple[list[str], pd.DataFrame]:
+    def clean_projects(
+        self, df: pd.DataFrame
+    ) -> tuple[list[str], pd.DataFrame]:
         """Cleans project records and parses the next set of URLs to crawl.
 
         Args:
@@ -258,9 +260,11 @@ class UndpProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse project start date
         if project.get("start"):
-            start_date_utc = datetime.strptime(project.get("start"), "%Y-%m-%d")
+            start_date_utc = datetime.strptime(
+                project.get("start"), "%Y-%m-%d"
+            )
         else:
-            start_date_utc = None
+            start_date_utc = ""
 
         # Parse project number
         number = project["project_id"]

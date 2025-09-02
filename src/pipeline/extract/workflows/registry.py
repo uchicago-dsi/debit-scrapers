@@ -25,7 +25,7 @@ class StarterWorkflowRegistry:
         settings.EBRD_ABBREVIATION: settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW,
         settings.EIB_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
         settings.FMO_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
-        settings.IDB_ABBREVIATION: settings.PROJECT_DOWNLOAD_WORKFLOW,
+        settings.IDB_ABBREVIATION: settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW,
         settings.IFC_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
         settings.KFW_ABBREVIATION: settings.PROJECT_DOWNLOAD_WORKFLOW,
         settings.MIGA_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
@@ -114,7 +114,10 @@ class WorkflowClassRegistry:
         f"{settings.FMO_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.FmoSeedUrlsWorkflow,
         f"{settings.FMO_ABBREVIATION}-{settings.RESULTS_PAGE_WORKFLOW}": banks.FmoResultsScrapeWorkflow,
         f"{settings.FMO_ABBREVIATION}-{settings.PROJECT_PAGE_WORKFLOW}": banks.FmoProjectScrapeWorkflow,
-        f"{settings.IDB_ABBREVIATION}-{settings.PROJECT_DOWNLOAD_WORKFLOW}": banks.IdbProjectDownloadWorkflow,
+        f"{settings.IDB_ABBREVIATION}-{settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW}": banks.IdbPartialProjectDownloadWorkflow,
+        f"{settings.IDB_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.IdbSeedUrlsWorkflow,
+        f"{settings.IDB_ABBREVIATION}-{settings.RESULTS_PAGE_WORKFLOW}": banks.IdbResultsScrapeWorkflow,
+        f"{settings.IDB_ABBREVIATION}-{settings.PROJECT_PARTIAL_PAGE_WORKFLOW}": banks.IdbProjectPartialScrapeWorkflow,
         f"{settings.IFC_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.IfcSeedUrlsWorkflow,
         f"{settings.IFC_ABBREVIATION}-{settings.PROJECT_PAGE_WORKFLOW}": banks.IfcProjectScrapeWorkflow,
         f"{settings.KFW_ABBREVIATION}-{settings.PROJECT_DOWNLOAD_WORKFLOW}": banks.KfwDownloadWorkflow,
@@ -168,7 +171,9 @@ class WorkflowClassRegistry:
             ) from None
 
         # Create logger for selected workflow
-        logger = LoggerFactory.get(f"WORKER - {source}")
+        logger = LoggerFactory.get(
+            f"WORKER - {source.upper()} - {workflow_type.upper()}"
+        )
 
         # Select correct keyword args for workflow initializer
         if workflow_type in (

@@ -9,6 +9,7 @@ import re
 import warnings
 
 # Third-party imports
+import numpy as np
 import pandas as pd
 import requests
 from django.conf import settings
@@ -23,7 +24,9 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
     @property
     def download_url(self) -> str:
         """The URL containing all project records."""
-        return "https://www3.dfc.gov/OPICProjects/Home/GetOPICActiveProjectList"
+        return (
+            "https://www3.dfc.gov/OPICProjects/Home/GetOPICActiveProjectList"
+        )
 
     def get_projects(self) -> pd.DataFrame:
         """Downloads all development bank projects as JSON from DFC's website.
@@ -43,7 +46,9 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                 "ignore",
                 category=requests.packages.urllib3.exceptions.InsecureRequestWarning,
             )
-            r = self._data_request_client.post(url=self.download_url, verify=False)
+            r = self._data_request_client.post(
+                url=self.download_url, verify=False
+            )
             if not r.ok:
                 raise RuntimeError(
                     "Error fetching DFC project records. "
@@ -86,8 +91,10 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
                 # Parse URL and project number from anchor tag
                 url_match = re.search(r"<a href='(.*)' target", details)
-                url = url_match.group(1) if url_match else None
-                number = None if not url else url.replace(".pdf", "").split("/")[-1]
+                url = url_match.group(1) if url_match else ""
+                number = (
+                    "" if not url else url.replace(".pdf", "").split("/")[-1]
+                )
 
                 # Parse project affiliate and name in remaining HTML
                 affiliate = re.search(r"<b>(.*)</b>", details)
@@ -95,8 +102,8 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
                 return {
                     "number": number,
-                    "name": name.group(0) if name else None,
-                    "affiliates": affiliate.group(1) if affiliate else None,
+                    "name": name.group(0) if name else "",
+                    "affiliates": affiliate.group(1) if affiliate else "",
                     "url": url,
                 }
 
@@ -149,8 +156,7 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                 Args:
                     group: The group.
 
-                    col_name: The column for which to
-                        concatenate values.
+                    col_name: The column for which to concatenate values.
 
                     delimiter: The string used to join values.
                         Defaults to a pipe ("|").
@@ -169,22 +175,33 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
             aggregated_projects = []
             groups = df.groupby("url")
-            for name, group in groups:
+            for grp_key, group in groups:
                 first = group.iloc[0]
                 aggregated_projects.append(
                     {
                         "affiliates": concatenate_values(group, "affiliates"),
                         "countries": concatenate_values(group, "countries"),
                         "date_effective": str(group["year"].min()),
-                        "finance_types": concatenate_values(group, "finance_types"),
+                        "finance_types": concatenate_values(
+                            group, "finance_types"
+                        ),
                         "name": concatenate_values(group, "name", ". "),
                         "number": first["number"],
                         "source": first["source"],
                         "total_amount": group["total_amount"].sum(),
-                        "total_amount_currency": first["total_amount_currency"],
-                        "url": name,
+                        "total_amount_currency": first[
+                            "total_amount_currency"
+                        ],
+                        "url": grp_key,
                     }
                 )
+
+            # Replace NaN values with None
+            df = df.replace({np.nan: None})
+
+            # Replace None values with empty strings for string columns
+            cols = [k for k, v in col_mapping.items() if v == "object"]
+            df[cols] = df[cols].replace({None: ""})
 
             return pd.DataFrame(aggregated_projects)
 

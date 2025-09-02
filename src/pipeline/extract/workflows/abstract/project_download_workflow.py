@@ -8,17 +8,15 @@ pattern to allow customization by subclasses.
 # Standard library imports
 import json
 from abc import abstractmethod
-from datetime import UTC, datetime
 from logging import Logger
 
 # Third-party imports
 import pandas as pd
+from django.conf import settings
 
 # Application imports
 from common.http import DataRequestClient
 from extract.dal import DatabaseClient
-from extract.domain import TaskUpdateRequest
-from extract.models import ExtractionTask
 from extract.workflows.abstract import BaseWorkflow
 
 
@@ -126,17 +124,18 @@ class ProjectDownloadWorkflow(BaseWorkflow):
         Returns:
             `None`
         """
+        # Define task retry count (one less than delivery attempt count)
+        retry_count = num_delivery_attempts - 1
+
         try:
-            # Begin tracking updates for current task
-            task = TaskUpdateRequest()
-            task["id"] = task_id
-            task["status"] = ExtractionTask.StatusChoices.IN_PROGRESS
-            task["started_at_utc"] = datetime.now(UTC)
-            task["retry_count"] = num_delivery_attempts - 1
+            # Log start of task processing
             self._logger.info(
-                f'Processing job "{job_id}", source "{source}", task '
-                f'"{task_id}", message "{message_id}".'
+                f"Processing message {message_id} for task {task_id}. "
+                f"Number of delivery attempts: {num_delivery_attempts}"
             )
+
+            # Mark task as pending in database
+            self._db_client.mark_task_pending(task_id)
 
             # Download and clean project records
             raw_project_df = self.get_projects()
@@ -147,29 +146,18 @@ class ProjectDownloadWorkflow(BaseWorkflow):
                 clean_project_df["task_id"] = task_id
                 json_str = clean_project_df.to_json(orient="records")
                 clean_projects = json.loads(json_str)
-                self._db_client.bulk_create_staged_projects(clean_projects)
+                self._db_client.bulk_upsert_projects(clean_projects)
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to insert new project records into database. {e}"
                 ) from None
 
         except Exception as e:
-            # Log error
-            error_message = (
-                f'Project download task failed for message "{message_id}". {e}'
-            )
-            self._logger.error(error_message)
+            # Mark task as failed in database
+            self._logger.error(f"Task failed. {e}")
+            self._db_client.mark_task_failure(task_id, str(e), retry_count)
+            raise RuntimeError(str(e)) from None
 
-            # Record task failure in database
-            task["status"] = ExtractionTask.StatusChoices.ERROR
-            task["failed_at_utc"] = datetime.now(UTC)
-            task["last_error"] = error_message
-            self._db_client.update_task(task)
-
-            # Bubble up error
-            raise RuntimeError(error_message) from None
-
-        # Record task success in database
-        task["status"] = ExtractionTask.StatusChoices.COMPLETED
-        task["completed_at_utc"] = datetime.now(UTC)
-        self._db_client.update_task(task)
+        # Mark task as successful in database
+        self._logger.info("Task succeeded.")
+        self._db_client.mark_task_success(task_id, retry_count)

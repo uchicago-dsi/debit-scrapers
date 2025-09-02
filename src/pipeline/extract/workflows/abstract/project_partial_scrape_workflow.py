@@ -8,14 +8,11 @@ the template design pattern to allow customization by subclasses.
 
 # Standard library imports
 from abc import abstractmethod
-from datetime import UTC, datetime
 from logging import Logger
 
 # Application imports
 from common.http import DataRequestClient
 from extract.dal import DatabaseClient
-from extract.domain import TaskUpdateRequest
-from extract.models import ExtractionTask
 from extract.workflows.abstract import BaseWorkflow
 
 
@@ -102,51 +99,44 @@ class ProjectPartialScrapeWorkflow(BaseWorkflow):
         Returns:
             `None`
         """
-        # Begin tracking updates for current task
-        task = TaskUpdateRequest()
-        task["id"] = task_id
-        task["status"] = ExtractionTask.StatusChoices.IN_PROGRESS
-        task["started_at_utc"] = datetime.now(UTC)
-        task["retry_count"] = num_delivery_attempts - 1
-        self._logger.info(
-            f"Processing job '{job_id}', source '{source}', "
-            f"task '{task_id}', message '{message_id}'."
-        )
+        # Define task retry count (one less than delivery attempt count)
+        retry_count = num_delivery_attempts - 1
 
         try:
+            # Log start of task processing
+            self._logger.info(
+                f"Processing message {message_id} for task {task_id}. "
+                f"Number of delivery attempts: {num_delivery_attempts}"
+            )
+
+            # Mark task as pending in database
+            self._db_client.mark_task_pending(task_id)
+
             # Extract project data
             try:
                 project_records = self.scrape_project_page(url)
             except Exception as e:
-                raise RuntimeError(f"Failed to scrape project page. {e}") from None
+                raise RuntimeError(
+                    f"Failed to scrape project page. {e}"
+                ) from None
 
             # Update project record(s) in database
             try:
-                for r in project_records:
-                    self._db_client.update_staged_project(r)
+                for project in project_records:
+                    self._db_client.patch_project(
+                        {"task_id": task_id, **project}
+                    )
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to update project record(s) in database. {e}"
                 ) from None
 
         except Exception as e:
-            # Log error
-            error_message = (
-                "Project page partial scraping workflow "
-                f"failed for message {message_id}. {e}"
-            )
-            self._logger.error(error_message)
+            # Mark task as failed in database
+            self._logger.error(f"Task failed. {e}")
+            self._db_client.mark_task_failure(task_id, str(e), retry_count)
+            raise RuntimeError(str(e)) from None
 
-            # Record task failure in database
-            task["status"] = ExtractionTask.StatusChoices.ERROR
-            task["failed_at_utc"] = datetime.now(UTC)
-            task["last_error"] = error_message
-            self._db_client.update_task(task)
-
-            # Bubble up error
-            raise RuntimeError(error_message) from None
-
-        # Record task success in database
-        task["status"] = ExtractionTask.StatusChoices.COMPLETED
-        task["completed_at_utc"] = datetime.now(UTC)
-        self._db_client.update_task(task)
+        # Mark task as successful in database
+        self._logger.info("Task succeeded.")
+        self._db_client.mark_task_success(task_id, retry_count)

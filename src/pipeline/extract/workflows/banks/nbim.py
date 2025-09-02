@@ -54,7 +54,9 @@ class NbimSeedUrlsWorkflow(SeedUrlsWorkflow):
         try:
             return [
                 self.search_results_base_url.format(year)
-                for year in range(self.project_start_year, self.project_end_year + 1)
+                for year in range(
+                    self.project_start_year, self.project_end_year + 1
+                )
             ]
         except Exception as e:
             raise RuntimeError(
@@ -95,7 +97,9 @@ class NbimProjectScrapeWorkflow(ProjectScrapeWorkflow):
         try:
             data = r.json()
         except Exception:
-            raise RuntimeError("Error parsing NBIM project data into JSON.") from None
+            raise RuntimeError(
+                "Error parsing NBIM project data into JSON."
+            ) from None
 
         # Skip processing if no data exists
         if not data:
@@ -125,11 +129,15 @@ class NbimProjectScrapeWorkflow(ProjectScrapeWorkflow):
         real_estate_df["finance_types"] = "real-estate"
 
         # Concatenate DataFrames
-        df = pd.concat([equities_df, fixed_income_df, real_estate_df], sort=True)
+        df = pd.concat(
+            [equities_df, fixed_income_df, real_estate_df], sort=True
+        )
         df["year"] = int(url.split("year=")[1])
 
         # Rename existing columns
-        df = df.rename(columns={"s": "sectors", "ic": "countries", "n": "affiliates"})
+        df = df.rename(
+            columns={"s": "sectors", "ic": "countries", "n": "affiliates"}
+        )
 
         # Construct project URLs
         def create_project_url(row: pd.Series) -> str:
@@ -156,14 +164,11 @@ class NbimProjectScrapeWorkflow(ProjectScrapeWorkflow):
         df["source"] = settings.NBIM_ABBREVIATION.upper()
         df["number"] = df["id"].astype(int)
         df["name"] = df["affiliates"]
-        df["status"] = None
+        df["status"] = ""
         df["date_effective"] = df["year"]
         df["total_amount"] = df["h"].str["v"]
         df["total_amount_currency"] = "NOK"
         df["total_amount_usd"] = df["h"].str["vu"]
-
-        # Replace blanks with None
-        df = df.replace([""], None, regex=True)
 
         # Set final column schema
         col_mapping = {
@@ -182,5 +187,9 @@ class NbimProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "url": "object",
         }
         df = df[col_mapping.keys()].astype(col_mapping)
+
+        # Replace None values with empty strings for string data columns
+        cols = [k for k, v in col_mapping.items() if v == "object"]
+        df[cols] = df[cols].replace({None: ""})
 
         return df.to_dict("records")

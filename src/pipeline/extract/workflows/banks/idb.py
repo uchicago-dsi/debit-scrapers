@@ -2,33 +2,51 @@
 
 Data is retrieved by requesting an authentication token from IDB's backend
 and then using that token to request an Excel file containing project records.
+
+No filters on website:
+Records in Excel file not in search results and (seemingly vice versa)
+Website only shows projects with an approval date
 """
 
 # Standard library imports
 import json
 import warnings
+from datetime import datetime
 from io import BytesIO
 
 # Third-party imports
 import numpy as np
 import pandas as pd
+from bs4 import BeautifulSoup
 from django.conf import settings
 
 # Application imports
-from extract.workflows.abstract import ProjectDownloadWorkflow
+from extract.workflows.abstract import (
+    ProjectPartialDownloadWorkflow,
+    ProjectPartialScrapeWorkflow,
+    ResultsScrapeWorkflow,
+    SeedUrlsWorkflow,
+)
 
 
-class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
-    """Downloads project details from IBD's website."""
+class IdbPartialProjectDownloadWorkflow(ProjectPartialDownloadWorkflow):
+    """Downloads and parses project details from IBD's website."""
 
     @property
     def download_url(self) -> str:
         """The URL containing all project records."""
-        return "https://wabi-us-east2-redirect.analysis.windows.net/export/xlsx"
+        return (
+            "https://wabi-us-east2-redirect.analysis.windows.net/export/xlsx"
+        )
+
+    @property
+    def next_workflow(self) -> str:
+        """The name of the workflow to execute, if any. Overrides parent."""
+        return settings.SEED_URLS_WORKFLOW
 
     @property
     def project_page_url(self) -> str:
-        """The base URL for an IBD project page."""
+        """The URL for an IBD project page."""
         return "https://www.iadb.org/en/project/{}"
 
     @property
@@ -60,7 +78,9 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
             ) from None
 
         # Fetch authentication token
-        r = self._data_request_client.get(self.token_url, use_random_user_agent=True)
+        r = self._data_request_client.get(
+            self.token_url, use_random_user_agent=True
+        )
 
         # Raise error if token not received successfully
         if not r.ok:
@@ -106,32 +126,28 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
 
         return df
 
-    def clean_projects(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Cleans project records to conform to an expected schema.
+    def clean_projects(
+        self, df: pd.DataFrame
+    ) -> tuple[list[str], pd.DataFrame]:
+        """Cleans project records and parses the next set of URLs to crawl.
 
         Args:
             df: The raw project records.
 
         Returns:
-            The cleaned records.
+            A two-item tuple consisting of the new URLs and cleaned records.
         """
         # Drop last three rows holding summary statistics
         df = df.drop(df.tail(3).index)
 
-        # Replace NaNs with None
-        df = df.replace({np.nan: None, "Not Defined": None, "1901-01-01": None})
+        # Replace missing values
+        df = df.replace({np.nan: None, "Not Defined": "", "1/1/1901": ""})
 
         # Add bank column
-        df["bank"] = "IDB"
-
-        # Add loan amount in USD column
-        df["total_amount_in_usd"] = df.apply(
-            lambda row: (row["Approval Amount"] if row["Currency"] == "USD" else None),
-            axis=1,
-        )
+        df["bank"] = settings.IDB_ABBREVIATION.upper()
 
         # Add countries column
-        def format_countries(val: str | None) -> str | None:
+        def format_countries(val: str | None) -> str:
             """Formats a string of country names.
 
             Transforms the input into a pipe-delimited string
@@ -145,10 +161,12 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
                 A pipe-delimited list of country names.
             """
             if not val:
-                return None
+                return ""
 
             excluded = ["BANKWIDE", "HEADQUARTERS", "REGIONAL"]
-            parts = [p for p in val.split("; ") if p and p.upper() not in excluded]
+            parts = [
+                p for p in val.split("; ") if p and p.upper() not in excluded
+            ]
             return "|".join(parts)
 
         df["countries"] = df["Project Country"].apply(format_countries)
@@ -156,7 +174,9 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
         # Add project affiliates column
         df["affiliates"] = df.apply(
             lambda row: "|".join(
-                elem for elem in [row["Borrower"], row["Executing Agency"]] if elem
+                elem
+                for elem in [row["Borrower"], row["Executing Agency"]]
+                if elem
             ),
             axis=1,
         )
@@ -166,22 +186,283 @@ class IdbProjectDownloadWorkflow(ProjectDownloadWorkflow):
             lambda proj_num: self.project_page_url.format(proj_num)
         )
 
-        # Finalize columns
+        # Finalize column schema
         col_map = {
             "affiliates": "affiliates",
             "countries": "countries",
-            "Approval Date": "date_approved",
-            "Signature Date": "date_signed",
+            "Project Type": "finance_types",
+            "Last Updated": "last_updated",
             "Project Name": "name",
             "Project Number": "number",
             "Sector": "sectors",
             "bank": "source",
-            "Status": "status",
-            "Approval Amount": "total_amount",
-            "Currency": "total_amount_currency",
-            "total_amount_in_usd": "total_amount_usd",
             "url": "url",
         }
         df = df.rename(columns=col_map)[col_map.values()]
 
-        return df
+        # Standardize date formats
+        def parse_dates(val: str) -> str:
+            try:
+                return pd.to_datetime(val).strftime("%Y-%m-%d")
+            except ValueError:
+                return ""
+
+        df["last_updated"] = df["last_updated"].apply(parse_dates)
+
+        # Replace None with empty strings in string data columns
+        cols = [
+            "affiliates",
+            "countries",
+            "finance_types",
+            "last_updated",
+            "name",
+            "number",
+            "sectors",
+        ]
+        df[cols] = df[cols].replace({None: ""})
+
+        # Group by project number and perform aggregations
+        def concatenate_values(
+            group: pd.DataFrame, col_name: str, delimiter: str = "|"
+        ) -> str:
+            """A generic function for grouping and concatenating values.
+
+            Args:
+                group: The group.
+
+                col_name: The column for which to
+                    concatenate values.
+
+                delimiter: The string used to join values.
+                    Defaults to a pipe ("|").
+
+            Returns:
+                The concatenated values.
+            """
+            lst = []
+            for name in group[col_name].tolist():
+                lst.extend(name.split("|"))
+            return delimiter.join(sorted(set(lst)))
+
+        aggregated_projects = []
+        for _, grp in df.groupby("number"):
+            first = grp.iloc[0]
+            aggregated_projects.append(
+                {
+                    "affiliates": concatenate_values(grp, "affiliates"),
+                    "countries": concatenate_values(grp, "countries"),
+                    "finance_types": concatenate_values(grp, "finance_types"),
+                    "date_last_updated": grp["last_updated"].max(),
+                    "name": first["name"],
+                    "number": first["number"],
+                    "sectors": concatenate_values(grp, "sectors"),
+                    "source": first["source"],
+                    "url": first["url"],
+                }
+            )
+
+        return [""], pd.DataFrame(aggregated_projects)
+
+
+class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
+    """Retrieves the first set of IDB URLs to scrape."""
+
+    @property
+    def first_page_num(self) -> int:
+        """The number of the first search results page."""
+        return 0
+
+    @property
+    def next_workflow(self) -> str:
+        """The next workflow to execute."""
+        return settings.RESULTS_PAGE_WORKFLOW
+
+    @property
+    def search_results_base_url(self) -> str:
+        """The base URL for a project search results webpage."""
+        return "https://www.iadb.org/en/project-search?page={page_num}"
+
+    def _find_last_page(self) -> int:
+        """Retrieves the number of the last search results page.
+
+        Args:
+            `None`
+
+        Returns:
+            The page number.
+        """
+        # Fetch page
+        params = {"page_num": self.first_page_num}
+        first_results_page = self.search_results_base_url.format(**params)
+        r = self._data_request_client.get(first_results_page)
+
+        # Check response
+        if not r.ok:
+            raise RuntimeError(
+                f"Error fetching search results page "
+                f"from IDB. The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Extract last page number from webpage HTML
+        try:
+            soup = BeautifulSoup(r.text, "html.parser")
+            last_page_btn = soup.find("li", {"class": "pager__item--last"})
+            last_page_num = int(
+                last_page_btn.find("idb-button")["button-url"].split("=")[-1]
+            )
+            return last_page_num
+        except Exception as e:
+            raise RuntimeError(
+                f"Error retrieving last page number at '{first_results_page}'. {e}"
+            ) from None
+
+    def generate_seed_urls(self) -> list[str]:
+        """Generates the first set of URLs to scrape.
+
+        Args:
+            `None`
+
+        Returns:
+            The unique list of search result pages.
+        """
+        try:
+            last_page_num = self._find_last_page()
+            result_pages = [
+                self.search_results_base_url.format(page_num=num)
+                for num in range(self.first_page_num, last_page_num + 1)
+            ]
+            return result_pages
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to generate IDB search result pages to crawl. {e}"
+            ) from None
+
+
+class IdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
+    """Scrapes an IDB search results page for project webpage URLs."""
+
+    @property
+    def next_workflow(self) -> str:
+        """The next workflow to execute. Overrides parent."""
+        return settings.PROJECT_PARTIAL_PAGE_WORKFLOW
+
+    @property
+    def project_page_base_url(self) -> str:
+        """The base URL for an IBD project page."""
+        return "https://www.iadb.org"
+
+    def scrape_results_page(self, url: str) -> list[str]:
+        """Scrapes a search results page for project webpage URLs.
+
+        NOTE: Delays must be placed in between requests to avoid throttling.
+
+        Args:
+            url: The URL to a search results page
+                containing lists of development projects.
+
+        Returns:
+            The list of scraped project page URLs.
+        """
+        # Request page
+        r = self._data_request_client.get(
+            url=url,
+            use_random_user_agent=True,
+            use_random_delay=True,
+            min_random_delay=1,
+            max_random_delay=3,
+        )
+
+        # Check response
+        if not r.ok:
+            raise RuntimeError(
+                f"Error fetching search results page "
+                f"from IDB. The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Parse webpage HTML into node tree and scrape table for URLs
+        try:
+            soup = BeautifulSoup(r.text, "html.parser")
+            data_table = soup.find("idb-table")
+            urls = [
+                f"{self.project_page_base_url}{a['href']}"
+                for a in data_table.find_all("a")
+                if a["href"].startswith("/en/project/")
+            ]
+        except Exception as e:
+            raise RuntimeError(
+                f"Error scraping project page URLs from '{url}'. {e}"
+            ) from None
+
+        return urls
+
+
+class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
+    """Scrapes an IDB search results page for project data only."""
+
+    def scrape_project_page(self, url: str) -> list[dict]:
+        """Extracts a IDB project's total funding, status, and approval date.
+
+        Args:
+            url: The URL to the project webpage.
+
+        Returns:
+            The raw record(s).
+        """
+        # Request page
+        r = self._data_request_client.get(
+            url=url,
+            use_random_user_agent=True,
+            use_random_delay=True,
+            min_random_delay=1,
+            max_random_delay=3,
+        )
+
+        # Check response
+        if not r.ok:
+            raise RuntimeError(
+                f"Error fetching project page from "
+                f"IDB. The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Initialize project
+        project = {
+            "source": settings.IDB_ABBREVIATION.upper(),
+            "url": url,
+        }
+
+        # Parse webpage HTML into node tree and scrape table for project data
+        try:
+            soup = BeautifulSoup(r.text, "html.parser")
+            for row in soup.find_all("idb-project-table-row"):
+                stat_type = row.find("p", {"slot": "stat-type"}).text.strip()
+                stat_data = row.find("p", {"slot": "stat-data"}).text.strip()
+
+                if stat_type == "Approval Date":
+                    parsed_date = datetime.strptime(stat_data, "%B %d, %Y")
+                    formatted_date = parsed_date.strftime("%Y-%m-%d")
+                    project["date_approved"] = formatted_date
+
+                elif stat_type == "Project Status":
+                    project["status"] = stat_data
+
+                elif stat_type == "Original Amount Approved":
+                    currency, amount = stat_data.split(" ")
+                    parsed_amount = float(amount.replace(",", ""))
+                    project["total_amount_currency"] = currency
+                    project["total_amount"] = parsed_amount
+                    project["total_amount_usd"] = (
+                        parsed_amount if currency == "USD" else None
+                    )
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Error scraping project data from '{url}'. {e}"
+            ) from None
+
+        return [project]

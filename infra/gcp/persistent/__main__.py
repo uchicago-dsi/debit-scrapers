@@ -426,6 +426,7 @@ cloud_workflow_service_account_email = (
 # Intialize variables shared across Cloud Run services
 shared_template_args = dict(
     service_account=cloud_run_service_account.email,
+    timeout="900s",
     volumes=[
         gcp.cloudrunv2.ServiceTemplateVolumeArgs(
             name="cloudsql",
@@ -467,6 +468,14 @@ shared_template_container_args = dict(
             ),
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+            name="GOOGLE_CLOUD_PROJECT_ID",
+            value=PROJECT_ID,
+        ),
+        gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+            name="GOOGLE_CLOUD_PROJECT_REGION",
+            value=PROJECT_REGION,
+        ),
+        gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="POSTGRES_DB",
             value=POSTGRES_DB,
         ),
@@ -490,11 +499,9 @@ shared_template_container_args = dict(
             value=POSTGRES_USER,
         ),
     ],
-    ports=[
-        gcp.cloudrunv2.ServiceTemplateContainerPortsArgs(
-            container_port=DJANGO_PORT,
-        ),
-    ],
+    ports=gcp.cloudrunv2.ServiceTemplateContainerPortsArgs(
+        container_port=DJANGO_PORT,
+    ),
     volume_mounts=[
         gcp.cloudrunv2.ServiceTemplateContainerVolumeMountArgs(
             name="cloudsql",
@@ -518,17 +525,17 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
                 **shared_template_container_args,
             )
         ],
+        max_instance_request_concurrency=2,
         **shared_template_args,
     ),
     traffics=[
         gcp.cloudrunv2.ServiceTrafficArgs(
             percent=100,
-            latest_revision=True,
         )
     ],
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
-        max_instance_count=2,
+        manual_instance_count=20,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -551,17 +558,17 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
                 **shared_template_container_args,
             )
         ],
+        max_instance_request_concurrency=100,
         **shared_template_args,
     ),
     traffics=[
         gcp.cloudrunv2.ServiceTrafficArgs(
             percent=100,
-            latest_revision=True,
         )
     ],
     scaling=gcp.cloudrunv2.ServiceScalingArgs(
         min_instance_count=0,
-        max_instance_count=80,
+        manual_instance_count=20,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

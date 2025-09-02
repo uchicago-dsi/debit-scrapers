@@ -10,7 +10,7 @@ set -e
 trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 
 # Log error message upon script exit
-trap '[ $? -eq 1 ] && echo "An unexpected error occurred."' EXIT
+trap 'status=$?; if [ $status -ne 0 ]; then echo "An unexpected error occurred (exit $status)."; fi' EXIT
 
 # Parse command line arguments
 migrate=false
@@ -31,16 +31,16 @@ done
 # (WARNING: Defaults to "yes" for all questions)
 if $migrate ; then
     echo "Creating database migrations from Django models."
-    yes | ./manage.py makemigrations
+    yes | uv run python ./pipeline/manage.py makemigrations
 
     echo "Applying migrations to database."
-    yes | ./manage.py migrate
+    yes | uv run python ./pipeline/manage.py migrate
 fi
 
 # Extract latest development project data if indicated
 if $extract_data ; then
     echo "Orchestrating data extraction."
-    ./manage.py orchestrator
+    uv run python ./pipeline/manage.py orchestrator
 fi
 
 # Log successful end of database setup
@@ -54,8 +54,10 @@ fi
 # Otherwise, run server corresponding to environment
 if $development ; then
     echo "Running default development server."
-    ./manage.py runserver 0.0.0.0:8000
+    cd pipeline
+    uv run python manage.py runserver 0.0.0.0:8000 --verbosity 2
 else 
     echo "Running production server."
-    gunicorn config.wsgi
+    cd pipeline
+    uv run gunicorn --config python:config.gunicorn config.wsgi
 fi

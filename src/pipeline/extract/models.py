@@ -11,9 +11,11 @@ class ExtractionJob(models.Model):
         """Metadata for the model."""
 
         db_table = "extraction_job"
-        constraints = [models.UniqueConstraint(fields=["date"], name="unique_date")]
+        constraints = [
+            models.UniqueConstraint(fields=["date"], name="unique_date")
+        ]
 
-    date = models.CharField(max_length=9)
+    date = models.CharField(max_length=10)
     """The unique identifier assigned to the job."""
 
     started_at_utc = models.DateTimeField(auto_now_add=True, null=True)
@@ -96,7 +98,7 @@ class ExtractedProject(models.Model):
         db_table = "extracted_project"
         constraints = [
             models.UniqueConstraint(
-                fields=["bank", "url"], name="unique_extracted_project"
+                fields=["source", "url"], name="unique_extracted_project"
             )
         ]
 
@@ -106,7 +108,9 @@ class ExtractedProject(models.Model):
     last_updated_at_utc = models.DateTimeField(auto_now=True)
     """The time at which the record was last updated in UTC."""
 
-    task = models.ForeignKey("extract.ExtractionTask", on_delete=models.CASCADE)
+    task = models.ForeignKey(
+        "extract.ExtractionTask", on_delete=models.CASCADE
+    )
     """The parent task."""
 
     affiliates = models.TextField(blank=True, default="")
@@ -183,13 +187,19 @@ class ExtractedProject(models.Model):
     status = models.CharField(max_length=50, blank=True, default="")
     """The current project status."""
 
-    total_amount = models.DecimalField(null=True, decimal_places=2, max_digits=20)
+    total_amount = models.DecimalField(
+        null=True, decimal_places=2, max_digits=20
+    )
     """The total amount of funding awarded to the project."""
 
-    total_amount_currency = models.CharField(max_length=50, blank=True, default="")
+    total_amount_currency = models.CharField(
+        max_length=50, blank=True, default=""
+    )
     """The currency of the loan."""
 
-    total_amount_usd = models.DecimalField(null=True, decimal_places=2, max_digits=20)
+    total_amount_usd = models.DecimalField(
+        null=True, decimal_places=2, max_digits=20
+    )
     """The current loan amount in USD, if provided."""
 
     url = models.URLField(blank=True, default="")

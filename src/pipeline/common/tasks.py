@@ -9,6 +9,9 @@ from abc import ABC, abstractmethod
 import requests
 from django.conf import settings
 
+# Application imports
+from common.logger import LoggerFactory
+
 
 class MessageQueueClient(ABC):
     """A duck-typed interface for a task queue."""
@@ -38,6 +41,44 @@ class MessageQueueClient(ABC):
         raise NotImplementedError
 
 
+class DummyQueue(MessageQueueClient):
+    """A dummy task queue that serves as a pass-through."""
+
+    def __init__(self) -> None:
+        """Initializes a new instance of a `DummyQueue`.
+
+        Args:
+            `None`
+
+        Returns:
+            `None`
+        """
+        self._logger = LoggerFactory.get("DUMMY QUEUE")
+
+    def enqueue(self, tasks: list[dict]) -> None:
+        """Queues one or more tasks to be processed.
+
+        Args:
+            tasks: The tasks.
+
+        Returns:
+            `None`
+        """
+        self._logger.info(f"Queueing {len(tasks)} tasks.")
+        self._logger.info(json.dumps(tasks))
+
+    def purge(self, sources: list[str]) -> None:
+        """Purges all tasks related to the given data sources.
+
+        Args:
+            sources: The data sources.
+
+        Returns:
+            `None`
+        """
+        self._logger.info(f"Purging tasks for sources {', '.join(sources)}.")
+
+
 class GoogleCloudTaskQueue(MessageQueueClient):
     """A wrapper for Google Cloud Tasks."""
 
@@ -55,7 +96,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         """
         try:
             self._project = settings.GOOGLE_CLOUD_PROJECT_ID
-            self._region = settings.GOOGLE_CLOUD_TASKS_QUEUE_REGION
+            self._region = settings.GOOGLE_CLOUD_PROJECT_REGION
         except AttributeError as e:
             raise RuntimeError(
                 f"Django project not correctly configured. {e}"
@@ -140,4 +181,7 @@ class TaskQueueFactory:
     @staticmethod
     def get() -> MessageQueueClient:
         """Creates a task queue for the current environment."""
-        return GoogleCloudTaskQueue()
+        if settings.DEBUG:
+            return DummyQueue()
+        else:
+            return GoogleCloudTaskQueue()

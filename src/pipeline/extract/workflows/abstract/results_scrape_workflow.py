@@ -8,7 +8,6 @@ customization by subclasses.
 
 # Standard library imports
 from abc import abstractmethod
-from datetime import UTC, datetime
 from logging import Logger
 
 # Third-party imports
@@ -18,8 +17,6 @@ from django.conf import settings
 from common.http import DataRequestClient
 from common.tasks import MessageQueueClient
 from extract.dal import DatabaseClient
-from extract.domain import TaskUpdateRequest
-from extract.models import ExtractionTask
 from extract.workflows.abstract import BaseWorkflow
 
 
@@ -112,18 +109,19 @@ class ResultsScrapeWorkflow(BaseWorkflow):
         Returns:
             `None`
         """
-        # Begin tracking updates for current task
-        task = TaskUpdateRequest()
-        task["id"] = task_id
-        task["status"] = ExtractionTask.StatusChoices.IN_PROGRESS
-        task["started_at_utc"] = datetime.now(UTC)
-        task["retry_count"] = num_delivery_attempts - 1
-        self._logger.info(
-            f"Processing job '{job_id}', source '{source}', "
-            f"task '{task_id}', message '{message_id}'."
-        )
+        # Define task retry count (one less than delivery attempt count)
+        retry_count = num_delivery_attempts - 1
 
         try:
+            # Log start of task processing
+            self._logger.info(
+                f"Processing message {message_id} for task {task_id}. "
+                f"Number of delivery attempts: {num_delivery_attempts}"
+            )
+
+            # Mark task as pending in database
+            self._db_client.mark_task_pending(task_id)
+
             # Scrape search results page fors project URLs
             try:
                 project_page_urls = self.scrape_results_page(url)
@@ -134,17 +132,17 @@ class ResultsScrapeWorkflow(BaseWorkflow):
 
             # Insert new tasks for scraping project pages into database
             try:
-                payload = []
-                for url in project_page_urls:
-                    payload.append(
+                new_tasks = self._db_client.bulk_upsert_tasks(
+                    [
                         {
                             "job_id": job_id,
                             "source": source,
                             "url": url,
                             "workflow_type": self.next_workflow,
                         }
-                    )
-                project_page_messages = self._db_client.bulk_upsert_tasks(payload)
+                        for url in project_page_urls
+                    ]
+                )
             except Exception as e:
                 raise RuntimeError(
                     "Failed to insert new tasks for scraping "
@@ -153,30 +151,18 @@ class ResultsScrapeWorkflow(BaseWorkflow):
 
             # Enqueue task messages to be handled in subsequent requests
             try:
-                for msg in project_page_messages:
-                    self._msg_queue_client.enqueue(msg)
+                self._msg_queue_client.enqueue(new_tasks)
             except Exception as e:
                 raise RuntimeError(
-                    f"Failed to enqueue all {len(project_page_messages)} messages. {e}"
+                    f"Failed to enqueue all {len(new_tasks)} messages. {e}"
                 ) from None
 
         except Exception as e:
-            # Log error
-            error_message = (
-                f"Results page scraping workflow failed for message {message_id}. {e}"
-            )
-            self._logger.error(error_message)
+            # Mark task as failed in database
+            self._logger.error(f"Task failed. {e}")
+            self._db_client.mark_task_failure(task_id, str(e), retry_count)
+            raise RuntimeError(str(e)) from None
 
-            # Record task failure in database
-            task["status"] = ExtractionTask.StatusChoices.ERROR
-            task["failed_at_utc"] = datetime.now(UTC)
-            task["last_error"] = error_message
-            self._db_client.update_task(task)
-
-            # Bubble up error
-            raise RuntimeError(error_message) from None
-
-        # Record task success in database
-        task["status"] = ExtractionTask.StatusChoices.COMPLETED
-        task["completed_at_utc"] = datetime.now(UTC)
-        self._db_client.update_task(task)
+        # Mark task as successful in database
+        self._logger.info("Task succeeded.")
+        self._db_client.mark_task_success(task_id, retry_count)

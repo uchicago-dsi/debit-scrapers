@@ -31,7 +31,12 @@ from .fmo import (
     FmoResultsScrapeWorkflow,
     FmoSeedUrlsWorkflow,
 )
-from .idb import IdbProjectDownloadWorkflow
+from .idb import (
+    IdbPartialProjectDownloadWorkflow,
+    IdbProjectPartialScrapeWorkflow,
+    IdbResultsScrapeWorkflow,
+    IdbSeedUrlsWorkflow,
+)
 from .ifc import IfcProjectScrapeWorkflow, IfcSeedUrlsWorkflow
 from .kfw import KfwDownloadWorkflow
 from .miga import (

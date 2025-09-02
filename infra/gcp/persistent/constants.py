@@ -59,7 +59,7 @@ QUEUE_CONFIG = [
     },
     {
         "source": "idb",
-        "max_concurrent_dispatches": 1,
+        "max_concurrent_dispatches": 5,
         "requires_chromium": False,
     },
     {

@@ -57,9 +57,9 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
         try:
             # Determine number of requests necessary to fetch all projects
             num_projects = self.get_num_projects()
-            num_request_batches = (num_projects // self.num_projects_per_request) + (
-                1 if num_projects % self.num_projects_per_request > 0 else 0
-            )
+            num_request_batches = (
+                num_projects // self.num_projects_per_request
+            ) + (1 if num_projects % self.num_projects_per_request > 0 else 0)
 
             # Generate request URLs, specifying the number of
             # projects that can be obtained from IFC at once
@@ -75,7 +75,9 @@ class IfcSeedUrlsWorkflow(SeedUrlsWorkflow):
             return urls
 
         except Exception as e:
-            raise RuntimeError(f"Failed to generate IFC API URLs. {e}") from None
+            raise RuntimeError(
+                f"Failed to generate IFC API URLs. {e}"
+            ) from None
 
     def get_num_projects(self) -> int:
         """Retrieves the total number of projects from a search results page.
@@ -170,7 +172,9 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 for data in r.json()["SearchResult"]["data"]["results"]["data"]
             ]
         except json.JSONDecodeError:
-            raise RuntimeError("Error parsing IFC project records into JSON.") from None
+            raise RuntimeError(
+                "Error parsing IFC project records into JSON."
+            ) from None
         except KeyError:
             raise RuntimeError(
                 "The IFC project records had an unexpected JSON schema."
@@ -233,7 +237,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 The formatted name.
             """
             if not name or name is np.nan:
-                return None
+                return ""
 
             name_parts = name.split(",")
             num_formal_name_parts = 2
@@ -246,7 +250,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         df.loc[:, "countries"] = df["countries"].apply(correct_country_name)
 
         # Extract investment amount value and currency type
-        def get_multiplier(amount: str | float) -> float | None:
+        def get_multiplier(amount: str | float) -> float:
             """Returns the multiplier for investment amounts.
 
             Args:
@@ -265,13 +269,17 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 return 1
 
         df["multiplier"] = df["total_amount"].apply(get_multiplier)
-        df["total_amount_currency"] = df["total_amount"].str.extract(r"\((.*?)\)")
+        df["total_amount_currency"] = df["total_amount"].str.extract(
+            r"\((.*?)\)"
+        )
         df["total_amount"] = df["total_amount"].str.extract("(.*?) million")
         df["total_amount"] = pd.to_numeric(df["total_amount"], errors="coerce")
         df["total_amount"] = df["total_amount"] * df["multiplier"]
         df["total_amount_usd"] = df.apply(
             lambda row: (
-                row["total_amount"] if row["total_amount_currency"] == "USD" else None
+                row["total_amount"]
+                if row["total_amount_currency"] == "USD"
+                else None
             ),
             axis=1,
         )
@@ -287,12 +295,14 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 The parsed date.
             """
             if not val or val is np.nan:
-                return None
+                return ""
             return pd.to_datetime(val).strftime("%Y-%m-%d")
 
         df["date_approved"] = df["approval_date"].apply(parse_date)
         df["date_disclosed"] = df["disclosed_date"].apply(parse_date)
-        df["date_planned_effective"] = df["estimated_start_date"].apply(parse_date)
+        df["date_planned_effective"] = df["estimated_start_date"].apply(
+            parse_date
+        )
 
         # Build project URLs using project name, number, and document type
         def generate_project_detail_url(row: pd.Series) -> str:
@@ -306,7 +316,9 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             """
             # Compose URL fragment containing project name
             regex = '[()"#/@;:<>{}`+=~|.!?,]'
-            substitute = row["name"].lower().replace(" ", "-").replace("---", "-")
+            substitute = (
+                row["name"].lower().replace(" ", "-").replace("---", "-")
+            )
             proj_name_url_frag = re.sub(regex, "", substitute)
 
             # Parse other needed fields into str types
@@ -337,7 +349,22 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         ]
         df = df[cols_to_keep]
 
-        # Replace NaN values
+        # Replace NaN values with None
         df = df.replace({np.nan: None})
+
+        # Replace None with empty strings for string data columns
+        cols = [
+            "affiliates",
+            "countries",
+            "date_approved",
+            "date_disclosed",
+            "date_planned_effective",
+            "name",
+            "sectors",
+            "status",
+            "total_amount_currency",
+            "url",
+        ]
+        df[cols] = df[cols].replace({None: ""})
 
         return df.to_dict(orient="records")

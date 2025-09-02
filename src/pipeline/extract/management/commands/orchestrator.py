@@ -2,19 +2,18 @@
 
 # Standard library imports
 import logging
-import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, UTC
 
 # Third-party imports
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandParser
 
 # Application imports
 from common.logger import LoggerFactory
 from common.tasks import MessageQueueClient, TaskQueueFactory
 from extract.dal import DatabaseClient
-from extract.models import ExtractionJob, ExtractionTask
 from extract.workflows.registry import StarterWorkflowRegistry
 
 
@@ -55,12 +54,12 @@ class JobSubmission(ABC):
 
     @abstractmethod
     def handle_tasks(
-        self, job: ExtractionJob, sources: list[str], force_restart: bool
+        self, job_pk: int, sources: list[str], force_restart: bool
     ) -> None:
         """Saves and submits tasks to process the given data sources.
 
         Args:
-            job: The parent job.
+            job_pk: The primary key of the job.
 
             sources: The data sources.
 
@@ -80,10 +79,10 @@ class JobSubmission(ABC):
                 have not been registered.
 
         Args:
-            sources: The data sources.
+            sources: The raw data sources.
 
         Returns:
-            The validated.
+            The validated data sources.
         """
         valid_sources = StarterWorkflowRegistry.list()
 
@@ -101,11 +100,11 @@ class JobSubmission(ABC):
 
         return list(set(sources))
 
-    def monitor_job(self, job: ExtractionJob) -> None:
+    def monitor_job(self, pk: int) -> None:
         """Monitors the progress of tasks for a job.
 
         Args:
-            job: The job to monitor.
+            pk: The primary key of the job to monitor.
 
         Returns:
             `None`
@@ -115,16 +114,10 @@ class JobSubmission(ABC):
         while True:
             # Query database for tasks that have not reached a terminal state
             self._logger.info("Polling database for outstanding tasks.")
-            outstanding_tasks = ExtractionTask.objects.exists(
-                job=job,
-                status__in=[
-                    ExtractionTask.StatusChoices.NOT_STARTED,
-                    ExtractionTask.StatusChoices.IN_PROGRESS,
-                ],
-            )
+            num_outstanding = self._db_client.count_outstanding_tasks(pk)
 
             # Break if all tasks have completed
-            if not outstanding_tasks:
+            if not num_outstanding:
                 self._logger.info("All tasks have completed.")
                 break
 
@@ -138,18 +131,18 @@ class JobSubmission(ABC):
 
             # Otherwise, sleep for configured interval
             self._logger.info(
-                f"{len(outstanding_tasks):,} task(s) still to be processed. "
+                f"{num_outstanding:,} task(s) still to be processed. "
                 f"Sleeping for {self._polling_interval} minute(s)."
             )
             time.sleep(self._polling_interval * 60)
 
     def execute(
-        self, job: ExtractionTask, sources: list[str], force_restart: bool
+        self, job_pk: int, sources: list[str], force_restart: bool
     ) -> None:
         """Executes the data extraction job.
 
         Args:
-            job: The job.
+            job_pk: The primary key of the job.
 
             sources: The data sources.
 
@@ -163,33 +156,41 @@ class JobSubmission(ABC):
         self._logger.info("Draining existing task queues.")
         all_sources = StarterWorkflowRegistry.list()
         self._task_queue.purge(all_sources)
-        self._logger.info(f"{len(all_sources):,} task queues drained successfully.")
+        self._logger.info(
+            f"{len(all_sources):,} task queues drained successfully."
+        )
 
         # Validate requested data sources
         self._logger.info("Validating requested data sources.")
         validated_sources = self.validate_sources(sources)
-        self._logger(f"Identified {len(validated_sources):,} source(s) to process.")
+        self._logger.info(
+            f"Identified {len(validated_sources):,} source(s) to process."
+        )
 
         # Compose and submit data extraction tasks
         self._logger.info("Preparing data extraction tasks for data sources.")
-        self.handle_tasks(job, validated_sources, force_restart)
+        self.handle_tasks(job_pk, validated_sources, force_restart)
         self._logger.info("Tasks successfully queued and persisted.")
 
         # Monitor tasks
         self._logger.info("Beginning task monitoring phase.")
-        self.monitor_job(job)
+        self.monitor_job(job_pk)
+
+        # Mark job as completed
+        self._logger.info("Marking job as completed in database.")
+        self._db_client.mark_job_completed(job_pk)
 
 
 class NewSubmission(JobSubmission):
     """Represents a new or restarted data extraction job."""
 
     def handle_tasks(
-        self, job: ExtractionJob, sources: list[str], force_restart: bool
+        self, job_pk: int, sources: list[str], force_restart: bool
     ) -> None:
         """Saves and submits tasks to process the given data sources.
 
         Args:
-            job: The parent job.
+            job_pk: The primary key of the job.
 
             sources: The data sources.
 
@@ -199,24 +200,24 @@ class NewSubmission(JobSubmission):
         Returns:
             `None`
         """
-        # Compose tasks
-        tasks = [
-            {
-                "job_id": job.id,
-                "source": source,
-                "workflow_type": StarterWorkflowRegistry.get(source),
-            }
-            for source in sources
-        ]
-        self._logger.info(
-            f"Created {len(tasks):,} new tasks to trigger the "
-            "first stage of the data extraction workflow(s)."
-        )
-
-        # Insert task metadata into the database
+        # Insert task metadata into the
         try:
-            self._logger.info("Inserting task(s) into the database.")
-            self._db_client.bulk_create_tasks(tasks)
+            self._logger.info(
+                f"Upserting {len(sources):,} new task(s) "
+                "into the database to trigger the first stage "
+                "of the data extraction workflow(s)."
+            )
+            new_tasks = self._db_client.bulk_upsert_tasks(
+                [
+                    {
+                        "job_id": job_pk,
+                        "source": source,
+                        "workflow_type": StarterWorkflowRegistry.get(source),
+                        "url": "",
+                    }
+                    for source in sources
+                ]
+            )
         except Exception as e:
             raise RuntimeError(
                 f"Failed to insert new task(s) into the database. {e}"
@@ -224,22 +225,22 @@ class NewSubmission(JobSubmission):
 
         # Queue tasks for processing by workers
         try:
-            self._logger.info("Queueing tasks for processing.")
-            self._task_queue.enqueue(tasks)
+            self._logger.info("Enqueueing tasks for processing.")
+            self._task_queue.enqueue(new_tasks)
         except Exception as e:
-            raise RuntimeError(f"Failed to queue task(s). {e}") from None
+            raise RuntimeError(f"Failed to enqueue task(s). {e}") from None
 
 
 class Resubmission(JobSubmission):
     """Represents a resubmitted data extraction job."""
 
     def handle_tasks(
-        self, job: ExtractionJob, sources: list[str], force_restart: bool
+        self, job_pk: int, sources: list[str], force_restart: bool
     ) -> None:
         """Saves and submits tasks to process the given data sources.
 
         Args:
-            job: The parent job.
+            job_pk: The primary key of the job.
 
             sources: The data sources.
 
@@ -256,53 +257,24 @@ class Resubmission(JobSubmission):
             "Cancelling any pending or unstarted tasks for "
             "data sources not requested in this resubmission."
         )
-        ExtractionTask.objects.filter(
-            job=job,
-            status__in=[
-                ExtractionTask.StatusChoices.IN_PROGRESS,
-                ExtractionTask.StatusChoices.NOT_STARTED,
-            ],
-        ).exclude(source__in=sources).update(
-            status=ExtractionTask.StatusChoices.CANCELLED
+        self._db_client.cancel_outstanding_tasks(
+            job_pk, excluded_sources=sources
         )
 
         # Define set of tasks to resubmit
-        self._logger.info("Identifying tasks to resubmit.")
-        queryset = (
-            ExtractionTask.objects.filter(job=job, source__in=sources)
-            if force_restart
-            else ExtractionTask.objects.filter(
-                job=job,
-                source__in=sources,
-                status__in=[
-                    ExtractionTask.StatusChoices.NOT_STARTED,
-                    ExtractionTask.StatusChoices.IN_PROGRESS,
-                    ExtractionTask.StatusChoices.ERROR,
-                ],
-            )
-        )
+        self._logger.info("Resubmitting tasks for execution.")
+        tasks = self._db_client.reset_tasks(job_pk, sources, force_restart)
         self._logger.info(
-            f"Found {len(queryset):,} non-completed task(s) "
-            f'for pre-existing job "{job.id}" in the database.'
+            f"Resubmitted {len(tasks):,} task(s) for "
+            f'pre-existing job "{job_pk}" in the database.'
         )
-
-        # Update the tasks' status to "Not Started"
-        self._logger.info("Updating task statuses to 'Not Started'.")
-        queryset.update(status=ExtractionTask.StatusChoices.NOT_STARTED)
 
         # Queue tasks for processing by workers
         try:
-            self._logger.info("Resubmitting task(s) to the queue for processing.")
-            self._task_queue.enqueue(
-                [
-                    {
-                        "job_id": job.id,
-                        "source": task.source,
-                        "workflow_type": task.workflow_type,
-                    }
-                    for task in queryset
-                ]
+            self._logger.info(
+                "Resubmitting task(s) to the queue for processing."
             )
+            self._task_queue.enqueue(tasks)
         except Exception as e:
             raise RuntimeError(f"Failed to queue task(s). {e}") from None
 
@@ -388,16 +360,16 @@ class Command(BaseCommand):
         # Parse required environment variables
         try:
             logger.info("Parsing required environment variables.")
-            polling_interval = int(os.environ["POLLING_INTERVAL_IN_MINUTES"])
-            timeout = int(os.environ["MAX_WAIT_IN_MINUTES"])
-        except KeyError as e:
-            logger.error(f'Missing required environment variable "{e}".')
+            polling_interval = settings.POLLING_INTERVAL_IN_MINUTES
+            timeout = settings.MAX_WAIT_IN_MINUTES
+        except AttributeError as e:
+            logger.error(f'Missing required setting "{e}".')
             exit(1)
 
         # Initialize database client
         try:
             logger.info("Initializing database client.")
-            db_client = DatabaseClient(logger)
+            db_client = DatabaseClient()
         except Exception as e:
             logger.error(f"Failed to initialize database client. {e}")
             exit(1)
@@ -411,19 +383,20 @@ class Command(BaseCommand):
             exit(1)
 
         # Initialize job in database for current date ("YYYY-MM-DD")
-        now = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        job, created = ExtractionJob.objects.get_or_create(date=now)
+        job_id, job_date, created = db_client.get_or_create_job()
         logger.info(
-            f'Created new job for date "{now}".'
+            f'Created new job for date "{job_date}".'
             if created
-            else f'Found existing job for date "{now}".'
+            else f'Found existing job for date "{job_date}".'
         )
 
         # Submit tasks for job and monitor progress
         try:
             args = [db_client, task_queue, polling_interval, timeout, logger]
-            submission = NewSubmission(*args) if created else Resubmission(*args)
-            submission.execute(job, restrictions, force_restart)
+            submission = (
+                NewSubmission(*args) if created else Resubmission(*args)
+            )
+            submission.execute(job_id, restrictions, force_restart)
         except Exception as e:
             logger.error(f"Failed to orchestrate tasks. {e}")
             exit(1)

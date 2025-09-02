@@ -101,7 +101,7 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         soup = BeautifulSoup(r.text, "html.parser")
 
         # Get project summary metadata
-        def get_project_summary_field(field_name: str) -> str | None:
+        def get_project_summary_field(field_name: str) -> str:
             """Extracts the given data field from the project summary section.
 
             Args:
@@ -114,7 +114,7 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 div = soup.find(string=field_name).find_next("div")
                 return div.text
             except AttributeError:
-                return None
+                return ""
 
         number = get_project_summary_field("PROJECT NUMBER")
         name = soup.find("h1", {"class": "project-name"}).text
@@ -123,13 +123,15 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         appraised = get_project_summary_field("APPRAISAL REVIEW/FINAL REVIEW")
         approved = get_project_summary_field("FINANCING APPROVAL")
         closed = get_project_summary_field("LOAN CLOSING/LAST DISBURSEMENT")
-        proposed_funding_amount = get_project_summary_field("PROPOSED FUNDING AMOUNT")
+        proposed_funding_amount = get_project_summary_field(
+            "PROPOSED FUNDING AMOUNT"
+        )
         approved_funding = get_project_summary_field("APPROVED FUNDING")
         sectors = get_project_summary_field("SECTOR")
         countries = get_project_summary_field("MEMBER")
 
         # Extract project borrower and implementing entity data
-        def get_project_contact_field(field_name: str) -> str | None:
+        def get_project_contact_field(field_name: str) -> str:
             """Extracts contact information for a borrower or implementer.
 
             Args:
@@ -139,9 +141,9 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 The contact information.
             """
             try:
-                contact_div = soup.find("h2", string=field_name).find_next_sibling(
-                    "div"
-                )
+                contact_div = soup.find(
+                    "h2", string=field_name
+                ).find_next_sibling("div")
                 contact_fields = []
                 nbsp = "\xa0"
                 for p in contact_div.find_all("p"):
@@ -151,7 +153,7 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 return ", ".join(contact_fields)
 
             except AttributeError:
-                return None
+                return ""
 
         borrower = get_project_contact_field("BORROWER")
         implementer = get_project_contact_field("IMPLEMENTING ENTITY")
@@ -163,19 +165,21 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
             companies = implementer
 
         # Parse date fields
-        def parse_date(date_str: str) -> str | None:
+        def parse_date(date_str: str) -> str:
             """Maps a date string to a YYYY-MM-DD format.
 
             Args:
                 date_str: The date string to parse.
 
             Returns:
-                The parsed date string, or `None` if parsing fails.
+                The parsed date string, or an empty string if parsing fails.
             """
             try:
-                return datetime.strptime(date_str, "%B %d, %Y").strftime("%Y-%m-%d")
+                return datetime.strptime(date_str, "%B %d, %Y").strftime(
+                    "%Y-%m-%d"
+                )
             except Exception:
-                return None
+                return ""
 
         disclosed_utc = parse_date(disclosed)
         appraised_utc = parse_date(appraised)
@@ -184,10 +188,13 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Parse loan amount field to retrieve value and currency type
         if not proposed_funding_amount and not approved_funding:
-            loan_amount_currency = loan_amount = None
+            loan_amount = 0
+            loan_amount_currency = ""
         else:
             loan_str = (
-                proposed_funding_amount if proposed_funding_amount else approved_funding
+                proposed_funding_amount
+                if proposed_funding_amount
+                else approved_funding
             )
             loan_amount_currency = loan_str[:3]
             loan_amount_match = re.search(r"([\d,\.]+)", loan_str).groups(0)[0]

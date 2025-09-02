@@ -1,4 +1,4 @@
-"""WSGI config for pipeline_v2 project.
+"""WSGI config for pipeline project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

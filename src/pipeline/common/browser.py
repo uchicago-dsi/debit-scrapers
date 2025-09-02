@@ -48,45 +48,48 @@ class HeadlessBrowser:
         user_agent = random.choice(self._user_agent_headers)
 
         with sync_playwright() as p:
-            # Launch headless browser
-            browser = p.chromium.launch(headless=True)
+            try:
+                # Launch headless browser
+                browser = p.chromium.launch(headless=True)
 
-            # Open new browser tab and navigate to webpage
-            first_page = browser.new_page()
-            first_page.set_extra_http_headers({"User-Agent": user_agent})
-            first_page.goto(url, timeout=timeout)
+                # Open new browser tab and navigate to webpage
+                first_page = browser.new_page()
+                first_page.set_extra_http_headers({"User-Agent": user_agent})
+                first_page.goto(url, timeout=timeout)
 
-            # Trigger download event and note download URL
-            with first_page.expect_download(timeout=0) as download_event:
-                action(first_page)
-                download_url = download_event.value.url
-                download_name = download_event.value.suggested_filename
+                # Trigger download event and note download URL
+                with first_page.expect_download(timeout=0) as download_event:
+                    action(first_page)
+                    download_url = download_event.value.url
+                    download_name = download_event.value.suggested_filename
 
-            # Open second browser tab
-            second_page = browser.new_page()
-            second_page.set_extra_http_headers({"User-Agent": user_agent})
+                # Open second browser tab
+                second_page = browser.new_page()
+                second_page.set_extra_http_headers({"User-Agent": user_agent})
 
-            # Start download context and catch aborted event
-            with second_page.expect_download(timeout=0) as download_event:
-                try:
-                    second_page.goto(download_url, timeout=timeout)
-                except playwright.sync_api.Error:
-                    pass
+                # Start download context and catch aborted event
+                with second_page.expect_download(timeout=0) as download_event:
+                    try:
+                        second_page.goto(download_url, timeout=timeout)
+                    except playwright.sync_api.Error:
+                        pass
 
-            # Create temporary file
-            prefix, suffix = download_name.split(".")
-            temp_file = NamedTemporaryFile(
-                delete=False, prefix=prefix, suffix=f".{suffix}"
-            )
+                # Create temporary file
+                prefix, suffix = download_name.split(".")
+                temp_file = NamedTemporaryFile(
+                    delete=False, prefix=prefix, suffix=f".{suffix}"
+                )
 
-            # Close file handle to make writable
-            temp_file.close()
+                # Close file handle to make writable
+                temp_file.close()
 
-            # Save download to temporary file
-            download_event.value.save_as(temp_file.name)
+                # Save download to temporary file
+                download_event.value.save_as(temp_file.name)
 
-            # Return temporary file
-            return temp_file
+                # Return temporary file
+                return temp_file
+            finally:
+                browser.close()
 
     def get_html(self, url: str) -> str:
         """Retrieves the HTML content of a given URL.
@@ -102,17 +105,20 @@ class HeadlessBrowser:
 
         # Use headless browser to fetch HTML
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            try:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
 
-            # Set a realistic user agent
-            page.set_extra_http_headers({"User-Agent": user_agent})
+                # Set a realistic user agent
+                page.set_extra_http_headers({"User-Agent": user_agent})
 
-            # Navigate to the page
-            page.goto(url)
+                # Navigate to the page
+                page.goto(url)
 
-            # Wait for content to load
-            page.wait_for_load_state("networkidle")
+                # Wait for content to load
+                page.wait_for_load_state("networkidle")
 
-            # Get the page HTML
-            return page.content()
+                # Get the page HTML
+                return page.content()
+            finally:
+                browser.close()

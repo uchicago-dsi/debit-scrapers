@@ -9,9 +9,8 @@ scraped themselves for information on project sectors and companies.
 import re
 from datetime import datetime
 
-from bs4 import BeautifulSoup
-
 # Third-party imports
+from bs4 import BeautifulSoup
 from django.conf import settings
 
 # Application imports
@@ -45,28 +44,7 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
         """The base URL for a BIO project search results webpage."""
         return "https://www.bio-invest.be/en/investments/p{}?search="
 
-    def generate_seed_urls(self) -> list[str]:
-        """Generates the first set of URLs to scrape.
-
-        Args:
-            `None`
-
-        Returns:
-            The unique list of search result pages.
-        """
-        try:
-            last_page_num = self.find_last_page()
-            result_pages = [
-                self.search_results_base_url.format(n)
-                for n in range(self.first_page_num, last_page_num + 1)
-            ]
-            return result_pages
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to generate BIO search result pages to crawl. {e}"
-            ) from None
-
-    def find_last_page(self) -> int:
+    def _find_last_page(self) -> int:
         """Retrieves the number of the last search results page.
 
         Args:
@@ -95,6 +73,27 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
         except Exception as e:
             raise RuntimeError(
                 f"Error retrieving last page number at '{first_results_page}'. {e}"
+            ) from None
+
+    def generate_seed_urls(self) -> list[str]:
+        """Generates the first set of URLs to scrape.
+
+        Args:
+            `None`
+
+        Returns:
+            The unique list of search result pages.
+        """
+        try:
+            last_page_num = self._find_last_page()
+            result_pages = [
+                self.search_results_base_url.format(n)
+                for n in range(self.first_page_num, last_page_num + 1)
+            ]
+            return result_pages
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to generate BIO search result pages to crawl. {e}"
             ) from None
 
 
@@ -128,12 +127,16 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
 
             # Extract project date
             try:
-                raw_date = div.find(class_="icon--calendar").find_parent().text.strip()
-                effective_utc = datetime.strptime(raw_date, "%d/%m/%Y").strftime(
-                    "%Y-%m-%d"
+                raw_date = (
+                    div.find(class_="icon--calendar")
+                    .find_parent()
+                    .text.strip()
                 )
+                effective_utc = datetime.strptime(
+                    raw_date, "%d/%m/%Y"
+                ).strftime("%Y-%m-%d")
             except AttributeError:
-                effective_utc = None
+                effective_utc = ""
 
             # Extract project countries
             try:
@@ -141,20 +144,21 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 country_arr = [c.strip() for c in country_div.text.split(",")]
                 countries = "|".join(country_arr)
             except AttributeError:
-                countries = None
+                countries = ""
 
             # Extract loan amount (EUR)
             try:
                 loan_amount_str = (
                     div.find(class_="icon--euro").find_parent().text.strip()
                 )
-                loan_amount_match = re.search(r"([\d,\.]+)", loan_amount_str).groups(0)[
-                    0
-                ]
+                loan_amount_match = re.search(
+                    r"([\d,\.]+)", loan_amount_str
+                ).groups(0)[0]
                 loan_amount_value = float(loan_amount_match.replace(",", ""))
                 loan_amount_currency = "EUR"
             except AttributeError:
-                loan_amount_value = loan_amount_currency = None
+                loan_amount_value = None
+                loan_amount_currency = ""
 
             # Append results
             project_page_urls.append(url)
@@ -194,21 +198,23 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             company_div = soup.find(string="Organisation").parent
             companies = company_div.find_next_sibling("p").text
         except AttributeError:
-            companies = None
+            companies = ""
 
         # Retrieve investment field type
         try:
             inv_field_div = soup.find(string="Investment field").parent
             inv_field = inv_field_div.find_next_sibling("p").text
         except AttributeError:
-            inv_field = None
+            inv_field = ""
 
         # Retrieve investment activity type
         try:
             inv_activity_div = soup.find(string="Activity").parent
-            inv_activity = inv_activity_div.find_next_sibling("div").find("p").text
+            inv_activity = (
+                inv_activity_div.find_next_sibling("div").find("p").text
+            )
         except AttributeError:
-            inv_activity = None
+            inv_activity = ""
 
         # Derive project sector type
         if inv_field.lower() in (
