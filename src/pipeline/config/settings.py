@@ -94,7 +94,7 @@ APPEND_SLASH = False
 # AUTHENTICATION
 # ________________________________________________________________________
 
-ALLOWED_HOSTS = [os.environ["DJANGO_ALLOWED_HOST"]]
+ALLOWED_HOSTS = [os.environ["DJANGO_ALLOWED_HOST"], "127.0.0.1"]
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 AUTH_PASSWORD_VALIDATORS = [
     {
