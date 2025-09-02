@@ -535,8 +535,8 @@ shared_template_container_args = dict(
     ),
     volume_mounts=[
         gcp.cloudrunv2.ServiceTemplateContainerVolumeMountArgs(
-            name="cloudsql",
             mount_path="/cloudsql",
+            name="cloudsql",
         )
     ],
 )
@@ -615,14 +615,93 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
             containers=[
                 gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
                     args=["bash", "setup.sh", "--migrate", "--extract-data"],
-                    envs=[*shared_template_container_args["envs"]],
+                    envs=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_ALLOWED_HOST",
+                            value=DJANGO_ALLOWED_HOST,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_SECRET_KEY",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=django_secret.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_SETTINGS_MODULE",
+                            value=DJANGO_SETTINGS_MODULE,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="ENV",
+                            value="prod" if ENV == "p" else "test",
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="GEMINI_API_KEY",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=gemini_api_key.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="GOOGLE_CLOUD_PROJECT_ID",
+                            value=PROJECT_ID,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="GOOGLE_CLOUD_PROJECT_REGION",
+                            value=PROJECT_REGION,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="MAX_TASK_RETRIES",
+                            value=EXTRACTION_PIPELINE_MAX_RETRIES,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="MAX_WAIT_IN_MINUTES",
+                            value=EXTRACTION_PIPELINE_MAX_WAIT,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POLLING_INTERVAL_IN_MINUTES",
+                            value=EXTRACTION_PIPELINE_POLLING_INTERVAL,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_DB",
+                            value=POSTGRES_DB,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_HOST",
+                            value=pipeline_db.connection_name.apply(
+                                lambda name: f"/cloudsql/{name}"
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_PASSWORD",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=postgres_password.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_USER",
+                            value=POSTGRES_USER,
+                        ),
+                    ],
                     image=light_extract_image.image_name,
-                    ports=shared_template_container_args["ports"],
-                    resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                        cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
+                    ports=gcp.cloudrunv2.JobTemplateTemplateContainerPortArgs(
+                        container_port=DJANGO_PORT
                     ),
-                    volume_mounts=shared_template_container_args[
-                        "volume_mounts"
+                    resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
+                        limits={"memory": "512Mi", "cpu": "1"}
+                    ),
+                    volume_mounts=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerVolumeMountArgs(
+                            mount_path="/cloudsql",
+                            name="cloudsql",
+                        )
                     ],
                 )
             ],
