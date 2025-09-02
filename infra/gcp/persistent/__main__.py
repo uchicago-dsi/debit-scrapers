@@ -614,6 +614,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
         template=gcp.cloudrunv2.JobTemplateTemplateArgs(
             containers=[
                 gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
+                    args=["bash", "setup.sh", "--migrate", "--extract-data"],
                     envs=[*shared_template_container_args["envs"]],
                     image=light_extract_image.image_name,
                     ports=shared_template_container_args["ports"],
@@ -621,7 +622,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                         cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
                     ),
                     volume_mounts=shared_template_container_args[
-                        "volume-mounts"
+                        "volume_mounts"
                     ],
                 )
             ],
