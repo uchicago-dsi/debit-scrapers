@@ -217,16 +217,18 @@ fi
 print_header "Configuring IAM Roles"
 
 declare -A ROLES=(
-  ["roles/storage.admin"]="Storage Admin"
-  ["roles/serviceusage.serviceUsageAdmin"]="Service Usage Admin"
-  ["roles/iam.serviceAccountAdmin"]="Service Account Admin"
-  ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
-  ["roles/artifactregistry.admin"]="Artifact Registry Admin"
-  ["roles/compute.admin"]="Compute Admin"
-  ["roles/cloudsql.admin"]="Cloud SQL Admin"
-  ["roles/secretmanager.admin"]="Secret Manager Admin"
-  ["roles/cloudscheduler.admin"]="Cloud Scheduler Admin"
-  ["roles/run.admin"]="Cloud Run Admin"
+    ["roles/artifactregistry.admin"]="Artifact Registry Admin"
+    ["roles/run.admin"]="Cloud Run Admin"
+    ["roles/cloudscheduler.admin"]="Cloud Scheduler Admin"
+    ["roles/cloudsql.admin"]="Cloud SQL Admin"
+    ["roles/cloudtasks.admin"]="Cloud Tasks Admin"
+    ["roles/compute.admin"]="Compute Admin"
+    ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
+    ["roles/secretmanager.admin"]="Secret Manager Admin"
+    ["roles/iam.serviceAccountAdmin"]="Service Account Admin"
+    ["roles/serviceusage.serviceUsageAdmin"]="Service Usage Admin"
+    ["roles/storage.admin"]="Storage Admin"
+    ["roles/workflows.admin"]="Workflows Admin"
 )
 
 for ROLE in "${!ROLES[@]}"; do

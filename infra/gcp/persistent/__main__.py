@@ -691,9 +691,11 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                         ),
                     ],
                     image=light_extract_image.image_name,
-                    ports=gcp.cloudrunv2.JobTemplateTemplateContainerPortArgs(
-                        container_port=DJANGO_PORT
-                    ),
+                    ports=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerPortArgs(
+                            container_port=DJANGO_PORT
+                        )
+                    ],
                     resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
                         limits={"memory": "512Mi", "cpu": "1"}
                     ),
