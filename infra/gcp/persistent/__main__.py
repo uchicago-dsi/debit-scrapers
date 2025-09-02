@@ -530,7 +530,7 @@ shared_template_container_args = dict(
         ),
         initial_delay_seconds=0,
         period_seconds=30,
-        timeout_seconds=300,
+        timeout_seconds=1,
         failure_threshold=10,
     ),
     volume_mounts=[
