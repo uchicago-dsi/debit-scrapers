@@ -13,6 +13,7 @@ from constants import (
     DJANGO_SECRET_KEY,
     DJANGO_SETTINGS_MODULE,
     ENV,
+    EXTRACTION_PIPELINE_MAX_RETRIES,
     EXTRACTION_PIPELINE_MAX_WAIT,
     EXTRACTION_PIPELINE_POLLING_INTERVAL,
     EXTRACTION_PIPELINE_SCHEDULE,
@@ -31,6 +32,8 @@ from constants import (
 # See: https://www.pulumi.com/registry/packages/gcp/api-docs/provider/
 # ------------------------------------------------------------------------
 
+# region
+
 gcp_provider = gcp.Provider(
     f"debit-{ENV}-gcp-provider",
     default_labels={
@@ -42,10 +45,14 @@ gcp_provider = gcp.Provider(
     },
 )
 
+# endregion
+
 # ------------------------------------------------------------------------
 # Projects
 # See: https://www.pulumi.com/registry/packages/gcp/api-docs/projects/
 # ------------------------------------------------------------------------
+
+# region
 
 required_services = [
     "iam.googleapis.com",
@@ -70,6 +77,8 @@ enabled_services = [
     )
     for svc in required_services
 ]
+
+# endregion
 
 # ------------------------------------------------------------------------
 # Secret Manager
@@ -476,6 +485,18 @@ shared_template_container_args = dict(
             value=PROJECT_REGION,
         ),
         gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+            name="MAX_TASK_RETRIES",
+            value=EXTRACTION_PIPELINE_MAX_RETRIES,
+        ),
+        gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+            name="MAX_WAIT_IN_MINUTES",
+            value=EXTRACTION_PIPELINE_MAX_WAIT,
+        ),
+        gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+            name="POLLING_INTERVAL_IN_MINUTES",
+            value=EXTRACTION_PIPELINE_POLLING_INTERVAL,
+        ),
+        gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
             name="POSTGRES_DB",
             value=POSTGRES_DB,
         ),
@@ -523,6 +544,7 @@ shared_template_container_args = dict(
 # Create Cloud Run service running data extraction pipeline with browser
 heavy_cloud_run_service = gcp.cloudrunv2.Service(
     f"debit-{ENV}-runsvc-heavy",
+    deletion_protection=False,
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
     launch_stage="BETA",
     location=PROJECT_REGION,
@@ -553,6 +575,7 @@ pulumi.export("heavy_cloud_run_service", heavy_cloud_run_service.name)
 # Create Cloud Run service running data extraction pipeline without browser
 light_cloud_run_service = gcp.cloudrunv2.Service(
     f"debit-{ENV}-runsvc-light",
+    deletion_protection=False,
     ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
     launch_stage="BETA",
     location=PROJECT_REGION,
@@ -583,6 +606,7 @@ pulumi.export("light_cloud_run_service", light_cloud_run_service.name)
 # Create Cloud Run Job serving as orchestrator
 orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
     f"debit-{ENV}-runjob-extract",
+    deletion_protection=False,
     launch_stage="BETA",
     location=PROJECT_REGION,
     parallelism=1,
@@ -590,17 +614,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
         **shared_template_args,
         containers=[
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
-                envs=[
-                    *shared_template_container_args["envs"],
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="MAX_WAIT_IN_MINUTES",
-                        value=EXTRACTION_PIPELINE_MAX_WAIT,
-                    ),
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="POLLING_INTERVAL_IN_MINUTES",
-                        value=EXTRACTION_PIPELINE_POLLING_INTERVAL,
-                    ),
-                ],
+                envs=[*shared_template_container_args["envs"]],
                 image=light_extract_image.image_name,
                 ports=shared_template_container_args["ports"],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
