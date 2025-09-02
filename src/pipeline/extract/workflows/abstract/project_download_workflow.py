@@ -12,7 +12,6 @@ from logging import Logger
 
 # Third-party imports
 import pandas as pd
-from django.conf import settings
 
 # Application imports
 from common.http import DataRequestClient

@@ -8,7 +8,6 @@ associated companies, and approval dates.
 
 # Standard library imports
 import json
-import os
 import re
 from datetime import datetime
 from logging import Logger
