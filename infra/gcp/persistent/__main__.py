@@ -627,8 +627,9 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                 )
             ],
             service_account=cloud_run_service_account_email,
+            timeout=shared_template_args["timeout"],
+            volumes=shared_template_args["volumes"],
         ),
-        **shared_template_args,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
