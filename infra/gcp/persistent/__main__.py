@@ -228,7 +228,7 @@ extraction_repo_heavy = gcp.artifactregistry.Repository(
     ],
     format="DOCKER",
     docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
-        immutable_tags=True
+        immutable_tags=False
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -253,7 +253,7 @@ extraction_repo_light = gcp.artifactregistry.Repository(
     ],
     format="DOCKER",
     docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
-        immutable_tags=True
+        immutable_tags=False
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
