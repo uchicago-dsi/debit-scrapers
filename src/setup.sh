@@ -15,12 +15,14 @@ trap 'status=$?; if [ $status -ne 0 ]; then echo "An unexpected error occurred (
 # Parse command line arguments
 migrate=false
 extract_data=false
+force_restart=false
 run_server=false
 development=false
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --migrate) migrate=true; shift ;;
         --extract-data) extract_data=true; shift ;;
+        --force-restart) force_restart=true; shift ;;
         --run-server) run_server=true; shift ;;
         --development) development=true; shift ;;
         *) echo "Unknown command line parameter received: $1"; exit 1 ;;
@@ -40,7 +42,11 @@ fi
 # Extract latest development project data if indicated
 if $extract_data ; then
     echo "Orchestrating data extraction."
-    uv run python ./pipeline/manage.py orchestrator
+    force_flag=""
+    if $force_restart ; then
+        force_flag="--force-restart"
+    fi
+    uv run python ./pipeline/manage.py orchestrator $force_flag
 fi
 
 # Log successful end of database setup

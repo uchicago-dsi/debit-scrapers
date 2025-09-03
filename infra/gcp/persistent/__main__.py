@@ -229,8 +229,8 @@ extraction_repo_heavy = gcp.artifactregistry.Repository(
     description="Holds Docker images for data extraction using browser automation.",
     cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
-            id="keep-heavy",
-            action="KEEP",
+            id="keep-heavy-latest",
+            action="DELETE",
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
                 keep_count=1,
             ),
@@ -254,8 +254,8 @@ extraction_repo_light = gcp.artifactregistry.Repository(
     description="Holds Docker images for data extraction without browser automation.",
     cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
-            id="keep-light",
-            action="KEEP",
+            id="keep-light-latest",
+            action="DELETE",
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
                 keep_count=1,
             ),
