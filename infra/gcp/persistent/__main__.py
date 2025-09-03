@@ -230,9 +230,9 @@ extraction_repo_heavy = gcp.artifactregistry.Repository(
     cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
             id="keep-heavy-latest",
-            action="DELETE",
+            action="KEEP",
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
-                keep_count=1,
+                keep_count=1, package_name_prefixes=[]
             ),
         )
     ],
@@ -255,9 +255,9 @@ extraction_repo_light = gcp.artifactregistry.Repository(
     cleanup_policies=[
         gcp.artifactregistry.RepositoryCleanupPolicyArgs(
             id="keep-light-latest",
-            action="DELETE",
+            action="KEEP",
             most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
-                keep_count=1,
+                keep_count=1, package_name_prefixes=[]
             ),
         ),
     ],
