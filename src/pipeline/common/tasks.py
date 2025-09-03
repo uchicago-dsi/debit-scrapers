@@ -6,8 +6,9 @@ import time
 from abc import ABC, abstractmethod
 
 # Third-party imports
-import requests
+import google.auth
 from django.conf import settings
+from google.auth.transport.requests import AuthorizedSession
 
 # Application imports
 from common.logger import LoggerFactory
@@ -118,6 +119,12 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         Returns:
             `None`
         """
+        # Configure default authentication credentials
+        creds, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        session = AuthorizedSession(creds)
+
         for task in tasks:
             # Compose URL
             queue = f"{task['source'].lower()}-queue"
@@ -128,7 +135,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             url = f"https://cloudtasks.googleapis.com/v2beta3/{endpoint}"
 
             # Issue POST request
-            r = requests.post(url, json=json.dumps(task).encode(), timeout=60)
+            r = session.post(url, json=json.dumps(task).encode(), timeout=60)
 
             # Raise error if task not queued successfully
             if not r.ok:
@@ -150,6 +157,12 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         Returns:
             `None`
         """
+        # Configure default authentication credentials
+        creds, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        session = AuthorizedSession(creds)
+
         # Purge each queue
         for source in sources:
             # Compose URL
@@ -161,7 +174,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             url = f"https://cloudtasks.googleapis.com/v2/{endpoint}"
 
             # Issue POST request with empty request body
-            r = requests.post(url, timeout=60)
+            r = session.post(url, timeout=60)
 
             # Raise error if task not queued successfully
             if not r.ok:
