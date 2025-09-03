@@ -371,6 +371,17 @@ gcp.storage.BucketIAMMember(
     ),
 )
 
+# Grant account access to Cloud Tasks
+gcp.projects.IAMBinding(
+    f"debit-{ENV}-run-tsk-access",
+    project=PROJECT_ID,
+    role="roles/cloudtasks.admin",
+    members=[cloud_run_service_account_member],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
 # Configure custom service account for Cloud Tasks
 cloud_tasks_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-sa-tasks",
