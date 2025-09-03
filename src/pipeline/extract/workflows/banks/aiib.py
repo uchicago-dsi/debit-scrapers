@@ -85,7 +85,7 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """
         # Retrieve the project page
         r = self._data_request_client.get(
-            url, use_random_user_agent=True, use_random_delay=False
+            url, use_random_user_agent=True, use_random_delay=True
         )
 
         # Confirm that request was successful

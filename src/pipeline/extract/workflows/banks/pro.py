@@ -45,7 +45,11 @@ class ProSeedUrlsWorkflow(SeedUrlsWorkflow):
         """
         try:
             # Request project page
-            r = self._data_request_client.get(self.search_results_base_url)
+            r = self._data_request_client.get(
+                self.search_results_base_url,
+                use_random_user_agent=True,
+                use_random_delay=True,
+            )
 
             # Confirm that request was successful
             if not r.ok:
@@ -133,7 +137,9 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
             The project record(s).
         """
         # Retrieve HTML
-        r = self._data_request_client.get(url)
+        r = self._data_request_client.get(
+            url, use_random_user_agent=True, use_random_delay=True
+        )
         if not r.ok:
             raise RuntimeError(
                 "Failed to fetch project "

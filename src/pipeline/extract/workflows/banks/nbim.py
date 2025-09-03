@@ -82,7 +82,9 @@ class NbimProjectScrapeWorkflow(ProjectScrapeWorkflow):
             The raw project records.
         """
         # Query API for projects in given year
-        r = self._data_request_client.get(url)
+        r = self._data_request_client.get(
+            url, use_random_delay=True, use_random_user_agent=True
+        )
 
         # Check response status
         if not r.ok:

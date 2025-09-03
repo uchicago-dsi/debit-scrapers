@@ -50,7 +50,11 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         try:
             params = {"page_num": self.first_page_num}
             first_results_page = self.search_results_base_url.format(**params)
-            html = self._data_request_client.get(first_results_page).text
+            html = self._data_request_client.get(
+                first_results_page,
+                use_random_delay=True,
+                use_random_user_agent=True,
+            ).text
             soup = BeautifulSoup(html, "html.parser")
             last_page_btn = soup.find("li", {"class": "pager__item--last"})
             last_page_num = int(last_page_btn.find("a")["href"].split("=")[-1])

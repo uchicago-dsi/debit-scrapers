@@ -79,7 +79,7 @@ class IdbPartialProjectDownloadWorkflow(ProjectPartialDownloadWorkflow):
 
         # Fetch authentication token
         r = self._data_request_client.get(
-            self.token_url, use_random_user_agent=True
+            self.token_url, use_random_delay=True
         )
 
         # Raise error if token not received successfully
@@ -294,7 +294,11 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         # Fetch page
         params = {"page_num": self.first_page_num}
         first_results_page = self.search_results_base_url.format(**params)
-        r = self._data_request_client.get(first_results_page)
+        r = self._data_request_client.get(
+            first_results_page,
+            use_random_user_agent=True,
+            use_random_delay=True,
+        )
 
         # Check response
         if not r.ok:
@@ -370,8 +374,6 @@ class IdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
             url=url,
             use_random_user_agent=True,
             use_random_delay=True,
-            min_random_delay=1,
-            max_random_delay=3,
         )
 
         # Check response
@@ -417,8 +419,6 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             url=url,
             use_random_user_agent=True,
             use_random_delay=True,
-            min_random_delay=1,
-            max_random_delay=3,
         )
 
         # Check response

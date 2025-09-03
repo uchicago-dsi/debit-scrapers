@@ -57,7 +57,11 @@ class BioSeedUrlsWorkflow(SeedUrlsWorkflow):
             first_results_page = self.search_results_base_url.format(
                 self.first_page_num
             )
-            html = self._data_request_client.get(first_results_page).text
+            html = self._data_request_client.get(
+                first_results_page,
+                use_random_delay=True,
+                use_random_user_agent=True,
+            ).text
             soup = BeautifulSoup(html, "html.parser")
 
             results_div = soup.find("div", {"class": "js-filter-results"})
@@ -112,7 +116,9 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 URLs and list of project records.
         """
         # Retrieve search results page
-        response = self._data_request_client.get(url)
+        response = self._data_request_client.get(
+            url, use_random_user_agent=True, use_random_delay=True
+        )
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -190,7 +196,9 @@ class BioProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             The project records.
         """
         # Retrieve HTML
-        response = self._data_request_client.get(url)
+        response = self._data_request_client.get(
+            url, use_random_user_agent=True, use_random_delay=True
+        )
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Retrieve project companies

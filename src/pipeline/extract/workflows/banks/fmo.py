@@ -50,7 +50,11 @@ class FmoSeedUrlsWorkflow(SeedUrlsWorkflow):
             first_page_url = self.search_results_base_url.format(
                 self.first_page_num
             )
-            html = self._data_request_client.get(first_page_url).text
+            html = self._data_request_client.get(
+                first_page_url,
+                use_random_user_agent=True,
+                use_random_delay=True,
+            ).text
             soup = BeautifulSoup(html, "html.parser")
 
             pager = soup.find("div", {"class": "pbuic-pager-container"})
@@ -97,7 +101,9 @@ class FmoResultsScrapeWorkflow(ResultsScrapeWorkflow):
             The list of scraped project page URLs.
         """
         try:
-            source = self._data_request_client.get(url).text
+            source = self._data_request_client.get(
+                url, use_random_user_agent=True, use_random_delay=True
+            ).text
             soup = BeautifulSoup(source, "html.parser")
             urls = [
                 proj["href"]
@@ -129,7 +135,9 @@ class FmoProjectScrapeWorkflow(ProjectScrapeWorkflow):
             number = url.split("/")[-1] if url else ""
 
             # Fetch webpage HTML
-            r = self._data_request_client.get(url)
+            r = self._data_request_client.get(
+                url, use_random_user_agent=True, use_random_delay=True
+            )
 
             # Raise error if request failed
             if not r.ok:

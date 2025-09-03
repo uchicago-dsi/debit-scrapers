@@ -47,7 +47,7 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
                 category=requests.packages.urllib3.exceptions.InsecureRequestWarning,
             )
             r = self._data_request_client.post(
-                url=self.download_url, verify=False
+                url=self.download_url, use_random_user_agent=True, verify=False
             )
             if not r.ok:
                 raise RuntimeError(

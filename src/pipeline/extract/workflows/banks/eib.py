@@ -59,13 +59,15 @@ class EibSeedUrlsWorkflow(SeedUrlsWorkflow):
                 page_num=self.first_page_num,
                 items_per_page=self.num_results_per_page,
             )
-            response = self._data_request_client.get(first_results_page_url)
-            data = response.json()
+            r = self._data_request_client.get(
+                first_results_page_url,
+                use_random_user_agent=True,
+                use_random_delay=True,
+            )
+            data = r.json()
             total_num_items = int(data["totalItems"])
-            return (
-                total_num_items // self.num_results_per_page + 1
-                if total_num_items % self.num_results_per_page > 0
-                else 0
+            return (total_num_items // self.num_results_per_page) + (
+                1 if total_num_items % self.num_results_per_page > 0 else 0
             )
         except Exception as e:
             raise RuntimeError(

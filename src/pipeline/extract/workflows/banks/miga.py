@@ -53,7 +53,9 @@ class MigaSeedUrlsWorkflow(SeedUrlsWorkflow):
         try:
             # Fetch search results page
             url = self.search_results_base_url.format(self.first_page_num)
-            r = self._data_request_client.get(url, use_random_user_agent=True)
+            r = self._data_request_client.get(
+                url, use_random_user_agent=True, use_random_delay=True
+            )
 
             # Check if request was successful
             if not r.ok:
@@ -129,7 +131,9 @@ class MigaResultsScrapeWorkflow(ResultsScrapeWorkflow):
         """
         try:
             # Fetch search results page
-            r = self._data_request_client.get(url, use_random_user_agent=True)
+            r = self._data_request_client.get(
+                url, use_random_user_agent=True, use_random_delay=True
+            )
 
             # Check if request was successful
             if not r.ok:
@@ -185,7 +189,9 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """
         try:
             # Fetch project page
-            r = self._data_request_client.get(url, use_random_user_agent=True)
+            r = self._data_request_client.get(
+                url, use_random_user_agent=True, use_random_delay=True
+            )
 
             # Check if request was successful
             if not r.ok:

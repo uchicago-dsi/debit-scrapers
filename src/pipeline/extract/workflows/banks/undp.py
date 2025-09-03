@@ -252,7 +252,7 @@ class UndpProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         """
         # Fetch project data from API
         response = self._data_request_client.get(
-            url, use_random_delay=True, min_random_delay=1, max_random_delay=3
+            url, use_random_user_agent=True, use_random_delay=True
         )
 
         # Parse project JSON

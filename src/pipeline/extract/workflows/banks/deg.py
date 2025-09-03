@@ -37,7 +37,11 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
             The raw project records.
         """
         # Fetch project data
-        r = self._data_request_client.get(self.download_url)
+        r = self._data_request_client.get(
+            self.download_url,
+            use_random_delay=True,
+            use_random_user_agent=True,
+        )
         if not r.ok:
             raise RuntimeError(
                 "Error fetching DEG project data. "

@@ -45,6 +45,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
         r = self._data_request_client.get(
             self.download_url,
             use_random_user_agent=True,
+            use_random_delay=True,
             timeout_in_seconds=600,
         )
 

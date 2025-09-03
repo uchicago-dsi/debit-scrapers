@@ -47,7 +47,9 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         """
         # Fetch project data
         r = self._data_request_client.get(
-            self.download_url, use_random_user_agent=True
+            self.download_url,
+            use_random_user_agent=True,
+            use_random_delay=True,
         )
         if not r.ok:
             raise RuntimeError(
