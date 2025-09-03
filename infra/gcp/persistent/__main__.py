@@ -205,6 +205,7 @@ pipeline_db = gcp.sql.DatabaseInstance(
         edition="ENTERPRISE", tier="db-f1-micro"
     ),
     deletion_protection=False,
+    root_password=postgres_password_version.secret_data.apply(lambda val: val),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
