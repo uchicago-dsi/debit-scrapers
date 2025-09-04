@@ -95,12 +95,21 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         Returns:
             `None`
         """
+        # Validate existence of Google Cloud Project settings
         try:
             self._project = settings.GOOGLE_CLOUD_PROJECT_ID
             self._region = settings.GOOGLE_CLOUD_PROJECT_REGION
         except AttributeError as e:
             raise RuntimeError(
                 f"Django project not correctly configured. {e}"
+            ) from None
+
+        # List project queues
+        try:
+            self._queues = self.list()
+        except Exception as e:
+            raise RuntimeError(
+                f'Failed to list queues for project "{self._project}". {e}'
             ) from None
 
     def enqueue(self, tasks: list[dict]) -> None:
@@ -126,13 +135,11 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         session = AuthorizedSession(creds)
 
         for task in tasks:
+            # Look up queue name by data source
+            queue = self.get(task["source"])
+
             # Compose URL
-            queue = f"{task['source'].lower()}-queue"
-            endpoint = (
-                f"projects/{self._project}/locations/{self._region}/"
-                f"queues/{queue}/tasks:buffer"
-            )
-            url = f"https://cloudtasks.googleapis.com/v2beta3/{endpoint}"
+            url = f"https://cloudtasks.googleapis.com/v2beta3/{queue}/tasks:buffer"
 
             # Issue POST request
             r = session.post(url, json=json.dumps(task).encode(), timeout=60)
@@ -140,10 +147,72 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             # Raise error if task not queued successfully
             if not r.ok:
                 raise RuntimeError(
-                    f'Failed to queue task for "{queue}". The call '
-                    f'returned a status code of "{r.status_code} - '
+                    f'Failed to queue task for "{task["source"]}". The '
+                    f'call returned a status code of "{r.status_code} - '
                     f'{r.reason}" and the message "{r.text}".'
                 )
+
+    def get(self, source: str) -> str:
+        """Fetches the name of the queue for the given data source.
+
+        NOTE: Names are fully-qualified and have the format:
+        `projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID`
+
+        Args:
+            source: The data source.
+
+        Returns:
+            The queue name.
+        """
+        matches = [
+            queue for queue in self._queues if source.lower() in queue.lower()
+        ]
+        if len(matches) > 1:
+            raise RuntimeError(f'Multiple queues found for source "{source}".')
+        elif len(matches) == 0:
+            raise RuntimeError(f'Queue not found for source "{source}".')
+        else:
+            return matches[0]
+
+    def list(self) -> list[str]:
+        """Fetches the names of all queues in the current project..
+
+        NOTE: Names are fully-qualified and have the format:
+        `projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID`
+
+        References:
+        - https://cloud.google.com/tasks/docs/reference/rest/v2/projects.locations.queues/list
+        - https://cloud.google.com/tasks/docs/reference/rest/v2/projects.locations.queues#Queue
+
+        Args:
+            `None`
+
+        Returns:
+            The names.
+        """
+        # Configure default authentication credentials
+        creds, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        session = AuthorizedSession(creds)
+
+        # Issue GET request
+        url = (
+            "https://cloudtasks.googleapis.com/v2/projects/"
+            f"{self._project}/locations/{self._region}/queues"
+        )
+        r = session.get(url, timeout=60)
+
+        # Raise error if task not queued successfully
+        if not r.ok:
+            raise RuntimeError(
+                f'Failed to list queues for project "{self._project}". '
+                f'The call returned a status code of "{r.status_code} - '
+                f'{r.reason}" and the message "{r.text}".'
+            )
+
+        # Return names
+        return [queue["name"] for queue in r.json()["queues"]]
 
     def purge(self, sources: list[str]) -> None:
         """Purges all tasks related to the given data sources.
@@ -164,14 +233,9 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         session = AuthorizedSession(creds)
 
         # Purge each queue
-        for source in sources:
+        for queue in self._queues:
             # Compose URL
-            queue = f"{source.lower()}-queue"
-            endpoint = (
-                f"projects/{self._project}/locations/{self._region}/"
-                f"queues/{queue}/:purge"
-            )
-            url = f"https://cloudtasks.googleapis.com/v2/{endpoint}"
+            url = f"https://cloudtasks.googleapis.com/v2/{queue}/:purge"
 
             # Issue POST request with empty request body
             r = session.post(url, timeout=60)
