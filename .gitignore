@@ -84,7 +84,8 @@ target/
 *.pkl
 
 # Google Cloud SQL Proxy
-*cloud_sql_proxy
+*cloud-sql-proxy
+start-proxy.sh
 
 # Custom files
 *.build/

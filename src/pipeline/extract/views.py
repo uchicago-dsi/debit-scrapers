@@ -37,6 +37,13 @@ class GoogleCloudTasksView(View):
         Returns:
             A JSON response indicating the status of the task processing.
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(request.headers)
+        logger.info(request.body)
+        logger.info(json.loads(request.body))
+
         # Parse request headers
         try:
             message_id = request.headers["X-CloudTasks-TaskName"]

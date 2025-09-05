@@ -164,9 +164,15 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         Returns:
             The queue name.
         """
-        matches = [
-            queue for queue in self._queues if source.lower() in queue.lower()
-        ]
+        # Identify queue associated with given data source
+        matches = []
+        for queue in self._queues:
+            queue_id = queue.split("/")[-1]
+            source_component = queue_id.split("-")[2]
+            if source_component.lower() == source.lower():
+                matches.append(queue)
+
+        # Return single queue match or raise error
         if len(matches) > 1:
             raise RuntimeError(f'Multiple queues found for source "{source}".')
         elif len(matches) == 0:
@@ -175,7 +181,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             return matches[0]
 
     def list_names(self) -> list[str]:
-        """Fetches the names of all queues in the current project..
+        """Fetches the names of all queues in the current project.
 
         NOTE: Names are fully-qualified and have the format:
         `projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID`
