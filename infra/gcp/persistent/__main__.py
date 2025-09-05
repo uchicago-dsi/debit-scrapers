@@ -716,7 +716,7 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                 )
             ],
             service_account=cloud_run_service_account.email,
-            timeout="24h",
+            timeout="86400s",
             volumes=[
                 gcp.cloudrunv2.JobTemplateTemplateVolumeArgs(
                     name="cloudsql",
