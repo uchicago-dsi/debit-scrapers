@@ -1,8 +1,9 @@
 # Retrieve base image
 FROM ubuntu:22.04
 
-# Install Python and system dependencies
-RUN apt-get update -y && \
+# Install Python and system dependencies using AWS mirror
+RUN sed -i 's|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g' /etc/apt/sources.list && \
+    apt-get update -y && \
     apt-get install -y python3.11 python3.11-venv python3-pip curl && \
     rm -rf /var/lib/apt/lists/*
 
