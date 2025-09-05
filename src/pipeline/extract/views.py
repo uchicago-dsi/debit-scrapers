@@ -11,11 +11,13 @@ from django.views import View
 
 # Application imports
 from common.http import DataRequestClient
+from common.logger import LoggerFactory
 from common.tasks import TaskQueueFactory
 from extract.dal import DatabaseClient
 from extract.workflows.registry import WorkflowClassRegistry
 
 # Instantiate global variables
+logger = LoggerFactory.get("WORKER - ROUTER")
 db_client = DatabaseClient()
 data_request_client = DataRequestClient()
 queue_client = TaskQueueFactory.get()
@@ -37,29 +39,23 @@ class GoogleCloudTasksView(View):
         Returns:
             A JSON response indicating the status of the task processing.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(request.headers)
-        logger.info(request.body)
-        logger.info(json.loads(request.body))
+        # Log receipt of request
+        logger.info(f"New request received: {json.loads(request.body)}")
 
         # Parse request headers
         try:
-            message_id = request.headers["X-CloudTasks-TaskName"]
+            message_id = request.headers["X-Cloudtasks-Taskname"]
             num_retries = int(
-                request.headers["X-CloudTasks-TaskExecutionCount"]
+                request.headers["X-Cloudtasks-Taskexecutioncount"]
             )
         except KeyError as e:
-            return JsonResponse(
-                {"error": f'Missing expected HTTP request header "{e}"'},
-                status=400,
-            )
+            err_msg = f'Missing expected HTTP request header "{e}"'
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=400)
         except ValueError as e:
-            return JsonResponse(
-                {"error": f"Request header could not be parsed. {e}"},
-                status=400,
-            )
+            err_msg = f"Request header could not be parsed. {e}"
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=400)
 
         # Decode and extract message data
         try:
@@ -70,14 +66,13 @@ class GoogleCloudTasksView(View):
             workflow_type = payload["workflow_type"]
             url = payload["url"]
         except json.JSONDecodeError as e:
-            return JsonResponse(
-                {"error": f"Unable to parse JSON. {e}"}, status=400
-            )
+            err_msg = f"Unable to parse JSON. {e}"
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=400)
         except KeyError as e:
-            return JsonResponse(
-                {"error": f'Missing expected request body attribute "{e}"'},
-                status=400,
-            )
+            err_msg = f'Missing expected request body attribute "{e}"'
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=400)
 
         # Instantiate appropriate workflow class from registry
         try:
@@ -88,16 +83,10 @@ class GoogleCloudTasksView(View):
                 queue_client,
                 db_client,
             )
-        except ValueError as e:
-            return JsonResponse(
-                {"error": f"Failed to instantiate workflow. {e}"},
-                status=400,
-            )
-        except RuntimeError as e:
-            return JsonResponse(
-                {"error": f"Failed to instantiate workflow. {e}"},
-                status=500,
-            )
+        except (ValueError, RuntimeError) as e:
+            err_msg = f"Failed to instantiate workflow. {e}"
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=400)
 
         # Run workflow
         try:
@@ -110,8 +99,8 @@ class GoogleCloudTasksView(View):
                 url,
             )
         except Exception as e:
-            return JsonResponse(
-                {"error": f"Error running workflow. {e}"}, status=500
-            )
+            err_msg = f"Error running workflow. {e}"
+            logger.error(err_msg)
+            return JsonResponse({"error": err_msg}, status=500)
 
         return HttpResponse(status=200)
