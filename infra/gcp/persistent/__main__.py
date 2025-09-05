@@ -716,8 +716,13 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
                 )
             ],
             service_account=cloud_run_service_account.email,
-            timeout=shared_template_args["timeout"],
-            volumes=shared_template_args["volumes"],
+            timeout="24h",
+            volumes=gcp.cloudrunv2.JobTemplateTemplateVolumeArgs(
+                name="cloudsql",
+                cloud_sql_instance=gcp.cloudrunv2.JobTemplateTemplateVolumeCloudSqlInstanceArgs(
+                    instances=[pipeline_db.connection_name],
+                ),
+            ),
         ),
     ),
     opts=pulumi.ResourceOptions(
