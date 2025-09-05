@@ -142,7 +142,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             url = f"https://cloudtasks.googleapis.com/v2beta3/{queue}/tasks:buffer"
 
             # Issue POST request
-            r = session.post(url, json=json.dumps(task).encode(), timeout=60)
+            r = session.post(url, json=task, timeout=60)
 
             # Raise error if task not queued successfully
             if not r.ok:
