@@ -121,6 +121,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
 
         References:
         - https://cloud.google.com/tasks/docs/creating-http-target-tasks#create_a_task_using_the_buffertask_method
+        - https://googleapis.dev/python/google-auth/latest/reference/google.auth.transport.requests.html
 
         Args:
             tasks: The tasks.
@@ -142,7 +143,17 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             url = f"https://cloudtasks.googleapis.com/v2beta3/{queue}/tasks:buffer"
 
             # Issue POST request
-            r = session.post(url, json=task, timeout=60)
+            r = session.post(
+                url,
+                json={
+                    "id": task["id"],
+                    "job": task["job"],
+                    "source": task["source"],
+                    "workflow_type": task["workflow_type"],
+                    "url": task["url"],
+                },
+                timeout=60,
+            )
 
             # Raise error if task not queued successfully
             if not r.ok:
