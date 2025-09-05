@@ -435,6 +435,17 @@ cloud_workflow_service_account_member = (
     )
 )
 
+# Grant Cloud Run service account permission to impersonate Cloud Tasks service account
+gcp.serviceaccount.IAMMember(
+    f"debit-{ENV}-run-tasks-impersonate",
+    service_account_id=cloud_tasks_service_account.name,
+    role="roles/iam.serviceAccountUser",
+    member=cloud_run_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
 # endregion
 
 # ------------------------------------------------------------------------
