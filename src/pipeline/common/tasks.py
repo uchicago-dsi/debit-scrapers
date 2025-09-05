@@ -30,8 +30,8 @@ class MessageQueueClient(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def purge(self, sources: list[str]) -> None:
-        """Purges all tasks related to the given data sources.
+    def purge(self) -> None:
+        """Purges all tasks from the configured queues.
 
         Args:
             sources: The data sources.
@@ -68,16 +68,16 @@ class DummyQueue(MessageQueueClient):
         self._logger.info(f"Queueing {len(tasks)} tasks.")
         self._logger.info(json.dumps(tasks))
 
-    def purge(self, sources: list[str]) -> None:
-        """Purges all tasks related to the given data sources.
+    def purge(self) -> None:
+        """Purges all tasks from the configured queues.
 
         Args:
-            sources: The data sources.
+            `None`
 
         Returns:
             `None`
         """
-        self._logger.info(f"Purging tasks for sources {', '.join(sources)}.")
+        self._logger.info("Purging tasks for all data sources.")
 
 
 class GoogleCloudTaskQueue(MessageQueueClient):
@@ -106,7 +106,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
 
         # List project queues
         try:
-            self._queues = self.list()
+            self._queues = self.list_names()
         except Exception as e:
             raise RuntimeError(
                 f'Failed to list queues for project "{self._project}". {e}'
@@ -136,7 +136,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
 
         for task in tasks:
             # Look up queue name by data source
-            queue = self.get(task["source"])
+            queue = self.get_name(task["source"])
 
             # Compose URL
             url = f"https://cloudtasks.googleapis.com/v2beta3/{queue}/tasks:buffer"
@@ -152,7 +152,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
                     f'{r.reason}" and the message "{r.text}".'
                 )
 
-    def get(self, source: str) -> str:
+    def get_name(self, source: str) -> str:
         """Fetches the name of the queue for the given data source.
 
         NOTE: Names are fully-qualified and have the format:
@@ -174,7 +174,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         else:
             return matches[0]
 
-    def list(self) -> list[str]:
+    def list_names(self) -> list[str]:
         """Fetches the names of all queues in the current project..
 
         NOTE: Names are fully-qualified and have the format:
@@ -214,14 +214,14 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         # Return names
         return [queue["name"] for queue in r.json()["queues"]]
 
-    def purge(self, sources: list[str]) -> None:
-        """Purges all tasks related to the given data sources.
+    def purge(self) -> None:
+        """Purges all tasks from the configured queues.
 
         References:
         - https://cloud.google.com/tasks/docs/manage-queues-and-tasks#purge-tasks
 
         Args:
-            sources: The data sources.
+            `None`
 
         Returns:
             `None`

@@ -154,11 +154,8 @@ class JobSubmission(ABC):
         """
         # Drain existing queues
         self._logger.info("Draining existing task queues.")
-        all_sources = StarterWorkflowRegistry.list()
-        self._task_queue.purge(all_sources)
-        self._logger.info(
-            f"{len(all_sources):,} task queues drained successfully."
-        )
+        self._task_queue.purge()
+        self._logger.info("Task queues drained successfully.")
 
         # Validate requested data sources
         self._logger.info("Validating requested data sources.")
