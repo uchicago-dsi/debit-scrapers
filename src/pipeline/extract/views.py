@@ -61,7 +61,7 @@ class GoogleCloudTasksView(View):
         try:
             payload = json.loads(request.body) if request.body else {}
             task_id = payload["id"]
-            job_id = payload["job_id"]
+            job_id = payload["job"]
             source = payload["source"]
             workflow_type = payload["workflow_type"]
             url = payload["url"]
