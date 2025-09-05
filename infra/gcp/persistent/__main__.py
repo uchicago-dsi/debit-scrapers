@@ -571,10 +571,10 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
             )
         ],
         max_instance_request_concurrency=2,
+        scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
+            min_instance_count=0, max_instance_count=2
+        ),
         **shared_template_args,
-    ),
-    scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
-        min_instance_count=0, max_instance_count=2
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -600,10 +600,10 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
             )
         ],
         max_instance_request_concurrency=100,
+        scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
+            min_instance_count=0, max_instance_count=95
+        ),
         **shared_template_args,
-    ),
-    scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
-        min_instance_count=0, max_instance_count=95
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
