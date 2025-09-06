@@ -312,6 +312,8 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                     1
                 )
                 amount = float(leading_decimal) * multiplier
+            else:
+                amount = None
 
             # Determine currency
             if not raw_amount:
