@@ -6,6 +6,7 @@ search result pages and then scraping details from each project page.
 
 # Standard library imports
 import re
+import time
 from datetime import datetime
 
 # Third-party imports
@@ -156,6 +157,9 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             The project record(s).
         """
         from common.browser import HeadlessBrowser
+
+        # Add delay before requesting page
+        time.sleep(5)
 
         # Initialize headless browser
         browser = HeadlessBrowser()
