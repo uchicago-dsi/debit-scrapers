@@ -157,21 +157,38 @@ class DatabaseClient:
             status=ExtractionTask.StatusChoices.CANCELLED
         )
 
-    def get_or_create_job(self) -> tuple[int, str, bool]:
-        """Gets or creates a new job in the database for the current date.
+    def get_or_create_job(
+        self, date: str | None = None
+    ) -> tuple[int, str, bool]:
+        """Gets or creates a new job in the database for a given date.
 
-        NOTE: The date is expressed in YYYY-MM-DD format and uses UTC.
+        NOTE: The date should be expressed as YYYY-MM-DD and represent UTC.
+        If no date is provided, the current date (today) is used by default.
 
         Args:
-            `None`
+            date: The date to create a job for.
 
         Returns:
             A three-item tuple consisting of the job primary key
                 and date as well as a boolean indicating whether
                 the job was created.
         """
+        # Validate date format if date provided
+        if date:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"Invalid date format: {date}.") from None
+
+        # Validate that date is not set in the future
         now = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        job, created = ExtractionJob.objects.get_or_create(date=now)
+        if date and date > now:
+            raise ValueError(
+                f'Cannot create job for future date "{date}".'
+            ) from None
+
+        # Get or create job
+        job, created = ExtractionJob.objects.get_or_create(date=date or now)
         return job.id, job.date, created
 
     def count_outstanding_tasks(self, job_pk: int) -> int:

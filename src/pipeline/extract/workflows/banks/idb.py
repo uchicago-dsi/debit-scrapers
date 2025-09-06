@@ -436,29 +436,39 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             "url": url,
         }
 
-        # Parse webpage HTML into node tree and scrape table for project data
+        # Parse webpage HTML into node tree
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # Scrape table for project data
         try:
-            soup = BeautifulSoup(r.text, "html.parser")
             for row in soup.find_all("idb-project-table-row"):
                 stat_type = row.find("p", {"slot": "stat-type"}).text.strip()
                 stat_data = row.find("p", {"slot": "stat-data"}).text.strip()
 
                 if stat_type == "Approval Date":
-                    parsed_date = datetime.strptime(stat_data, "%B %d, %Y")
-                    formatted_date = parsed_date.strftime("%Y-%m-%d")
-                    project["date_approved"] = formatted_date
+                    try:
+                        parsed_date = datetime.strptime(stat_data, "%B %d, %Y")
+                        formatted_date = parsed_date.strftime("%Y-%m-%d")
+                        project["date_approved"] = formatted_date
+                    except ValueError:
+                        project["date_approved"] = ""
 
                 elif stat_type == "Project Status":
                     project["status"] = stat_data
 
                 elif stat_type == "Original Amount Approved":
-                    currency, amount = stat_data.split(" ")
-                    parsed_amount = float(amount.replace(",", ""))
-                    project["total_amount_currency"] = currency
-                    project["total_amount"] = parsed_amount
-                    project["total_amount_usd"] = (
-                        parsed_amount if currency == "USD" else None
-                    )
+                    try:
+                        currency, amount = stat_data.split(" ")
+                        parsed_amount = float(amount.replace(",", ""))
+                        project["total_amount_currency"] = currency
+                        project["total_amount"] = parsed_amount
+                        project["total_amount_usd"] = (
+                            parsed_amount if currency == "USD" else None
+                        )
+                    except ValueError:
+                        project["total_amount_currency"] = ""
+                        project["total_amount"] = None
+                        project["total_amount_usd"] = None
 
         except Exception as e:
             raise RuntimeError(

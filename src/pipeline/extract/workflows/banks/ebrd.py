@@ -333,22 +333,41 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         # Fallback to AI if rule-based webscraping fails
         if not companies or not loan_amount_value or not loan_amount_currency:
             try:
+                # Compose prompt from HTML
                 prompt = self._build_prompt(soup)
+
+                # Submit prompt
                 response = self._prompt_ai(prompt)
+
+                # Parse LLM response
                 if response:
+
+                    # Finalize company field
                     companies = (
                         response["client"] if not companies else companies
-                    )
-                    loan_amount_value = (
-                        response["loan_amount"]
-                        if loan_amount_value is None
-                        else loan_amount_value
-                    )
+                    ) or ""
+
+                    # Finalize currency field
                     loan_amount_currency = (
                         response["currency"]
                         if not loan_amount_currency
                         else loan_amount_currency
+                    ) or ""
+
+                    # Finalize loan amount field
+                    raw_loan_amount_value = (
+                        response["loan_amount"]
+                        if loan_amount_value is None
+                        else loan_amount_value
                     )
+                    loan_amount_value = (
+                        int(float(raw_loan_amount_value.replace(",", "")))
+                        if isinstance(raw_loan_amount_value, str)
+                        else raw_loan_amount_value
+                    )
+            except ValueError:
+                loan_amount_value = None
+                loan_amount_currency = ""
             except Exception as e:
                 self._logger.warning(
                     f"Failed to extract project data for EBRD using Gemini API service: {e}"

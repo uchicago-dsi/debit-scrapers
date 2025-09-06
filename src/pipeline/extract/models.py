@@ -202,5 +202,5 @@ class ExtractedProject(models.Model):
     )
     """The current loan amount in USD, if provided."""
 
-    url = models.URLField(blank=True, default="")
+    url = models.URLField(blank=True, default="", max_length=2000)
     """The URL to the project page on the bank's website."""

@@ -45,9 +45,7 @@ class GoogleCloudTasksView(View):
         # Parse request headers
         try:
             message_id = request.headers["X-Cloudtasks-Taskname"]
-            num_retries = int(
-                request.headers["X-Cloudtasks-Taskexecutioncount"]
-            )
+            num_retries = int(request.headers["X-Cloudtasks-Taskretrycount"])
         except KeyError as e:
             err_msg = f'Missing expected HTTP request header "{e}"'
             logger.error(err_msg)

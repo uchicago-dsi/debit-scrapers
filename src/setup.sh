@@ -18,6 +18,7 @@ extract_data=false
 force_restart=false
 run_server=false
 development=false
+date=""
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --migrate) migrate=true; shift ;;
@@ -25,6 +26,15 @@ while [[ "$#" -gt 0 ]]; do
         --force-restart) force_restart=true; shift ;;
         --run-server) run_server=true; shift ;;
         --development) development=true; shift ;;
+        --date)
+            if [[ -n "$2" && "$2" != --* ]]; then
+                date="$2"
+                shift 2
+            else
+                echo "Error: --date requires a value"
+                exit 1
+            fi
+            ;;
         *) echo "Unknown command line parameter received: $1"; exit 1 ;;
     esac
 done
@@ -42,11 +52,14 @@ fi
 # Extract latest development project data if indicated
 if $extract_data ; then
     echo "Orchestrating data extraction."
-    force_flag=""
+    orchestrator_cmd="uv run python ./pipeline/manage.py orchestrate"
     if $force_restart ; then
-        force_flag="--force-restart"
+        orchestrator_cmd="$orchestrator_cmd --force-restart"
     fi
-    uv run python ./pipeline/manage.py orchestrator $force_flag
+    if [[ -n "$date" ]]; then
+        orchestrator_cmd="$orchestrator_cmd --date \"$date\""
+    fi
+    eval $orchestrator_cmd
 fi
 
 # Log successful end of database setup

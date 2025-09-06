@@ -187,21 +187,21 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
         Returns:
             The project record(s).
         """
-        try:
-            # Fetch project page
-            r = self._data_request_client.get(
-                url, use_random_user_agent=True, use_random_delay=True
+        # Fetch project page
+        r = self._data_request_client.get(
+            url, use_random_user_agent=True, use_random_delay=True
+        )
+
+        # Check if request was successful
+        if not r.ok:
+            raise Exception(
+                f"Error fetching project page "
+                f"from MIGA. The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
             )
 
-            # Check if request was successful
-            if not r.ok:
-                raise Exception(
-                    f"Error fetching project page "
-                    f"from MIGA. The request failed with a "
-                    f'"{r.status_code} - {r.reason}" status '
-                    f'code and the message "{r.text}".'
-                )
-
+        try:
             # Parse webpage HTML into node tree
             soup = BeautifulSoup(r.text, "html.parser")
 
@@ -237,10 +237,13 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                     "div", class_="field--name-field-date-spg-closed"
                 ).find("div", class_="field--item")
             )
-            parsed_disclosed_utc = datetime.strptime(
-                raw_disclosed_utc, "%B %d, %Y"
-            )
-            disclosed_utc = parsed_disclosed_utc.strftime("%Y-%m-%d")
+            if raw_disclosed_utc:
+                parsed_disclosed_utc = datetime.strptime(
+                    raw_disclosed_utc, "%B %d, %Y"
+                )
+                disclosed_utc = parsed_disclosed_utc.strftime("%Y-%m-%d")
+            else:
+                disclosed_utc = ""
 
             # Extract fiscal year
             fiscal_year = safe_nav(
@@ -321,13 +324,18 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 currency = ""
 
             # Extract affiliates
-            guarantee_div = soup.find(
-                "div", class_="field--name-field-guarantee-holder-term"
-            )
-            affiliates = "|".join(
-                div.text
-                for div in guarantee_div.find_all("div", class_="field--item")
-            )
+            try:
+                guarantee_div = soup.find(
+                    "div", class_="field--name-field-guarantee-holder-term"
+                )
+                affiliates = "|".join(
+                    div.text
+                    for div in guarantee_div.find_all(
+                        "div", class_="field--item"
+                    )
+                )
+            except AttributeError:
+                affiliates = ""
 
             return [
                 {

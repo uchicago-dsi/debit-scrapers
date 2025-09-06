@@ -581,7 +581,7 @@ heavy_cloud_run_service = gcp.cloudrunv2.Service(
                 **shared_template_container_args,
             )
         ],
-        max_instance_request_concurrency=2,
+        max_instance_request_concurrency=4,
         scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
             min_instance_count=0, max_instance_count=2
         ),
@@ -605,14 +605,14 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
                 image=light_extract_image.image_name,
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
-                    cpu_idle=True, limits={"memory": "512Mi", "cpu": "1"}
+                    cpu_idle=True, limits={"memory": "1Gi", "cpu": "1"}
                 ),
                 **shared_template_container_args,
             )
         ],
-        max_instance_request_concurrency=100,
+        max_instance_request_concurrency=10,
         scaling=gcp.cloudrunv2.ServiceTemplateScalingArgs(
-            min_instance_count=0, max_instance_count=95
+            min_instance_count=0, max_instance_count=5
         ),
         **shared_template_args,
     ),

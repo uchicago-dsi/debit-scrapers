@@ -92,9 +92,6 @@ class SeedUrlsWorkflow(BaseWorkflow):
         Returns:
             `None`
         """
-        # Define task retry count (one less than delivery attempt count)
-        retry_count = num_delivery_attempts - 1
-
         try:
             # Log start of task processing
             self._logger.info(
@@ -142,9 +139,11 @@ class SeedUrlsWorkflow(BaseWorkflow):
         except Exception as e:
             # Mark task as failed in database
             self._logger.error(f"Task failed. {e}")
-            self._db_client.mark_task_failure(task_id, str(e), retry_count)
+            self._db_client.mark_task_failure(
+                task_id, str(e), num_delivery_attempts
+            )
             raise RuntimeError(str(e)) from None
 
         # Mark task as successful in database
         self._logger.info("Task succeeded.")
-        self._db_client.mark_task_success(task_id, retry_count)
+        self._db_client.mark_task_success(task_id, num_delivery_attempts)

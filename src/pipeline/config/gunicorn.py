@@ -3,7 +3,7 @@
 # Django WSGI application path in pattern MODULE_NAME:VARIABLE_NAME
 wsgi_app = "config.wsgi:application"
 # The granularity of Error log outputs
-loglevel = "info"
+loglevel = "error"
 # The number of worker processes for handling requests
 workers = 2
 # The socket to bind

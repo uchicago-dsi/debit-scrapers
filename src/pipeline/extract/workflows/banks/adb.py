@@ -162,7 +162,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             url=url,
             use_random_user_agent=True,
             use_random_delay=True,
-            min_random_delay=1,
+            min_random_delay=3,
             max_random_delay=4,
         )
 
@@ -334,7 +334,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 "source": settings.ADB_ABBREVIATION.upper(),
                 "status": status,
                 "total_amount": loan_amount,
-                "total_amount_currency": "USD" if loan_amount else None,
+                "total_amount_currency": "USD" if loan_amount else "",
                 "total_amount_usd": loan_amount,
                 "url": url,
             }

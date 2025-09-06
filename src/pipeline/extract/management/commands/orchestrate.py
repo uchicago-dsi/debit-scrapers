@@ -296,6 +296,13 @@ class Command(BaseCommand):
             `None`
         """
         parser.add_argument(
+            "--date",
+            type=str,
+            help="The date to process data for, in YYYY-MM-DD format. "
+            "Expressed in UTC and defaults to today/the current date. "
+            "Cannot be a future date.",
+        )
+        parser.add_argument(
             "--restrict-to",
             nargs="*",
             help="The initial list of data sources to scrape (default: all sources).",
@@ -331,6 +338,9 @@ class Command(BaseCommand):
 
             **options: Keyword arguments that include:
 
+                `date`: The date to process data for, in YYYY-MM-DD format.
+                    Defaults to today/the current date.
+
                 `restrict_to`: The list of data sources to process. If not
                     specified, the command queues tasks for all sources.
 
@@ -348,6 +358,7 @@ class Command(BaseCommand):
         # Parse command line options
         try:
             logger.info("Parsing command line options.")
+            date = options["date"]
             restrictions = options["restrict_to"]
             force_restart = options["force_restart"]
         except KeyError as e:
@@ -380,7 +391,7 @@ class Command(BaseCommand):
             exit(1)
 
         # Initialize job in database for current date ("YYYY-MM-DD")
-        job_id, job_date, created = db_client.get_or_create_job()
+        job_id, job_date, created = db_client.get_or_create_job(date)
         logger.info(
             f'Created new job for date "{job_date}".'
             if created
