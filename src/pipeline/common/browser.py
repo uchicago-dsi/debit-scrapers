@@ -116,7 +116,7 @@ class HeadlessBrowser:
                 page.goto(url)
 
                 # Wait for content to load
-                page.wait_for_load_state("networkidle", timeout=60_000)
+                page.wait_for_load_state("networkidle", timeout=120_000)
 
                 # Get the page HTML
                 return page.content()
