@@ -2,12 +2,13 @@
 
 # Google Cloud Workload Identity Federation Setup for GitHub Actions
 #
-# This script creates a service account with the permissions necessary to deploy and 
-# manage resources using Pulumi and permits GitHub Actions to impersonate that account
-# as a Workload Identity within a larger pool and authenticate using OIDC tokens.
+# Creates a service account with the permissions necessary to deploy and
+# manage resources using Pulumi. Permits GitHub Actions to impersonate
+# that account as a Workload Identity within a larger pool and authenticate
+# using OIDC tokens.
 #
-# Originally written by Claude Sonnet 4, the script has been extended to apply the 
-# "Service Usage Admin Role" and has been edited for clarity and bug fixes.
+# Created by Claude Sonnet 4 and then edited, extended, and corrected.
+#
 
 
 # ------------------------------------------------------------------------
@@ -222,6 +223,7 @@ declare -A ROLES=(
     ["roles/cloudscheduler.admin"]="Cloud Scheduler Admin"
     ["roles/cloudsql.admin"]="Cloud SQL Admin"
     ["roles/cloudtasks.admin"]="Cloud Tasks Admin"
+    ["roles/cloudtasks.queueAdmin"]="Cloud Tasks Queue Admin"
     ["roles/compute.admin"]="Compute Admin"
     ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
     ["roles/secretmanager.admin"]="Secret Manager Admin"

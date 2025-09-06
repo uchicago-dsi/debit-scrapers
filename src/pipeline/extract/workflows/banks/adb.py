@@ -147,28 +147,24 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
     """Scrapes an ADB project page for development bank project data."""
 
     def scrape_project_page(self, url: str) -> list[dict]:
-        """Extracts project details from an ADB project webpages.
-
-        NOTE: Delays must be placed in between requests to avoid throttling.
+        """Extracts project details from an ADB project webpage.
 
         Args:
             url: The URL for a project.
 
         Returns:
-            The list of project records.
+            The project record(s).
         """
-        # Request page
-        r = self._data_request_client.get(
-            url=url,
-            use_random_user_agent=True,
-            use_random_delay=True,
-            min_random_delay=3,
-            max_random_delay=4,
-        )
+        from common.browser import HeadlessBrowser
 
-        # Parse HTML
-        soup = BeautifulSoup(r.text, features="html.parser")
-        self._logger.critical(soup.prettify())
+        # Initialize headless browser
+        browser = HeadlessBrowser()
+
+        # Fetch HTML at givenURL
+        html = browser.get_html(url)
+
+        # Parse HTML into node tree
+        soup = BeautifulSoup(html, features="html.parser")
 
         # Find first project table holding project background details
         table = soup.find("article")

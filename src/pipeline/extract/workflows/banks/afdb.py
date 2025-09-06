@@ -158,7 +158,7 @@ class AfdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             url: The URL to the API resource.
 
         Returns:
-            The raw record(s).
+            The partial project record(s).
         """
         from common.browser import HeadlessBrowser
 
