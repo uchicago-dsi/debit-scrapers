@@ -8,7 +8,7 @@ class LoggerFactory:
     """A simple factory for configuring standard loggers."""
 
     @staticmethod
-    def get(name: str, level: int = logging.INFO) -> logging.Logger:
+    def get(name: str, level: int = logging.CRITICAL) -> logging.Logger:
         """Creates a logger with the given name and level.
 
         Attaches a stream handler that prints logs in a
@@ -17,7 +17,7 @@ class LoggerFactory:
         Args:
             name: The logger name.
 
-            level: The initial level. Defaults to 20 ("INFO").
+            level: The initial level. Defaults to 50 ("CRITICAL").
 
         Returns:
             The logger.

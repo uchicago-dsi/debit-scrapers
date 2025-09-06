@@ -155,7 +155,7 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",
+        "level": "CRITICAL",
     },
 }
 

@@ -202,7 +202,7 @@ pipeline_db = gcp.sql.DatabaseInstance(
     region=PROJECT_REGION,
     database_version="POSTGRES_17",
     settings=gcp.sql.DatabaseInstanceSettingsArgs(
-        edition="ENTERPRISE", tier="db-f1-micro"
+        edition="ENTERPRISE", tier="db-custom-1-3840"
     ),
     deletion_protection=False,
     root_password=postgres_password_version.secret_data.apply(lambda val: val),
