@@ -168,6 +168,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
 
         # Parse HTML
         soup = BeautifulSoup(r.text, features="html.parser")
+        self._logger.info(soup.prettify())
 
         # Find first project table holding project background details
         table = soup.find("article")

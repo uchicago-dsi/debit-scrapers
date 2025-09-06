@@ -14,7 +14,7 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 QUEUE_CONFIG = [
     {
         "source": "adb",
-        "max_concurrent_dispatches": 5,
+        "max_concurrent_dispatches": 2,
         "requires_chromium": False,
     },
     {

@@ -255,6 +255,11 @@ class EibProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
     def scrape_project_page(self, url: str) -> list[dict]:
         """Scrapes a project webpage for data.
 
+        NOTE: EIB has several hundred broken project links in its search
+        results; consequently, some requests for project webpages may
+        fail with a "404 - Not Found" status code. These errors are
+        gracefully handled by returning an empty list of project records.
+
         Args:
             url: The URL for the project page.
 
@@ -266,7 +271,11 @@ class EibProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             url, use_random_user_agent=True, use_random_delay=True
         )
 
-        # Raise error if request failed
+        # Return empty list if request failed
+        if r.status_code == 404:  # noqa
+            return []
+
+        # Raise error if request failed for any other reason
         if not r.ok:
             raise RuntimeError(
                 "Error fetching project page from EIB "
