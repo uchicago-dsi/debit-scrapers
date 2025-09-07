@@ -33,6 +33,7 @@ dependencies = [
     "google-cloud-tasks>=2.19.3",
     "playwright>=1.54.0",
     "gunicorn>=23.0.0",
+    "playwright-stealth>=2.0.0",
 ]
 
 [project.optional-dependencies]

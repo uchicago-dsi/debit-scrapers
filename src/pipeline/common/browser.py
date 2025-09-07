@@ -11,6 +11,7 @@ from typing import IO
 import playwright
 import playwright.sync_api
 from django.conf import settings
+from playwright_stealth import Stealth
 from playwright.sync_api import Page, sync_playwright
 
 
@@ -110,23 +111,47 @@ class HeadlessBrowser:
         except KeyError as e:
             raise RuntimeError(f"{e} environment variable not set.") from None
 
-        # Use headless browser to fetch HTML
-        with sync_playwright() as p:
+        # Use browser to fetch HTML
+        with Stealth().use_sync(sync_playwright()) as p:
             try:
                 browser = p.chromium.launch(
-                    headless=True,
+                    headless=False,
                     proxy={
                         "server": proxy_endpoint,
                         "username": proxy_username,
                         "password": proxy_password,
                     },
+                    args=[
+                        "--no-sandbox",
+                        "--disable-blink-features=AutomationControlled",
+                        "--disable-web-security",
+                        "--disable-features=VizDisplayCompositor",
+                    ],
                 )
-                page = browser.new_page()
 
-                # Disable imgaes, CSS, and fonts to speed up page load
+                context = browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    viewport={"width": 1920, "height": 1080},
+                    java_script_enabled=True,
+                    extra_http_headers={
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Accept-Encoding": "gzip, deflate, br",
+                        "DNT": "1",
+                        "Connection": "keep-alive",
+                        "Upgrade-Insecure-Requests": "1",
+                    },
+                )
+
+                page = context.new_page()
+
+                # Disable images, CSS, and fonts to speed up page load
                 page.route(
-                    "**/*.{png,jpg,jpeg,gif,css,woff,woff2}",
+                    "**/*.{png,jpg,jpeg,gif,webp,svg,ico}",
                     lambda route: route.abort(),
+                )
+                page.route(
+                    "**/*.{woff,woff2,ttf,eot}", lambda route: route.abort()
                 )
 
                 # Navigate to the page
