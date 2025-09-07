@@ -110,13 +110,13 @@ class HeadlessBrowser:
                 page = browser.new_page()
 
                 # Set a realistic user agent
-                page.set_extra_http_headers({"User-Agent": user_agent})
+                # page.set_extra_http_headers({"User-Agent": user_agent})
 
                 # Navigate to the page
                 page.goto(url)
 
                 # Wait for content to load
-                # page.wait_for_load_state("networkidle", timeout=0)
+                page.wait_for_load_state("networkidle", timeout=60_000)
 
                 # Get the page HTML
                 return page.content()
