@@ -23,6 +23,12 @@ EXTRACT_CONFIG_DIR = EXTRACT_DIR / "config"
 EXTRACT_TEST_DIR = EXTRACT_DIR / "tests"
 EXTRACT_TEST_RESULT_DIR = EXTRACT_TEST_DIR / "results"
 
+IATI_ACTIVITY_COUNTRY_FPATH = (
+    EXTRACT_CONFIG_DIR / "iati_activity_country_codes.json"
+)
+IATI_ACTIVITY_FINANCE_TYPE_FPATH = (
+    EXTRACT_CONFIG_DIR / "iati_activity_finance_type_codes.json"
+)
 IATI_ACTIVITY_SECTOR_FPATH = (
     EXTRACT_CONFIG_DIR / "iati_activity_sector_codes.json"
 )

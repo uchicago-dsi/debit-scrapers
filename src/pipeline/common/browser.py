@@ -11,7 +11,6 @@ from typing import IO
 import playwright
 import playwright.sync_api
 from django.conf import settings
-from playwright_stealth import Stealth
 from playwright.sync_api import Page, sync_playwright
 
 
@@ -102,70 +101,24 @@ class HeadlessBrowser:
             The HTML content.
         """
         # Select random user agent header
-        import os
+        user_agent = random.choice(self._user_agent_headers)
 
-        try:
-            proxy_endpoint = os.environ["PROXY_ENDPOINT"]
-            proxy_username = os.environ["PROXY_USERNAME"]
-            proxy_password = os.environ["PROXY_PASSWORD"]
-        except KeyError as e:
-            raise RuntimeError(f"{e} environment variable not set.") from None
-
-        # Use browser to fetch HTML
-        with Stealth().use_sync(sync_playwright()) as p:
+        # Use headless browser to fetch HTML
+        with sync_playwright() as p:
             try:
-                browser = p.chromium.launch(
-                    headless=True,
-                    proxy={
-                        "server": proxy_endpoint,
-                        "username": proxy_username,
-                        "password": proxy_password,
-                    },
-                    args=[
-                        "--no-sandbox",
-                        "--disable-blink-features=AutomationControlled",
-                        "--disable-web-security",
-                        "--disable-features=VizDisplayCompositor",
-                    ],
-                )
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
 
-                context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                    java_script_enabled=True,
-                    extra_http_headers={
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        "Accept-Encoding": "gzip, deflate, br",
-                        "DNT": "1",
-                        "Connection": "keep-alive",
-                        "Upgrade-Insecure-Requests": "1",
-                    },
-                )
-
-                page = context.new_page()
-
-                # Disable images, CSS, and fonts to speed up page load
-                page.route(
-                    "**/*.{png,jpg,jpeg,gif,webp,svg,ico}",
-                    lambda route: route.abort(),
-                )
-                page.route(
-                    "**/*.{woff,woff2,ttf,eot}", lambda route: route.abort()
-                )
+                # Set a realistic user agent
+                page.set_extra_http_headers({"User-Agent": user_agent})
 
                 # Navigate to the page
                 page.goto(url)
 
                 # Wait for content to load
-                page.wait_for_load_state("networkidle", timeout=60_000)
+                page.wait_for_load_state("networkidle", timeout=120_000)
 
                 # Get the page HTML
                 return page.content()
-            except Exception as e:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.critical(f"Playwright failure. {e}")
             finally:
                 browser.close()

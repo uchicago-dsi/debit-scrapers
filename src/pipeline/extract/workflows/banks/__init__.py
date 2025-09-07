@@ -1,10 +1,6 @@
 """Defines concrete workflows for extracting development bank project data."""
 
-from .adb import (
-    AdbProjectScrapeWorkflow,
-    AdbResultsScrapeWorkflow,
-    AdbSeedUrlsWorkflow,
-)
+from .adb import AdbProjectScrapeWorkflow, AdbSeedUrlsWorkflow
 from .afdb import (
     AfdbProjectPartialDownloadWorkflow,
     AfdbProjectPartialScrapeWorkflow,
@@ -58,7 +54,6 @@ from .wb import WbDownloadWorkflow
 
 __all__ = [
     "AdbProjectScrapeWorkflow",
-    "AdbResultsScrapeWorkflow",
     "AdbSeedUrlsWorkflow",
     "AfdbProjectPartialDownloadWorkflow",
     "AfdbProjectPartialScrapeWorkflow",

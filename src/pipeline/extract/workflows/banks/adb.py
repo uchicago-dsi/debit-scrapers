@@ -5,65 +5,40 @@ search result pages and then scraping details from each project page.
 """
 
 # Standard library imports
+import json
 import re
-import time
-from datetime import datetime
+from logging import Logger
+from itertools import chain
 
 # Third-party imports
-from bs4 import BeautifulSoup
+import numpy as np
+import pandas as pd
 from django.conf import settings
+from lxml import etree
 
 # Application imports
-from extract.workflows.abstract import (
-    ProjectScrapeWorkflow,
-    ResultsScrapeWorkflow,
-    SeedUrlsWorkflow,
-)
+from common.http import DataRequestClient
+from extract.dal import DatabaseClient
+from extract.workflows.abstract import ProjectScrapeWorkflow, SeedUrlsWorkflow
 
 
 class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
     """Retrieves the first set of ADB URLs to scrape."""
 
     @property
-    def first_page_num(self) -> int:
-        """The number of the first search results page."""
-        return 0
+    def adb_iati_dataset_search_string(self) -> str:
+        """A fragment shared by all ADB IATI activity dataset URLs."""
+        return "www.adb.org/iati/iati-activities-"
+
+    @property
+    def iati_datasets_url(self) -> int:
+        """The URL to the list of all IATI datasets."""
+        return "https://bulk-data.iatistandard.org/datasets-minimal"
 
     @property
     def next_workflow(self) -> str:
         """The next workflow to execute."""
-        return settings.RESULTS_PAGE_WORKFLOW
-
-    @property
-    def search_results_base_url(self) -> str:
-        """The base URL for a project search results webpage."""
-        return "https://www.adb.org/projects?page={page_num}"
-
-    def _find_last_page(self) -> int:
-        """Retrieves the number of the last search results page.
-
-        Args:
-            `None`
-
-        Returns:
-            The page number.
-        """
-        try:
-            params = {"page_num": self.first_page_num}
-            first_results_page = self.search_results_base_url.format(**params)
-            html = self._data_request_client.get(
-                first_results_page,
-                use_random_delay=True,
-                use_random_user_agent=True,
-            ).text
-            soup = BeautifulSoup(html, "html.parser")
-            last_page_btn = soup.find("li", {"class": "pager__item--last"})
-            last_page_num = int(last_page_btn.find("a")["href"].split("=")[-1])
-            return last_page_num
-        except Exception as e:
-            raise RuntimeError(
-                f"Error retrieving last page number at '{first_results_page}'. {e}"
-            ) from None
+        return settings.PROJECT_PAGE_WORKFLOW
 
     def generate_seed_urls(self) -> list[str]:
         """Generates the first set of URLs to scrape.
@@ -72,83 +47,184 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             `None`
 
         Returns:
-            The unique list of search result pages.
+            A list of URLs to the ADB IATI activity datasets.
         """
-        try:
-            last_page_num = self._find_last_page()
-            result_pages = [
-                self.search_results_base_url.format(page_num=num)
-                for num in range(self.first_page_num, last_page_num + 1)
-            ]
-            return result_pages
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to generate ADB search result pages to crawl. {e}"
-            ) from None
-
-
-class AdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
-    """Scrapes an ADB search results page for development bank project URLs."""
-
-    @property
-    def project_page_base_url(self) -> str:
-        """The base URL for individual ADB project pages."""
-        return "https://www.adb.org"
-
-    def scrape_results_page(self, url: str) -> list[str]:
-        """Scrapes a search results page for project webpage URLs.
-
-        NOTE: Delays must be placed in between requests to avoid throttling.
-
-        Args:
-            url: The URL to a search results page
-                containing lists of development projects.
-
-        Returns:
-            The list of scraped project page URLs.
-        """
-        # Request page
+        # Fetch IATI datasets
         r = self._data_request_client.get(
-            url=url,
+            url=self.iati_datasets_url,
             use_random_user_agent=True,
             use_random_delay=True,
             min_random_delay=1,
             max_random_delay=3,
         )
 
-        # Check response
-        if not r.ok:
-            raise RuntimeError(
-                f"Error fetching search results page "
-                f"from ADB. The request failed with a "
-                f'"{r.status_code} - {r.reason}" status '
-                f'code and the message "{r.text}".'
-            )
-
-        # Scrape search results
+        # Parse IATI datasets
         try:
-            soup = BeautifulSoup(r.text, features="html.parser")
-            projects_table = soup.find("div", {"class": "list"})
-            urls = []
-            for project in projects_table.find_all("div", {"class": "item"}):
-                try:
-                    link = project.find("a")
-                    urls.append(self.project_page_base_url + link["href"])
-                except TypeError:
-                    continue
+            datasets = r.json()
         except Exception as e:
             raise RuntimeError(
-                f"Error scraping project page URLs from '{url}'. {e}"
+                f"Error parsing ADB IATI datasets into JSON. {e}"
             ) from None
 
-        return urls
+        # Return URLs
+        return [
+            entry["source_url"]
+            for entry in datasets["datasets"]
+            if self.adb_iati_dataset_search_string in entry["source_url"]
+        ]
 
 
 class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
-    """Scrapes an ADB project page for development bank project data."""
+    """Downloads an ADB IATI activity file and parses it for project data."""
+
+    def __init__(
+        self,
+        data_request_client: DataRequestClient,
+        db_client: DatabaseClient,
+        logger: Logger,
+    ) -> None:
+        """Initializes a new instance of a `UndpResultsMultiScrapeWorkflow`.
+
+        Args:
+            data_request_client: A client for making HTTP GET requests
+                while adding random delays and rotating user agent headers.
+
+            db_client: A client used to insert and
+                update tasks in the database.
+
+            logger: A standard logger instance.
+
+        Returns:
+            `None`
+        """
+        # Initialize attributes
+        super().__init__(data_request_client, db_client, logger)
+
+        # Load IATI country codes
+        self._country_codes = self._load_iati_codelist(
+            settings.IATI_ACTIVITY_COUNTRY_FPATH
+        )
+
+        # Load IATI finance type codes
+        self._finance_type_codes = self._load_iati_codelist(
+            settings.IATI_ACTIVITY_FINANCE_TYPE_FPATH
+        )
+
+        # Load IATI sector codes
+        self._sector_codes = self._load_iati_codelist(
+            settings.IATI_ACTIVITY_SECTOR_FPATH
+        )
+
+    @property
+    def project_page_base_url(self) -> str:
+        """The base URL for an ADB project page."""
+        return "https://www.adb.org/projects/{project_number}/main"
+
+    def _load_iati_codelist(self, fpath: str) -> dict:
+        """Loads the IATI codelist from a JSON file.
+
+        Args:
+            fpath: The path to the JSON file.
+
+        Returns:
+            A dictionary mapping IATI codes to names.
+        """
+        with open(fpath) as f:
+            loaded = json.load(f)
+            return {entry["code"]: entry["name"] for entry in loaded["data"]}
+
+    def _process_activity(self, activity: etree._Element) -> dict:
+        """Processes an IATI activity for project data.
+
+        Args:
+            activity: An IATI activity.
+
+        Returns:
+            The project data.
+        """
+        # Initialize project
+        project = {}
+
+        # Parse affiliated organizations
+        project["affiliates"] = list(
+            {
+                narrative.text
+                for narrative in activity.findall(
+                    "participating-org/narrative"
+                )
+            }
+        )
+
+        # Parse and map affiliated countries
+        countries = []
+        for country in activity.findall("recipient-country"):
+            country_name = self._country_codes.get(country.get("code"))
+            countries.append(country_name)
+
+        for location in activity.findall("location"):
+            country_name = location.find("name/narrative").text
+            countries.append(country_name)
+
+        project["countries"] = sorted(set(countries))
+
+        # Parse dates
+        for date in activity.findall("activity-date"):
+            if date.get("type") == "2":
+                project["date_signed"] = date.get("iso-date")[:10]
+            elif date.get("type") == "3":
+                project["date_planned_close"] = date.get("iso-date")[:10]
+            elif date.get("type") == "4":
+                project["date_actual_close"] = date.get("iso-date")[:10]
+
+        # Parse finance types
+        finance_type_code = activity.find("default-finance-type").get("code")
+        project["finance_types"] = [
+            self._finance_type_codes.get(finance_type_code)
+        ]
+
+        # Parse name
+        project["name"] = activity.find("title/narrative").text
+
+        # Parse unique identifier/number
+        project["number"] = "-".join(
+            activity.find("iati-identifier").text.split("-")[3:5]
+        )
+
+        # Parse and map the project sectors
+        project["sectors"] = [
+            self._sector_codes[sector.get("code")]
+            for sector in activity.findall("sector")
+            if sector.get("vocabulary") == "1"
+        ]
+
+        # Set project source
+        project["source"] = settings.ADB_ABBREVIATION.upper()
+
+        # Parse status
+        info_form_url = activity.find("contact-info/website").text
+        match = re.search(r"[^(]+\(([^)]+)\)", info_form_url)
+        project["status"] = match.group(1) if match else ""
+
+        # Parse total amount
+        for transaction in activity.findall("transaction"):
+            if transaction.find("transaction-type").get("code") == "2":
+                project["total_amount"] = project["total_amount_usd"] = float(
+                    transaction.find("value").text
+                )
+                break
+
+        # Parse currency
+        project["total_amount_currency"] = activity.get("default-currency")
+
+        # Construct URL to project page
+        project["url"] = self.project_page_base_url.format(
+            project_number=project["number"]
+        )
+
+        return project
 
     def scrape_project_page(self, url: str) -> list[dict]:
-        """Extracts project details from an ADB project webpage.
+        """Extracts project details from an ADB IATI activity file.
 
         Args:
             url: The URL for a project.
@@ -156,187 +232,142 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         Returns:
             The project record(s).
         """
-        from common.browser import HeadlessBrowser
+        # Initialize projects
+        raw_projects = []
 
-        # Add delay before requesting page
-        time.sleep(5)
+        # Stream remote file of ADB's loan activities in specific country
+        with self._data_request_client.get(url, stream=True) as r:
+            if not r.ok:
+                raise RuntimeError(
+                    "Error fetching data. The request failed with "
+                    f'a "{r.status_code} - {r.reason}" status '
+                    f'code and the message "{r.text}".'
+                )
+            r.raw.decode_content = True
+            context = etree.iterparse(r.raw, events=("end",))
+            for _, elem in context:
+                if elem.tag == "iati-activity":
+                    raw_projects.append(self._process_activity(elem))
 
-        # Initialize headless browser
-        browser = HeadlessBrowser()
+        # Read projects into DataFrame
+        df = pd.DataFrame(raw_projects)
 
-        # Fetch HTML at givenURL
-        html = browser.get_html(url)
+        # Replace missing values with None
+        df = df.replace({np.nan: None})
 
-        # Parse HTML into node tree
-        soup = BeautifulSoup(html, features="html.parser")
-
-        # Find first project table holding project background details
-        table = soup.find("article")
-
-        # Extract project name, number, and status
-        def get_field(detail_name: str) -> str:
-            try:
-                element = table.find(string=detail_name)
-                parent = element.find_parent()
-                sibling_cell = parent.find_next_siblings("dd")[0]
-                raw_text = sibling_cell.text
-                field = raw_text.strip(" \n")
-                return "" if field == "" else field
-            except AttributeError:
-                return ""
-
-        name = get_field("Project Name")
-        number = get_field("Project Number")
-        status = get_field("Project Status")
-        finance_types = get_field("Project Type / Modality of Assistance")
-
-        # Extract and format countries
-        country_label = table.find(string="Country / Economy")
-        if not country_label:
-            country_label = table.find(string="Country")
-
-        parent = country_label.find_parent()
-        sibling_cell = parent.find_next_siblings("dd")[0]
-        countries = "|".join(li.text for li in sibling_cell.find_all("li"))
-
-        # Define local function to calculate loan amount multiplier
-        def get_multiplier(text: str) -> float:
-            """Returns the multiplier for loan amounts.
+        # Define helper function for combining list-like columns
+        def combine(series: pd.Series) -> str:
+            """Combines values in a Pandas series into a pipe-delimited string.
 
             Args:
-                text: The loan amount.
+                series: The series.
 
             Returns:
-                The multiplier.
+                The string.
             """
-            if "BILLION" in text:
-                return 10**9
-            elif "MILLION" in text:
-                return 10**6
-            else:
-                return 1
+            return "|".join(sorted(set(chain.from_iterable(series))))
 
-        # Extract ADB funding amount
-        finance_tables = soup.find_all("table", {"class": "fund-table"})
-        if not finance_tables:
-            loan_amount = None
-        else:
-            loan_amount = 0
-            for t in finance_tables:
-                # Find table body
-                tbody = t.find("tbody")
+        # Define helper function for parsing loan amounts
+        def parse_amount(amount: np.float64) -> float | None:
+            """Parses a loan amount from its Numpy representation.
 
-                # Find table rows
-                rows = tbody.find_all("tr", class_=lambda c: c != "subhead")
+            Args:
+                amount: The raw loan amount.
 
-                # Parse loan amount and add to total
-                for r in rows:
-                    loan_cell = r.find_all("td")[1]
-                    multiplier = get_multiplier(loan_cell.text.upper())
-                    loan_str = re.search(r"([\d,\.]+)", loan_cell.text).groups(
-                        0
-                    )[0]
-                    fund_amount = float(loan_str.replace(",", "")) * multiplier
-                    loan_amount += int(fund_amount)
-            loan_amount = int(loan_amount)
+            Returns:
+                The parsed amount.
+            """
+            return float(amount) if not np.isnan(amount) else None
 
-        # Extract sectors
-        sector_header_str = table.find(string="Sector / Subsector")
-        sector_row = sector_header_str.find_parent()
-        sector_names = sector_row.find_next_sibling("dd")
-        sector_strongs = sector_names.find_all("strong", {"class": "sector"})
-        sectors = (
-            ""
-            if not sector_strongs
-            else "|".join(s.text for s in sector_strongs)
-        )
+        # Define helper function for parsing the max of a list of dates
+        def parse_max_date(dates: list[str | None]) -> str | None:
+            """Returns the maximum of a list of dates.
 
-        # Extract companies
-        try:
-            agency_text = soup.find(string="Implementing Agency")
-            if not agency_text:
-                agency_text = soup.find(string="Executing Agencies")
-            parent = agency_text.find_parent()
-            agency_cell = parent.find_next_siblings("dd")[0]
-            company_spans = agency_cell.find_all(
-                "span", {"class": "address-company"}
-            )
-            affiliates = "|".join(
-                c.text.strip(" \n") for c in company_spans if c.text
-            )
-        except Exception:
-            affiliates = ""
+            If no valid dates exist, returns an empty string.
 
-        # Define local function to parse date string
-        def parse_date(date_str: str) -> str:
+            Args:
+                dates: The list of dates.
+
+            Returns:
+                The max date.
+            """
             try:
-                parsed_date = datetime.strptime(date_str, "%d %b %Y")
-                return parsed_date.strftime("%Y-%m-%d")
-            except Exception:
+                return max(d for d in dates if d is not None)
+            except ValueError:
                 return ""
 
-        # Extract project approval date
-        try:
-            approval_text = soup.find(string="Approval")
-            parent = approval_text.find_parent()
-            approval_cell = parent.find_next_siblings("dd")[0]
-            date_approved = parse_date(approval_cell.text)
-        except Exception:
-            date_approved = ""
+        # Define helper function for parsing the min of a list of dates
+        def parse_min_date(dates: list[str | None]) -> str | None:
+            """Returns the minimum of a list of dates.
 
-        # Extract project appraisal date
-        try:
-            appraisal_text = soup.find(string="Concept Clearance")
-            parent = appraisal_text.find_parent()
-            appraisal_cell = parent.find_next_siblings("dd")[0]
-            date_under_appraisal = parse_date(appraisal_cell.text)
-        except Exception:
-            date_under_appraisal = ""
+            If no valid dates exist, returns an empty string.
 
-        # Extract additional project dates
-        try:
-            milestone_text = soup.find("caption", string="Milestones")
-            parent = milestone_text.find_parent()
-            labels = [
-                th.text.strip(" \n")
-                for th in parent.find_all("th")
-                if th.text.strip(" \n") != "Closing"
-            ]
-            values = [td.text.strip(" \n") for td in parent.find_all("td")]
-            milestone_dict = dict(zip(labels, values))
-            date_effective = parse_date(milestone_dict.get("Effectivity Date"))
-            date_planned_close = parse_date(milestone_dict.get("Original"))
-            date_revised_close = parse_date(milestone_dict.get("Revised"))
-            date_actual_close = parse_date(milestone_dict.get("Actual"))
-            date_signed = parse_date(milestone_dict.get("Signing Date"))
-        except Exception:
-            date_effective = ""
-            date_planned_close = ""
-            date_revised_close = ""
-            date_actual_close = ""
-            date_signed = ""
+            Args:
+                dates: The list of dates.
 
-        # Compose final project record schema
-        return [
-            {
-                "affiliates": affiliates,
-                "countries": countries,
-                "date_actual_close": date_actual_close,
-                "date_approved": date_approved,
-                "date_effective": date_effective,
-                "date_planned_close": date_planned_close,
-                "date_revised_close": date_revised_close,
-                "date_signed": date_signed,
-                "date_under_appraisal": date_under_appraisal,
-                "finance_types": finance_types,
-                "name": name,
-                "number": number,
-                "sectors": sectors,
-                "source": settings.ADB_ABBREVIATION.upper(),
-                "status": status,
-                "total_amount": loan_amount,
-                "total_amount_currency": "USD" if loan_amount else "",
-                "total_amount_usd": loan_amount,
-                "url": url,
-            }
-        ]
+            Returns:
+                The min date.
+            """
+            try:
+                return min(d for d in dates if d is not None)
+            except ValueError:
+                return ""
+
+        # Define helper function for defining project status
+        def parse_status(statuses: pd.Series) -> str:
+            """Determines the aggregate project status.
+
+            An ADB project consists of multiple debt instruments,
+            each with their own status ("Proposed", "Approved",
+            "Active", "Dropped/ Terminated", "Closed", or "Archived").
+
+            If all the statuses are the same, the overall/aggregate project
+            status should be that status. If any status is "Active", the
+            project status should also be "Active" (indicating that at least
+            one loan is in progress). Otherwise, the status should be "Other".
+
+            Args:
+                statuses: The statuses of the financial instruments.
+
+            Returns:
+                The aggregate project status.
+            """
+            if len(set(statuses)) == len(statuses):
+                return statuses.iloc[0]
+            elif any(s == "Active" for s in statuses):
+                return "Active"
+            else:
+                return "Other"
+
+        # Aggregate projects by project number/URL
+        aggregated_projects = []
+        for _, grp in df.groupby("url"):
+            aggregated_projects.append(
+                {
+                    "affiliates": combine(grp["affiliates"]),
+                    "countries": combine(grp["countries"]),
+                    "date_signed": parse_min_date(grp["date_signed"]),
+                    "date_planned_close": parse_max_date(
+                        grp["date_planned_close"]
+                    ),
+                    "date_actual_close": parse_max_date(
+                        grp["date_actual_close"]
+                    ),
+                    "finance_types": combine(grp["finance_types"]),
+                    "name": grp["name"].iloc[0],
+                    "number": grp["number"].iloc[0],
+                    "sectors": combine(grp["sectors"]),
+                    "source": grp["source"].iloc[0],
+                    "status": parse_status(grp["status"]),
+                    "total_amount": parse_amount(grp["total_amount"].sum()),
+                    "total_amount_usd": parse_amount(
+                        grp["total_amount_usd"].sum()
+                    ),
+                    "total_amount_currency": grp["total_amount_currency"].iloc[
+                        0
+                    ],
+                    "url": grp["url"].iloc[0],
+                }
+            )
+
+        return aggregated_projects

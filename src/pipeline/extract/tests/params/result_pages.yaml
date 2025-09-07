@@ -1,9 +1,5 @@
 ---
 # Parameters (i.e., bank and URL) used to test scraping of project search result pages for project page URLs.
-- adb:
-    - https://www.adb.org/projects?page=0
-    - https://www.adb.org/projects?page=300
-    - https://www.adb.org/projects?page=583
 - fmo:
     - https://www.fmo.nl/worldmap?page=1
     - https://www.fmo.nl/worldmap?page=30

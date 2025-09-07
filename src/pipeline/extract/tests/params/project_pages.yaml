@@ -1,11 +1,9 @@
 ---
 # Parameters (i.e., bank and URL) used to test scraping of project pages.
 - adb:
-    - https://www.adb.org/projects/53303-001/main
-    - https://www.adb.org/projects/55015-001/main
-    - https://www.adb.org/projects/34418-024/main
-    - https://www.adb.org/projects/39305-012/main
-    - https://www.adb.org/projects/47277-001/main
+    - https://www.adb.org/iati/iati-activities-kh.xml
+    - http://www.adb.org/iati/iati-activities-in.xml
+    - https://www.adb.org/iati/iati-activities-reg.xml
 - aiib:
     - https://www.aiib.org/en/projects/details/2021/proposed/India-Extension-Renovation-and-Modernization-of-Grand-Anicut-Canal-System.html
     - https://www.aiib.org/en/projects/details/2023/approved/Egypt-Sustainable-Transport-and-Digital-Infrastructure-Guarantee.html

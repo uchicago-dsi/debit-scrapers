@@ -95,7 +95,6 @@ class WorkflowClassRegistry:
 
     _REGISTRY = {
         f"{settings.ADB_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.AdbSeedUrlsWorkflow,
-        f"{settings.ADB_ABBREVIATION}-{settings.RESULTS_PAGE_WORKFLOW}": banks.AdbResultsScrapeWorkflow,
         f"{settings.ADB_ABBREVIATION}-{settings.PROJECT_PAGE_WORKFLOW}": banks.AdbProjectScrapeWorkflow,
         f"{settings.AFDB_ABBREVIATION}-{settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW}": banks.AfdbProjectPartialDownloadWorkflow,
         f"{settings.AFDB_ABBREVIATION}-{settings.PROJECT_PARTIAL_PAGE_WORKFLOW}": banks.AfdbProjectPartialScrapeWorkflow,
