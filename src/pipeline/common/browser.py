@@ -101,16 +101,33 @@ class HeadlessBrowser:
             The HTML content.
         """
         # Select random user agent header
-        # user_agent = random.choice(self._user_agent_headers)
+        import os
+
+        try:
+            proxy_endpoint = os.environ["PROXY_ENDPOINT"]
+            proxy_username = os.environ["PROXY_USERNAME"]
+            proxy_password = os.environ["PROXY_PASSWORD"]
+        except KeyError as e:
+            raise RuntimeError(f"{e} environment variable not set.") from None
 
         # Use headless browser to fetch HTML
         with sync_playwright() as p:
             try:
-                browser = p.chromium.launch(headless=True)
+                browser = p.chromium.launch(
+                    headless=True,
+                    proxy={
+                        "server": proxy_endpoint,
+                        "username": proxy_username,
+                        "password": proxy_password,
+                    },
+                )
                 page = browser.new_page()
 
-                # Set a realistic user agent
-                # page.set_extra_http_headers({"User-Agent": user_agent})
+                # Disable imgaes, CSS, and fonts to speed up page load
+                page.route(
+                    "**/*.{png,jpg,jpeg,gif,css,woff,woff2}",
+                    lambda route: route.abort(),
+                )
 
                 # Navigate to the page
                 page.goto(url)
