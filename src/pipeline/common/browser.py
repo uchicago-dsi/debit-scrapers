@@ -101,7 +101,7 @@ class HeadlessBrowser:
             The HTML content.
         """
         # Select random user agent header
-        user_agent = random.choice(self._user_agent_headers)
+        # user_agent = random.choice(self._user_agent_headers)
 
         # Use headless browser to fetch HTML
         with sync_playwright() as p:
