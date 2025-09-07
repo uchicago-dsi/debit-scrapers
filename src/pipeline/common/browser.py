@@ -115,7 +115,7 @@ class HeadlessBrowser:
         with Stealth().use_sync(sync_playwright()) as p:
             try:
                 browser = p.chromium.launch(
-                    headless=False,
+                    headless=True,
                     proxy={
                         "server": proxy_endpoint,
                         "username": proxy_username,
@@ -162,5 +162,10 @@ class HeadlessBrowser:
 
                 # Get the page HTML
                 return page.content()
+            except Exception as e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.critical(f"Playwright failure. {e}")
             finally:
                 browser.close()
