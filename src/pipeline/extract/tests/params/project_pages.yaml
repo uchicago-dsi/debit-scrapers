@@ -1,6 +1,7 @@
 ---
 # Parameters (i.e., bank and URL) used to test scraping of project pages.
 - adb:
+    - https://www.adb.org/iati/iati-activities-af.xml
     - https://www.adb.org/iati/iati-activities-kh.xml
     - http://www.adb.org/iati/iati-activities-in.xml
     - https://www.adb.org/iati/iati-activities-reg.xml

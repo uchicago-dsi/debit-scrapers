@@ -115,6 +115,11 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             settings.IATI_ACTIVITY_SECTOR_FPATH
         )
 
+        # Load IATI status codes
+        self._status_codes = self._load_iati_codelist(
+            settings.IATI_ACTIVITY_STATUS_FPATH
+        )
+
     @property
     def project_page_base_url(self) -> str:
         """The base URL for an ADB project page."""
@@ -201,9 +206,13 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         project["source"] = settings.ADB_ABBREVIATION.upper()
 
         # Parse status
-        info_form_url = activity.find("contact-info/website").text
-        match = re.search(r"[^(]+\(([^)]+)\)", info_form_url)
-        project["status"] = match.group(1) if match else ""
+        try:
+            info_form_url = activity.find("contact-info/website").text
+            match = re.search(r"[^(]+\(([^)]+)\)", info_form_url)
+            project["status"] = match.group(1) if match else ""
+        except Exception:
+            iati_status_code = activity.find("activity-status").get("code")
+            project["status"] = self._status_codes.get(iati_status_code, "")
 
         # Parse total amount
         for transaction in activity.findall("transaction"):
