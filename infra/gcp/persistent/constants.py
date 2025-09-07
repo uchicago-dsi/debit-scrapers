@@ -15,7 +15,7 @@ QUEUE_CONFIG = [
     {
         "source": "adb",
         "max_concurrent_dispatches": 2,
-        "requires_chromium": True,
+        "requires_chromium": False,
     },
     {
         "source": "afdb",
