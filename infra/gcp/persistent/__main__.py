@@ -927,63 +927,69 @@ extraction_workflow = gcp.workflows.Workflow(
                 - exportData:
                     parallel:
                         branches:
-                            - exportJob:
-                                call: googleapis.sqladmin.v1.instances.export
-                                args:
-                                    instance: {cloud_sql_instance_id}
-                                    project: {project_id}
-                                    body:
-                                        exportContext:
-                                            csvExportOptions:
-                                                selectQuery: "SELECT * FROM extraction_job"
-                                                escapeCharacter: \"
-                                                quoteCharacter: \"
-                                                fieldsTerminatedBy: \t
-                                                linesTerminatedBy: \n
-                                            databases:
-                                                - {database_name}
-                                            fileType: CSV
-                                            kind: sql#exportContext
-                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-job.tsv
-                                result: jobOperation
-                            - exportTasks:
-                                call: googleapis.sqladmin.v1.instances.export
-                                args:
-                                    instance: {cloud_sql_instance_id}
-                                    project: {project_id}
-                                    body:
-                                        exportContext:
-                                            csvExportOptions:
-                                                selectQuery: "SELECT * FROM extraction_task"
-                                                escapeCharacter: \"
-                                                quoteCharacter: \"
-                                                fieldsTerminatedBy: \t
-                                                linesTerminatedBy: \n
-                                            databases:
-                                                - {database_name}
-                                            fileType: CSV
-                                            kind: sql#exportContext
-                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
-                                result: jobOperation
-                            - exportProjects:
-                                call: googleapis.sqladmin.v1.instances.export
-                                args:
-                                    instance: {cloud_sql_instance_id}
-                                    project: {project_id}
-                                    body:
-                                        exportContext:
-                                            csvExportOptions:
-                                                selectQuery: "SELECT * FROM extracted_projects"
-                                                escapeCharacter: \"
-                                                quoteCharacter: \"
-                                                fieldsTerminatedBy: \t
-                                                linesTerminatedBy: \n
-                                            databases:
-                                                - {database_name}
-                                            fileType: CSV
-                                            kind: sql#exportContext
-                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extracted-projects.tsv
-                                result: projectOperation
+                            - jobs:
+                                steps:
+                                    - exportJob:
+                                        call: googleapis.sqladmin.v1.instances.export
+                                        args:
+                                            instance: {cloud_sql_instance_id}
+                                            project: {project_id}
+                                            body:
+                                                exportContext:
+                                                    csvExportOptions:
+                                                        selectQuery: "SELECT * FROM extraction_job"
+                                                        escapeCharacter: \"
+                                                        quoteCharacter: \"
+                                                        fieldsTerminatedBy: \t
+                                                        linesTerminatedBy: \n
+                                                    databases:
+                                                        - {database_name}
+                                                    fileType: CSV
+                                                    kind: sql#exportContext
+                                                    uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-job.tsv
+                                        result: jobOperation
+                            - tasks:
+                                steps:
+                                    - exportTasks:
+                                        call: googleapis.sqladmin.v1.instances.export
+                                        args:
+                                            instance: {cloud_sql_instance_id}
+                                            project: {project_id}
+                                            body:
+                                                exportContext:
+                                                    csvExportOptions:
+                                                        selectQuery: "SELECT * FROM extraction_task"
+                                                        escapeCharacter: \"
+                                                        quoteCharacter: \"
+                                                        fieldsTerminatedBy: \t
+                                                        linesTerminatedBy: \n
+                                                    databases:
+                                                        - {database_name}
+                                                    fileType: CSV
+                                                    kind: sql#exportContext
+                                                    uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
+                                        result: jobOperation
+                            - projects:
+                                steps:
+                                    - exportProjects:
+                                        call: googleapis.sqladmin.v1.instances.export
+                                        args:
+                                            instance: {cloud_sql_instance_id}
+                                            project: {project_id}
+                                            body:
+                                                exportContext:
+                                                    csvExportOptions:
+                                                        selectQuery: "SELECT * FROM extracted_projects"
+                                                        escapeCharacter: \"
+                                                        quoteCharacter: \"
+                                                        fieldsTerminatedBy: \t
+                                                        linesTerminatedBy: \n
+                                                    databases:
+                                                        - {database_name}
+                                                    fileType: CSV
+                                                    kind: sql#exportContext
+                                                    uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extracted-projects.tsv
+                                        result: projectOperation
                 - stopDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
