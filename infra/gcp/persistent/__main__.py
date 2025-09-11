@@ -936,10 +936,10 @@ extraction_workflow = gcp.workflows.Workflow(
                                         exportContext:
                                             csvExportOptions:
                                                 selectQuery: "SELECT * FROM extraction_job"
-                                                escapeCharacter: "\""
-                                                quoteCharacter: "\""
-                                                fieldsTerminatedBy: "\t"
-                                                linesTerminatedBy: "\n"
+                                                escapeCharacter: \"
+                                                quoteCharacter: \"
+                                                fieldsTerminatedBy: \t
+                                                linesTerminatedBy: \n
                                             databases:
                                                 - {database_name}
                                             fileType: CSV
@@ -955,10 +955,10 @@ extraction_workflow = gcp.workflows.Workflow(
                                         exportContext:
                                             csvExportOptions:
                                                 selectQuery: "SELECT * FROM extraction_task"
-                                                escapeCharacter: "\""
-                                                quoteCharacter: "\""
-                                                fieldsTerminatedBy: "\t"
-                                                linesTerminatedBy: "\n"
+                                                escapeCharacter: \"
+                                                quoteCharacter: \"
+                                                fieldsTerminatedBy: \t
+                                                linesTerminatedBy: \n
                                             databases:
                                                 - {database_name}
                                             fileType: CSV
@@ -974,10 +974,10 @@ extraction_workflow = gcp.workflows.Workflow(
                                         exportContext:
                                             csvExportOptions:
                                                 selectQuery: "SELECT * FROM extracted_projects"
-                                                escapeCharacter: "\""
-                                                quoteCharacter: "\""
-                                                fieldsTerminatedBy: "\t"
-                                                linesTerminatedBy: "\n"
+                                                escapeCharacter: \"
+                                                quoteCharacter: \"
+                                                fieldsTerminatedBy: \t
+                                                linesTerminatedBy: \n
                                             databases:
                                                 - {database_name}
                                             fileType: CSV
