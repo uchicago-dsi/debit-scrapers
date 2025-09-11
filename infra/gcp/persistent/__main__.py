@@ -919,7 +919,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                         - --migrate
                                         - --extract-data
                                         - --date
-                                        - ${date}
+                                        - ${{date}}
                         connector_params:
                             timeout: 86400
                         url: "https://run.googleapis.com/v2/projects/{project_id}/locations/{project_region}/jobs/{job_name}:run"
