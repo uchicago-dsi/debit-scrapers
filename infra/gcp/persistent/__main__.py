@@ -944,7 +944,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                                 - {database_name}
                                             fileType: CSV
                                             kind: sql#exportContext
-                                            uri: {destination_uri}/extraction/${{date}}/${{date}}-extraction-job.tsv
+                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-job.tsv
                                 result: jobOperation
                             - exportTasks:
                                 call: googleapis.sqladmin.v1.instances.export
@@ -963,7 +963,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                                 - {database_name}
                                             fileType: CSV
                                             kind: sql#exportContext
-                                            uri: {destination_uri}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
+                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
                                 result: jobOperation
                             - exportProjects:
                                 call: googleapis.sqladmin.v1.instances.export
