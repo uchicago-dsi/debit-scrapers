@@ -1022,6 +1022,28 @@ gcp.projects.IAMBinding(
     ),
 )
 
+# Grant Cloud Workflow permission to invoke Cloud SQL commands
+gcp.projects.IAMBinding(
+    f"debit-{ENV}-flows-sql-access",
+    project=PROJECT_ID,
+    role="roles/cloudsql.admin",
+    members=[cloud_workflow_service_account_member],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant Cloud Workflow permission to write to Cloud Storage
+gcp.projects.IAMBinding(
+    f"debit-{ENV}-flows-stg-access",
+    project=PROJECT_ID,
+    role="roles/storage.objectCreator",
+    members=[cloud_workflow_service_account_member],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
 gcp.projects.IAMBinding(
     f"debit-{ENV}-sch-flows-access",
