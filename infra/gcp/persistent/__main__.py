@@ -1030,12 +1030,27 @@ gcp.projects.IAMBinding(
     ),
 )
 
-# Grant Cloud Workflow permission to write to Cloud Storage bucket
+# Grant Cloud Workflow admin permission for Cloud Storage
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-flows-stg-access",
     bucket=data_bucket.name,
     role="roles/storage.admin",
     member=cloud_workflow_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Allow Cloud SQL Admin service agent to write export files to the bucket
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-sqladmin-export-writer",
+    bucket=data_bucket.name,
+    role="roles/storage.objectCreator",
+    member=pulumi.Output.concat(
+        "serviceAccount:service-",
+        gcp.organizations.get_project().number,
+        "@gcp-sa-cloud-sql.iam.gserviceaccount.com",
+    ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
