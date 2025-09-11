@@ -936,10 +936,9 @@ extraction_workflow = gcp.workflows.Workflow(
                                                 exportContext:
                                                     csvExportOptions:
                                                         selectQuery: "SELECT * FROM extraction_job"
-                                                        escapeCharacter: \x22
-                                                        quoteCharacter: \x22
-                                                        fieldsTerminatedBy: \x09
-                                                        linesTerminatedBy: \x0a
+                                                        escapeCharacter: 22
+                                                        quoteCharacter: 22
+                                                        fieldsTerminatedBy: 09
                                                     databases:
                                                         - {database_name}
                                                     fileType: CSV
@@ -957,10 +956,9 @@ extraction_workflow = gcp.workflows.Workflow(
                                                 exportContext:
                                                     csvExportOptions:
                                                         selectQuery: "SELECT * FROM extraction_task"
-                                                        escapeCharacter: \x22
-                                                        quoteCharacter: \x22
-                                                        fieldsTerminatedBy: \x09
-                                                        linesTerminatedBy: \x0a
+                                                        escapeCharacter: 22
+                                                        quoteCharacter: 22
+                                                        fieldsTerminatedBy: 09
                                                     databases:
                                                         - {database_name}
                                                     fileType: CSV
@@ -978,10 +976,9 @@ extraction_workflow = gcp.workflows.Workflow(
                                                 exportContext:
                                                     csvExportOptions:
                                                         selectQuery: "SELECT * FROM extracted_projects"
-                                                        escapeCharacter: \x22
-                                                        quoteCharacter: \x22
-                                                        fieldsTerminatedBy: \x09
-                                                        linesTerminatedBy: \x0a
+                                                        escapeCharacter: 22
+                                                        quoteCharacter: 22
+                                                        fieldsTerminatedBy: 09
                                                     databases:
                                                         - {database_name}
                                                     fileType: CSV
@@ -1033,12 +1030,12 @@ gcp.projects.IAMBinding(
     ),
 )
 
-# Grant Cloud Workflow permission to write to Cloud Storage
-gcp.projects.IAMBinding(
+# Grant Cloud Workflow permission to write to Cloud Storage bucket
+gcp.storage.BucketIAMMember(
     f"debit-{ENV}-flows-stg-access",
-    project=PROJECT_ID,
-    role="roles/storage.objectCreator",
-    members=[cloud_workflow_service_account_member],
+    bucket=data_bucket.name,
+    role="roles/storage.objectAdmin",
+    member=cloud_workflow_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
