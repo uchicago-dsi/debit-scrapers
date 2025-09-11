@@ -875,20 +875,131 @@ extraction_workflow = gcp.workflows.Workflow(
     deletion_protection=False,
     source_contents=pulumi.Output.format(
         """
+        # Workflow to extract development project data for a given date.
+        #
+        # Uses the current date in UTC if no YYYY-MM-DD date is provided
+        # through the DATE_OVERRIDE environment variable. Starts a database
+        # instance to store extracted data and then triggers a Cloud Run job
+        # to orchestrate the data extraction. When the job completes, exports
+        # the database tables as CSV files to Cloud Storage, truncates the
+        # database, and turns the database off.
+        #
+        # References:
+        # - https://cloud.google.com/workflows/docs/reference/googleapis#invoke_a_connector_call
+        # - https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1/operations
+        # - https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1/instances/export
+        # - https://cloud.google.com/workflows/docs/reference/googleapis/sqladmin/v1/instances/export
+        # - https://cloud.google.com/workflows/docs/reference/googleapis/sqladmin/v1/instances/patch
+        #
         main:
             steps:
-                - extract_data:
+                - getDate:
+                    assign:
+                        - date: ${{if(len(sys.get_env("DATE_OVERRIDE")) > 0, sys.get_env("DATE_OVERRIDE"), text.substring(time.format(sys.now()), 0, 10))}}  
+                - startDatabase:
+                    call: googleapis.sqladmin.v1.instances.patch
+                    args:
+                        instance: {cloud_sql_instance_id}
+                        project: {project_id}
+                        body:
+                            settings:
+                                activationPolicy: ALWAYS
+                    result: startDbOperation
+                - extractData:
                     call: http.post
                     args:
                         auth:
                             type: OAuth2
-                        body: {{}}
+                        body:
+                            overrides:
+                                containerOverrides:
+                                    args:
+                                        - bash
+                                        - setup.sh
+                                        - --migrate
+                                        - --extract-data
+                                        - --date
+                                        - ${date}
+                        connector_params:
+                            timeout: 86400
                         url: "https://run.googleapis.com/v2/projects/{project_id}/locations/{project_region}/jobs/{job_name}:run"
                     result: response
+                - exportData:
+                    parallel:
+                        branches:
+                            - exportJob:
+                                call: googleapis.sqladmin.v1.instances.export
+                                args:
+                                    instance: {cloud_sql_instance_id}
+                                    project: {project_id}
+                                    body:
+                                        exportContext:
+                                            csvExportOptions:
+                                                selectQuery: "SELECT * FROM extraction_job"
+                                                escapeCharacter: "\""
+                                                quoteCharacter: "\""
+                                                fieldsTerminatedBy: "\t"
+                                                linesTerminatedBy: "\n"
+                                            databases:
+                                                - {database_name}
+                                            fileType: CSV
+                                            kind: sql#exportContext
+                                            uri: {destination_uri}/extraction/${{date}}/${{date}}-extraction-job.tsv
+                                result: jobOperation
+                            - exportTasks:
+                                call: googleapis.sqladmin.v1.instances.export
+                                args:
+                                    instance: {cloud_sql_instance_id}
+                                    project: {project_id}
+                                    body:
+                                        exportContext:
+                                            csvExportOptions:
+                                                selectQuery: "SELECT * FROM extraction_task"
+                                                escapeCharacter: "\""
+                                                quoteCharacter: "\""
+                                                fieldsTerminatedBy: "\t"
+                                                linesTerminatedBy: "\n"
+                                            databases:
+                                                - {database_name}
+                                            fileType: CSV
+                                            kind: sql#exportContext
+                                            uri: {destination_uri}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
+                                result: jobOperation
+                            - exportProjects:
+                                call: googleapis.sqladmin.v1.instances.export
+                                args:
+                                    instance: {cloud_sql_instance_id}
+                                    project: {project_id}
+                                    body:
+                                        exportContext:
+                                            csvExportOptions:
+                                                selectQuery: "SELECT * FROM extracted_projects"
+                                                escapeCharacter: "\""
+                                                quoteCharacter: "\""
+                                                fieldsTerminatedBy: "\t"
+                                                linesTerminatedBy: "\n"
+                                            databases:
+                                                - {database_name}
+                                            fileType: CSV
+                                            kind: sql#exportContext
+                                            uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extracted-projects.tsv
+                                result: projectOperation
+                - stopDatabase:
+                    call: googleapis.sqladmin.v1.instances.patch
+                    args:
+                        instance: {cloud_sql_instance_id}
+                        project: {project_id}
+                        body:
+                            settings:
+                                activationPolicy: NEVER
+                    result: stopDbOperation
         """,
+        cloud_sql_instance_id=pipeline_db.name,
+        database_name=POSTGRES_DB,
+        data_bucket_url=data_bucket.url,
+        job_name=orchestrator_cloud_run_job.name,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
-        job_name=orchestrator_cloud_run_job.name,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
