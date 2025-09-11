@@ -1034,7 +1034,7 @@ gcp.projects.IAMBinding(
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-flows-stg-access",
     bucket=data_bucket.name,
-    role="roles/storage.objectAdmin",
+    role="roles/storage.admin",
     member=cloud_workflow_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
