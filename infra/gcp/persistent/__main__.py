@@ -906,10 +906,9 @@ extraction_workflow = gcp.workflows.Workflow(
                                 activationPolicy: ALWAYS
                     result: startDbOperation
                 - extractData:
-                    call: http.post
+                    call: googleapis.run.v2.projects.locations.jobs.run
                     args:
-                        auth:
-                            type: OAuth2
+                        name: projects/{project_id}/locations/{project_region}/jobs/{job_name}
                         body:
                             overrides:
                                 containerOverrides:
@@ -922,8 +921,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                         - ${{date}}
                         connector_params:
                             timeout: 86400
-                        url: "https://run.googleapis.com/v2/projects/{project_id}/locations/{project_region}/jobs/{job_name}:run"
-                    result: response
+                    result: extractDataOperation
                 - exportData:
                     parallel:
                         branches:
