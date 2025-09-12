@@ -1076,7 +1076,8 @@ gcp.storage.BucketIAMMember(
     role="roles/storage.objectCreator",
     member=f"serviceAccount:{cloudsql_service_agent_email}",
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[enabled_services, cloudsql_service_agent],
+        provider=gcp_provider,
     ),
 )
 
@@ -1089,7 +1090,7 @@ gcp.storage.BucketIAMMember(
         "serviceAccount:", cloudsql_service_agent.email
     ),
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services,
+        depends_on=[enabled_services, cloudsql_service_agent],
         provider=gcp_provider,
     ),
 )
@@ -1102,7 +1103,8 @@ gcp.storage.BucketIAMMember(
     role="roles/storage.legacyBucketWriter",
     member=f"serviceAccount:{cloudsql_service_agent_email}",
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[enabled_services, cloudsql_service_agent],
+        provider=gcp_provider,
     ),
 )
 
@@ -1114,7 +1116,8 @@ gcp.storage.BucketIAMMember(
     role="roles/storage.admin",
     member=f"serviceAccount:{cloudsql_service_agent_email}",
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[enabled_services, cloudsql_service_agent],
+        provider=gcp_provider,
     ),
 )
 
