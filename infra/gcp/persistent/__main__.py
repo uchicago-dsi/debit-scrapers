@@ -1032,6 +1032,17 @@ gcp.projects.IAMBinding(
 )
 
 # Grant Cloud Workflow permission to interface with Cloud Storage
+gcp.projects.IAMBinding(
+    f"debit-{ENV}-flows-stg-role",
+    project=PROJECT_ID,
+    role="roles/storage.admin",
+    members=[cloud_workflow_service_account_member],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant Cloud Workflow permission to interface with Cloud Storage
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-flows-stg-access",
     bucket=data_bucket.name,
