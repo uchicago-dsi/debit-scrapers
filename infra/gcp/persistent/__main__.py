@@ -1053,7 +1053,13 @@ gcp.storage.BucketIAMMember(
     ),
 )
 
-# Force creation of Cloud SQL service agent
+# FIXED: Get the Cloud SQL service agent email properly
+# The Cloud SQL service agent has a specific format
+cloudsql_service_agent_email = (
+    f"service-{PROJECT_ID}@gcp-sa-cloud-sql.iam.gserviceaccount.com"
+)
+
+# Alternative: Force creation of Cloud SQL service agent (keep this as backup)
 cloudsql_service_agent = gcp.projects.ServiceIdentity(
     f"debit-{ENV}-sql-agent",
     project=PROJECT_ID,
@@ -1063,27 +1069,52 @@ cloudsql_service_agent = gcp.projects.ServiceIdentity(
     ),
 )
 
-# Grant Cloud SQL service agent permission to write to Cloud Storage
+# FIXED: Grant Cloud SQL service agent proper permissions using the standard email format
 gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sql-stg-access",
+    f"debit-{ENV}-sql-stg-access-standard",
+    bucket=data_bucket.name,
+    role="roles/storage.objectCreator",
+    member=f"serviceAccount:{cloudsql_service_agent_email}",
+    opts=pulumi.ResourceOptions(
+        depends_on=[enabled_services, data_bucket], provider=gcp_provider
+    ),
+)
+
+# FIXED: Also grant using the service agent from the API (backup)
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-sql-stg-access-api",
     bucket=data_bucket.name,
     role="roles/storage.objectCreator",
     member=pulumi.Output.concat(
         "serviceAccount:", cloudsql_service_agent.email
     ),
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[enabled_services, cloudsql_service_agent, data_bucket],
+        provider=gcp_provider,
     ),
 )
 
-# Grant Cloud Scheduler service account permission to invoke Cloud Workflow
-gcp.projects.IAMBinding(
-    f"debit-{ENV}-sch-flows-access",
-    project=PROJECT_ID,
-    role="roles/workflows.invoker",
-    members=[cloud_scheduler_service_account_member],
+# ADDITIONAL FIX: Grant storage.legacyBucketWriter role as well
+# This is sometimes needed for Cloud SQL exports
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-sql-stg-legacy-access",
+    bucket=data_bucket.name,
+    role="roles/storage.legacyBucketWriter",
+    member=f"serviceAccount:{cloudsql_service_agent_email}",
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[enabled_services, data_bucket], provider=gcp_provider
+    ),
+)
+
+# ADDITIONAL FIX: Make sure the data bucket allows the Cloud SQL service agent
+# Sometimes bucket-level permissions are needed in addition to project-level
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-sql-bucket-admin",
+    bucket=data_bucket.name,
+    role="roles/storage.admin",
+    member=f"serviceAccount:{cloudsql_service_agent_email}",
+    opts=pulumi.ResourceOptions(
+        depends_on=[enabled_services, data_bucket], provider=gcp_provider
     ),
 )
 
@@ -1096,6 +1127,18 @@ gcp.projects.IAMBinding(
 
 # region
 
+# Grant Cloud Scheduler service account permission to invoke Cloud Workflow
+gcp.projects.IAMBinding(
+    f"debit-{ENV}-sch-flows-access",
+    project=PROJECT_ID,
+    role="roles/workflows.invoker",
+    members=[cloud_scheduler_service_account_member],
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Create scheduled job
 scheduled_job = gcp.cloudscheduler.Job(
     f"debit-{ENV}-sch-extract",
     description="A scheduled job to extract data.",
