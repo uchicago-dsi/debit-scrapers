@@ -1031,6 +1031,17 @@ gcp.projects.IAMBinding(
     ),
 )
 
+# Grant Cloud Workflow permission to interface with Cloud Storage
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-flows-stg-access",
+    bucket=data_bucket.name,
+    role="roles/storage.admin",
+    member=cloud_workflow_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
 # Force creation of Cloud SQL service agent
 cloudsql_service_agent = gcp.projects.ServiceIdentity(
     f"debit-{ENV}-sql-agent",
