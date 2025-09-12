@@ -866,6 +866,7 @@ gcp.serviceaccount.IAMMember(
 
 # region
 
+# Create workflow
 extraction_workflow = gcp.workflows.Workflow(
     f"debit-{ENV}-flows-extract",
     region=PROJECT_REGION,
@@ -1030,26 +1031,23 @@ gcp.projects.IAMBinding(
     ),
 )
 
-# Grant Cloud Workflow admin permission for Cloud Storage
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-flows-stg-access",
-    bucket=data_bucket.name,
-    role="roles/storage.admin",
-    member=cloud_workflow_service_account_member,
+# Force creation of Cloud SQL service agent
+cloudsql_service_agent = gcp.projects.ServiceIdentity(
+    f"debit-{ENV}-sql-agent",
+    project=PROJECT_ID,
+    service="sqladmin.googleapis.com",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
 
-# Allow Cloud SQL Admin service agent to write export files to the bucket
+# Grant Cloud SQL service agent permission to write to Cloud Storage
 gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sqladmin-export-writer",
+    f"debit-{ENV}-sql-stg-access",
     bucket=data_bucket.name,
     role="roles/storage.objectCreator",
     member=pulumi.Output.concat(
-        "serviceAccount:service-",
-        gcp.organizations.get_project().number,
-        "@gcp-sa-cloud-sql.iam.gserviceaccount.com",
+        "serviceAccount:", cloudsql_service_agent.email
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
