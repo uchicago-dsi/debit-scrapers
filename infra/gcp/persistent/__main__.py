@@ -316,9 +316,12 @@ pulumi.export("extraction_light_image", light_extract_image.image_name)
 
 # region
 
+# CLOUD RUN
+
 # Configure custom service account for Cloud Run
 cloud_run_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-sa-cloudrun",
+    account_id=f"debit-{ENV}-sa-cloudrun",
     display_name="Cloud Run Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -393,9 +396,12 @@ gcp.projects.IAMMember(
     ),
 )
 
+# CLOUD TASKS
+
 # Configure custom service account for Cloud Tasks
 cloud_tasks_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-sa-tasks",
+    account_id=f"debit-{ENV}-sa-tasks",
     display_name="Cloud Tasks Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -408,28 +414,23 @@ cloud_tasks_service_account_member = cloud_tasks_service_account.email.apply(
     lambda email: f"serviceAccount:{email}"
 )
 
-# Configure custom service account for Cloud Scheduler
-cloud_scheduler_service_account = gcp.serviceaccount.Account(
-    f"debit-{ENV}-sa-scheduler",
-    display_name="Cloud Scheduler Service Account",
+# Grant Cloud Run service account permission to impersonate Cloud Tasks service account
+gcp.serviceaccount.IAMMember(
+    f"debit-{ENV}-run-tasks-impersonate",
+    service_account_id=cloud_tasks_service_account.name,
+    role="roles/iam.serviceAccountUser",
+    member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
-pulumi.export(
-    "cloud_scheduler_service_account", cloud_scheduler_service_account.email
-)
 
-# Store reference to service account email
-cloud_scheduler_service_account_member = (
-    cloud_scheduler_service_account.email.apply(
-        lambda email: f"serviceAccount:{email}"
-    )
-)
+# CLOUD WORKFLOWS
 
 # Configure custom service account for Cloud Workflows
 cloud_workflow_service_account = gcp.serviceaccount.Account(
     f"debit-{ENV}-sa-flows",
+    account_id=f"debit-{ENV}-sa-flows",
     display_name="Cloud Workflow Service Account",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
@@ -446,12 +447,73 @@ cloud_workflow_service_account_member = (
     )
 )
 
-# Grant Cloud Run service account permission to impersonate Cloud Tasks service account
-gcp.serviceaccount.IAMMember(
-    f"debit-{ENV}-run-tasks-impersonate",
-    service_account_id=cloud_tasks_service_account.name,
-    role="roles/iam.serviceAccountUser",
-    member=cloud_run_service_account_member,
+# Grant Cloud Workflow permission to invoke Cloud Run Jobs
+gcp.projects.IAMMember(
+    f"debit-{ENV}-flows-run-access",
+    project=PROJECT_ID,
+    role="roles/run.developer",
+    member=cloud_workflow_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant Cloud Workflow permission to invoke Cloud SQL commands
+gcp.projects.IAMMember(
+    f"debit-{ENV}-flows-sql-access",
+    project=PROJECT_ID,
+    role="roles/cloudsql.admin",
+    member=cloud_workflow_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant DB instance's service account object admin permissions on data bucket
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-db-stg-access",
+    bucket=data_bucket.name,
+    role="roles/storage.objectAdmin",
+    member=pulumi.Output.concat(
+        "serviceAccount:", pipeline_db.service_account_email_address
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export(
+    "pipeline_db_service_account_email_address",
+    pipeline_db.service_account_email_address,
+)
+
+# CLOUD SCHEDULER
+
+# Configure custom service account for Cloud Scheduler
+cloud_scheduler_service_account = gcp.serviceaccount.Account(
+    f"debit-{ENV}-sa-scheduler",
+    account_id=f"debit-{ENV}-sa-scheduler",
+    display_name="Cloud Scheduler Service Account",
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export(
+    "cloud_scheduler_service_account", cloud_scheduler_service_account.email
+)
+
+# Store reference to service account email
+cloud_scheduler_service_account_member = (
+    cloud_scheduler_service_account.email.apply(
+        lambda email: f"serviceAccount:{email}"
+    )
+)
+
+# Grant Cloud Scheduler service account permission to invoke Cloud Workflow
+gcp.projects.IAMMember(
+    f"debit-{ENV}-sch-flows-access",
+    project=PROJECT_ID,
+    role="roles/workflows.invoker",
+    member=cloud_scheduler_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -1011,44 +1073,6 @@ extraction_workflow = gcp.workflows.Workflow(
 )
 pulumi.export("extraction_workflow", extraction_workflow.name)
 
-# Grant Cloud Workflow permission to invoke Cloud Run Jobs
-gcp.projects.IAMMember(
-    f"debit-{ENV}-flows-run-access",
-    project=PROJECT_ID,
-    role="roles/run.developer",
-    member=cloud_workflow_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# Grant Cloud Workflow permission to invoke Cloud SQL commands
-gcp.projects.IAMMember(
-    f"debit-{ENV}-flows-sql-access",
-    project=PROJECT_ID,
-    role="roles/cloudsql.admin",
-    member=cloud_workflow_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# Grant DB instance's service account object admin permissions on data bucket
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-db-stg-access",
-    bucket=data_bucket.name,
-    role="roles/storage.objectAdmin",
-    member=pulumi.Output.concat(
-        "serviceAccount:", pipeline_db.service_account_email_address
-    ),
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-pulumi.export(
-    "pipeline_db_service_account_email_address",
-    pipeline_db.service_account_email_address,
-)
 
 # endregion
 
@@ -1058,17 +1082,6 @@ pulumi.export(
 # ------------------------------------------------------------------------
 
 # region
-
-# Grant Cloud Scheduler service account permission to invoke Cloud Workflow
-gcp.projects.IAMMember(
-    f"debit-{ENV}-sch-flows-access",
-    project=PROJECT_ID,
-    role="roles/workflows.invoker",
-    member=cloud_scheduler_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
 
 # Create scheduled job
 scheduled_job = gcp.cloudscheduler.Job(
