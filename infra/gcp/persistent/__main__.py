@@ -1031,100 +1031,16 @@ gcp.projects.IAMBinding(
     ),
 )
 
-# Grant Cloud Workflow permission to interface with Cloud Storage
-gcp.projects.IAMBinding(
-    f"debit-{ENV}-flows-stg-role",
-    project=PROJECT_ID,
-    role="roles/storage.admin",
-    members=[cloud_workflow_service_account_member],
+# Grant DB instance's service account object admin permissions on data bucket
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-db-stg-access",
+    bucket=data_bucket.name,
+    role="roles/storage.objectAdmin",
+    member=pulumi.Output.concat(
+        "serviceAccount:", pipeline_db.service_account_email_address
+    ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# Grant Cloud Workflow permission to interface with Cloud Storage
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-flows-stg-access",
-    bucket=data_bucket.name,
-    role="roles/storage.admin",
-    member=cloud_workflow_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# FIXED: Get the Cloud SQL service agent email properly
-# The Cloud SQL service agent has a specific format
-cloudsql_service_agent_email = (
-    f"service-{PROJECT_ID}@gcp-sa-cloud-sql.iam.gserviceaccount.com"
-)
-
-# Alternative: Force creation of Cloud SQL service agent (keep this as backup)
-cloudsql_service_agent = gcp.projects.ServiceIdentity(
-    f"debit-{ENV}-sql-agent",
-    project=PROJECT_ID,
-    service="sqladmin.googleapis.com",
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-pulumi.export("cloudsql_service_agent", cloudsql_service_agent.email)
-
-# FIXED: Grant Cloud SQL service agent proper permissions using the standard email format
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sql-stg-access-standard",
-    bucket=data_bucket.name,
-    role="roles/storage.objectCreator",
-    member=pulumi.Output.concat(
-        "serviceAccount:", cloudsql_service_agent.email
-    ),
-    opts=pulumi.ResourceOptions(
-        depends_on=[*enabled_services, cloudsql_service_agent],
-        provider=gcp_provider,
-    ),
-)
-
-# FIXED: Also grant using the service agent from the API (backup)
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sql-stg-access-api",
-    bucket=data_bucket.name,
-    role="roles/storage.objectCreator",
-    member=pulumi.Output.concat(
-        "serviceAccount:", cloudsql_service_agent.email
-    ),
-    opts=pulumi.ResourceOptions(
-        depends_on=[*enabled_services, cloudsql_service_agent],
-        provider=gcp_provider,
-    ),
-)
-
-# ADDITIONAL FIX: Grant storage.legacyBucketWriter role as well
-# This is sometimes needed for Cloud SQL exports
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sql-stg-legacy-access",
-    bucket=data_bucket.name,
-    role="roles/storage.legacyBucketWriter",
-    member=pulumi.Output.concat(
-        "serviceAccount:", cloudsql_service_agent.email
-    ),
-    opts=pulumi.ResourceOptions(
-        depends_on=[*enabled_services, cloudsql_service_agent],
-        provider=gcp_provider,
-    ),
-)
-
-# ADDITIONAL FIX: Make sure the data bucket allows the Cloud SQL service agent
-# Sometimes bucket-level permissions are needed in addition to project-level
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-sql-bucket-admin",
-    bucket=data_bucket.name,
-    role="roles/storage.admin",
-    member=pulumi.Output.concat(
-        "serviceAccount:", cloudsql_service_agent.email
-    ),
-    opts=pulumi.ResourceOptions(
-        depends_on=[*enabled_services, cloudsql_service_agent],
-        provider=gcp_provider,
     ),
 )
 
