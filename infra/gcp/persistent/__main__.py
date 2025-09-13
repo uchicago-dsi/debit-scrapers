@@ -931,10 +931,10 @@ extraction_workflow = gcp.workflows.Workflow(
                         body:
                             exportContext:
                                 csvExportOptions:
-                                    selectQuery: "SELECT * FROM extraction_job"
-                                    escapeCharacter: 22
-                                    quoteCharacter: 22
-                                    fieldsTerminatedBy: 09
+                                    selectQuery: "SELECT * FROM public.extraction_job"
+                                    escapeCharacter: "22"
+                                    quoteCharacter: "22"
+                                    fieldsTerminatedBy: "09"
                                 databases:
                                     - {database_name}
                                 fileType: CSV
@@ -949,10 +949,10 @@ extraction_workflow = gcp.workflows.Workflow(
                         body:
                             exportContext:
                                 csvExportOptions:
-                                    selectQuery: "SELECT * FROM extraction_task"
-                                    escapeCharacter: 22
-                                    quoteCharacter: 22
-                                    fieldsTerminatedBy: 09
+                                    selectQuery: "SELECT * FROM public.extraction_task"
+                                    escapeCharacter: "22"
+                                    quoteCharacter: "22"
+                                    fieldsTerminatedBy: "09"
                                 databases:
                                     - {database_name}
                                 fileType: CSV
@@ -967,10 +967,10 @@ extraction_workflow = gcp.workflows.Workflow(
                         body:
                             exportContext:
                                 csvExportOptions:
-                                    selectQuery: "SELECT * FROM extracted_projects"
-                                    escapeCharacter: 22
-                                    quoteCharacter: 22
-                                    fieldsTerminatedBy: 09
+                                    selectQuery: "SELECT * FROM public.extracted_project"
+                                    escapeCharacter: "22"
+                                    quoteCharacter: "22"
+                                    fieldsTerminatedBy: "09"
                                 databases:
                                     - {database_name}
                                 fileType: CSV
