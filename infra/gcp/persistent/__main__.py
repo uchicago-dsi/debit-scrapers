@@ -969,7 +969,11 @@ extraction_workflow = gcp.workflows.Workflow(
             steps:
                 - getDate:
                     assign:
-                        - date: ${{if(len(sys.get_env("DATE_OVERRIDE")) > 0, sys.get_env("DATE_OVERRIDE"), text.substring(time.format(sys.now()), 0, 10))}}  
+                        - executionId: ${{sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}}
+                        - date: ${{if(len(sys.get_env("DATE_OVERRIDE")) > 0, sys.get_env("DATE_OVERRIDE"), text.substring(time.format(sys.now()), 0, 10))}}
+                        - bucketUrl: {data_bucket_url}
+                        - parentDir: ${{bucketUrl + "/extraction/" + date + "/"}}
+                        - fileId: ${{date + "-" + executionId}}
                 - startDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
@@ -1012,7 +1016,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extraction-job.tsv.gz"}}
+                                uri: ${{parentDir + "_jobs_" + executionId + ".tsv.gz" }}
                     result: jobOperation
                 - exportTasks:
                     call: googleapis.sqladmin.v1.instances.export
@@ -1030,7 +1034,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extraction-tasks.tsv.gz"}}
+                                uri: ${{parentDir + "_tasks_" + executionId + ".tsv.gz" }}
                     result: jobOperation
                 - exportProjects:
                     call: googleapis.sqladmin.v1.instances.export
@@ -1048,7 +1052,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extracted-projects.tsv.gz"}}
+                                uri: ${{parentDir + "_projects_" + executionId + ".tsv.gz" }}
                     result: projectOperation
                 - stopDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
