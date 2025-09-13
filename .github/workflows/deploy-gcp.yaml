@@ -91,6 +91,29 @@ jobs:
         working-directory: ${{ env.INFRA_DIR }}
         run: uv sync --locked
 
+      - name: Refresh infrastructure
+        uses: pulumi/actions@v6
+        with:
+          command: refresh
+          stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
+          work-dir: ${{ env.INFRA_DIR }}
+          cloud-url: ${{ env.BUCKET_URL}}
+        env:
+          DJANGO_PORT: ${{ vars.DJANGO_PORT }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          ENV: ${{ vars.ENV }}
+          EXTRACTION_PIPELINE_MAX_RETRIES: ${{ vars.EXTRACTION_PIPELINE_MAX_RETRIES }}
+          EXTRACTION_PIPELINE_MAX_WAIT: ${{ vars.EXTRACTION_PIPELINE_MAX_WAIT }}
+          EXTRACTION_PIPELINE_POLLING_INTERVAL: ${{ vars.EXTRACTION_PIPELINE_POLLING_INTERVAL }}
+          EXTRACTION_PIPELINE_SCHEDULE: ${{ vars.EXTRACTION_PIPELINE_SCHEDULE }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_PROJECT_REGION: ${{ vars.GCP_PROJECT_REGION }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          PULUMI_CONFIG_PASSPHRASE: ""
+
       - name: Deploy infrastructure
         uses: pulumi/actions@v6
         with:
