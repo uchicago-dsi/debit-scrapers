@@ -39,7 +39,7 @@ gcp_provider = gcp.Provider(
     default_labels={
         "project": "debit",
         "organization": "idi",
-        "environment": "test",
+        "environment": ENV,
         "managed-by": "uchicago-dsi",
         "automation": "pulumi",
     },
@@ -350,11 +350,11 @@ for idx, secret_id in enumerate(
     )
 
 # Grant account access to Cloud SQL
-gcp.projects.IAMBinding(
+gcp.projects.IAMMember(
     f"debit-{ENV}-run-sql-access",
     project=PROJECT_ID,
     role="roles/cloudsql.client",
-    members=[cloud_run_service_account_member],
+    member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -372,11 +372,22 @@ gcp.storage.BucketIAMMember(
 )
 
 # Grant account access to Cloud Tasks
-gcp.projects.IAMBinding(
+gcp.projects.IAMMember(
     f"debit-{ENV}-run-tsk-access",
     project=PROJECT_ID,
     role="roles/cloudtasks.admin",
-    members=[cloud_run_service_account_member],
+    member=cloud_run_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant account access to Artifact Registry
+gcp.projects.IAMMember(
+    f"debit-{ENV}-run-reg-access",
+    project=PROJECT_ID,
+    role="roles/artifactregistry.reader",
+    member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -546,8 +557,8 @@ shared_template_container_args = dict(
     ports=gcp.cloudrunv2.ServiceTemplateContainerPortsArgs(
         container_port=DJANGO_PORT,
     ),
-    startup_probe=gcp.cloudrun.ServiceTemplateSpecContainerStartupProbeArgs(
-        http_get=gcp.cloudrun.ServiceTemplateSpecContainerStartupProbeHttpGetArgs(
+    startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+        http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
             path="/",
             port=DJANGO_PORT,
         ),
@@ -1001,22 +1012,22 @@ extraction_workflow = gcp.workflows.Workflow(
 pulumi.export("extraction_workflow", extraction_workflow.name)
 
 # Grant Cloud Workflow permission to invoke Cloud Run Jobs
-gcp.projects.IAMBinding(
+gcp.projects.IAMMember(
     f"debit-{ENV}-flows-run-access",
     project=PROJECT_ID,
     role="roles/run.developer",
-    members=[cloud_workflow_service_account_member],
+    member=cloud_workflow_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
 
 # Grant Cloud Workflow permission to invoke Cloud SQL commands
-gcp.projects.IAMBinding(
+gcp.projects.IAMMember(
     f"debit-{ENV}-flows-sql-access",
     project=PROJECT_ID,
     role="roles/cloudsql.admin",
-    members=[cloud_workflow_service_account_member],
+    member=cloud_workflow_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -1049,11 +1060,11 @@ pulumi.export(
 # region
 
 # Grant Cloud Scheduler service account permission to invoke Cloud Workflow
-gcp.projects.IAMBinding(
+gcp.projects.IAMMember(
     f"debit-{ENV}-sch-flows-access",
     project=PROJECT_ID,
     role="roles/workflows.invoker",
-    members=[cloud_scheduler_service_account_member],
+    member=cloud_scheduler_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
