@@ -980,7 +980,7 @@ extraction_workflow = gcp.workflows.Workflow(
                 - stopDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
-                        instance: {cloud_sql_instance_fid}
+                        instance: {cloud_sql_instance_id}
                         project: {project_id}
                         body:
                             settings:
