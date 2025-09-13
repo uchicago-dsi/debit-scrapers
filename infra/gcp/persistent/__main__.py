@@ -1034,6 +1034,10 @@ gcp.storage.BucketIAMMember(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
+pulumi.export(
+    "pipeline_db_service_account_email_address",
+    pipeline_db.service_account_email_address,
+)
 
 # endregion
 
