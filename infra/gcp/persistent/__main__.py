@@ -478,7 +478,7 @@ gcp.storage.BucketIAMMember(
         "serviceAccount:", pipeline_db.service_account_email_address
     ),
     opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
+        depends_on=[*enabled_services, pipeline_db], provider=gcp_provider
     ),
 )
 pulumi.export(
