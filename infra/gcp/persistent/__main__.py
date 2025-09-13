@@ -939,7 +939,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-job.tsv
+                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extraction-job.tsv.gz"}}
                     result: jobOperation
                 - exportTasks:
                     call: googleapis.sqladmin.v1.instances.export
@@ -957,7 +957,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extraction-tasks.tsv
+                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extraction-tasks.tsv.gz"}}
                     result: jobOperation
                 - exportProjects:
                     call: googleapis.sqladmin.v1.instances.export
@@ -975,12 +975,12 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: {data_bucket_url}/extraction/${{date}}/${{date}}-extracted-projects.tsv
+                                uri: {data_bucket_url}${{"/extraction/" + date + "/" + date + "-extracted-projects.tsv.gz"}}
                     result: projectOperation
                 - stopDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
-                        instance: {cloud_sql_instance_id}
+                        instance: {cloud_sql_instance_fid}
                         project: {project_id}
                         body:
                             settings:
