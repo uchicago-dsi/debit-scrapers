@@ -1068,13 +1068,16 @@ cloudsql_service_agent = gcp.projects.ServiceIdentity(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
+pulumi.export("cloudsql_service_agent", cloudsql_service_agent.email)
 
 # FIXED: Grant Cloud SQL service agent proper permissions using the standard email format
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-sql-stg-access-standard",
     bucket=data_bucket.name,
     role="roles/storage.objectCreator",
-    member=f"serviceAccount:{cloudsql_service_agent_email}",
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloudsql_service_agent.email
+    ),
     opts=pulumi.ResourceOptions(
         depends_on=[*enabled_services, cloudsql_service_agent],
         provider=gcp_provider,
@@ -1101,7 +1104,9 @@ gcp.storage.BucketIAMMember(
     f"debit-{ENV}-sql-stg-legacy-access",
     bucket=data_bucket.name,
     role="roles/storage.legacyBucketWriter",
-    member=f"serviceAccount:{cloudsql_service_agent_email}",
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloudsql_service_agent.email
+    ),
     opts=pulumi.ResourceOptions(
         depends_on=[*enabled_services, cloudsql_service_agent],
         provider=gcp_provider,
@@ -1114,7 +1119,9 @@ gcp.storage.BucketIAMMember(
     f"debit-{ENV}-sql-bucket-admin",
     bucket=data_bucket.name,
     role="roles/storage.admin",
-    member=f"serviceAccount:{cloudsql_service_agent_email}",
+    member=pulumi.Output.concat(
+        "serviceAccount:", cloudsql_service_agent.email
+    ),
     opts=pulumi.ResourceOptions(
         depends_on=[*enabled_services, cloudsql_service_agent],
         provider=gcp_provider,
