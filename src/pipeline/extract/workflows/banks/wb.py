@@ -1,6 +1,11 @@
 """World Bank (WB)
 
 Data is retrieved by downloading an Excel file of project records.
+
+TODO: Thousands of older projects erroneously report commitments of $0.00.
+The actual investment figures are embedded within attached documents
+that have not yet been processed by the World Bank. Additional steps are
+needed to fetch these documents and use LLMs to extract the investment amounts.
 """
 
 # Standard library imports
@@ -226,7 +231,7 @@ class WbDownloadWorkflow(ProjectDownloadWorkflow):
                 "curr_total_commitment"
             ]
             df["total_amount_currency"] = df["total_amount"].apply(
-                lambda val: "USD" if val else ""
+                lambda val: "USD" if val is not None else ""
             )
 
             # Create countries column

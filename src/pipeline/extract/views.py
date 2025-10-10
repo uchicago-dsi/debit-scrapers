@@ -5,8 +5,8 @@ import json
 
 # Third-party imports
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
 # Application imports
@@ -24,7 +24,7 @@ queue_client = TaskQueueFactory.get()
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class GoogleCloudTasksView(View):
+class ExtractionWorkflowView(View):
     """An API for processing data extraction tasks on Google Cloud Platform."""
 
     def post(self, request: HttpRequest) -> JsonResponse:
@@ -37,7 +37,7 @@ class GoogleCloudTasksView(View):
             request: The HTTP request object.
 
         Returns:
-            A JSON response indicating the status of the task processing.
+            The HTTP response.
         """
         # Log receipt of request
         logger.info(f"New request received: {json.loads(request.body)}")

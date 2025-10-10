@@ -116,19 +116,28 @@ class KfwDownloadWorkflow(ProjectDownloadWorkflow):
                     The list of affiliates.
                 """
                 principal_map = {
-                    "BMZ": "German Federal Ministry for Economic Coperation and Development (BMZ)",
-                    "BMWK": "German Federal Ministry for Economic Affairs and Energy (BMWK)",
                     "AA": "German Federal Foreign Office (AA)",
-                    "BMUV": "German Federal Ministry for the Environment, Nature Conservation, Nuclear Safety and Consumer Protection (BMUV)",
                     "BMF": "German Federal Ministry of Finance (BMF)",
+                    "BMUKN": "German Federal Ministry for the Environment, Climate Action, Nature Conservation and Nuclear Safety (BMUKN)",
+                    "BMUV": "German Federal Ministry for the Environment, Nature Conservation, Nuclear Safety and Consumer Protection (BMUV)",
+                    "BMWE": "German Federal Ministry for Economic Affairs and Energy (BMWE)",
+                    "BMWK": "German Federal Ministry for Economic Affairs and Climate Action (BMWK)",
+                    "BMZ": "German Federal Ministry for Economic Coperation and Development (BMZ)",
                 }
-                return "|".join(
-                    [
+
+                if not row["principal"] or row["principal"] == "-":
+                    affiliates = [
+                        *row["projekttraegers"],
+                        *row["kofinanzpartners"],
+                    ]
+                else:
+                    affiliates = [
                         *row["projekttraegers"],
                         *row["kofinanzpartners"],
                         principal_map[row["principal"]],
                     ]
-                )
+
+                return "|".join(affiliates)
 
             df["affiliates"] = df.apply(get_affiliates, axis=1)
 

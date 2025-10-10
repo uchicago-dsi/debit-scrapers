@@ -112,15 +112,23 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 lists of development projects.
 
         Returns:
-            A tuple consisting of the list of scraped project page
-                URLs and list of project records.
+            A two-item tuple consisting of a list of scraped
+                project page URLs and a list of project records.
         """
         # Retrieve search results page
-        response = self._data_request_client.get(
+        r = self._data_request_client.get(
             url, use_random_user_agent=True, use_random_delay=True
         )
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        if not r.ok:
+            raise RuntimeError(
+                f"Error fetching search results page "
+                f"from BIO. The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Parse webpage HTML
+        soup = BeautifulSoup(r.text, "html.parser")
 
         # Scrape page for both project data and project page URLs
         project_page_urls = []
@@ -146,25 +154,33 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
 
             # Extract project countries
             try:
-                country_div = div.find(class_="icon--location").find_parent()
-                country_arr = [c.strip() for c in country_div.text.split(",")]
+                country_p = div.find(class_="icon--location").find_parent()
+                country_arr = [c.strip() for c in country_p.text.split(",")]
                 countries = "|".join(country_arr)
             except AttributeError:
                 countries = ""
 
-            # Extract loan amount (EUR)
+            # Extract total amount
             try:
-                loan_amount_str = (
-                    div.find(class_="icon--euro").find_parent().text.strip()
+                amount_span = div.find(class_=["icon--euro", "icon--dollar"])
+                amount_str = amount_span.find_parent().text.strip()
+                amount_match = re.search(r"([\d,\.]+)", amount_str).groups(0)[
+                    0
+                ]
+                amount_value = float(amount_match.replace(",", ""))
+                amount_currency = (
+                    "EUR" if "icon--euro" in amount_span["class"] else "USD"
                 )
-                loan_amount_match = re.search(
-                    r"([\d,\.]+)", loan_amount_str
-                ).groups(0)[0]
-                loan_amount_value = float(loan_amount_match.replace(",", ""))
-                loan_amount_currency = "EUR"
             except AttributeError:
-                loan_amount_value = None
-                loan_amount_currency = ""
+                amount_value = None
+                amount_currency = ""
+
+            # Extract finance types
+            try:
+                finance_type_p = div.find(class_="icon--types").find_parent()
+                finance_types = finance_type_p.text.strip()
+            except AttributeError:
+                finance_types = ""
 
             # Append results
             project_page_urls.append(url)
@@ -172,10 +188,14 @@ class BioResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
                 {
                     "countries": countries,
                     "date_effective": effective_utc,
+                    "finance_types": finance_types,
                     "name": name,
                     "source": settings.BIO_ABBREVIATION.upper(),
-                    "total_amount": loan_amount_value,
-                    "total_amount_currency": loan_amount_currency,
+                    "total_amount": amount_value,
+                    "total_amount_currency": amount_currency,
+                    "total_amount_usd": (
+                        None if amount_currency != "USD" else amount_value
+                    ),
                     "url": url,
                 }
             )

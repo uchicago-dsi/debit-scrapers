@@ -66,6 +66,7 @@ class DatabaseClient:
                 "date_signed",
                 "date_under_appraisal",
                 "finance_types",
+                "fiscal_year_effective",
                 "name",
                 "number",
                 "sectors",

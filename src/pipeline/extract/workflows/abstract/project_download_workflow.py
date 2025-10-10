@@ -59,12 +59,6 @@ class ProjectDownloadWorkflow(BaseWorkflow):
         self._db_client = db_client
 
     @property
-    @abstractmethod
-    def download_url(self) -> str:
-        """The URL containing all project records."""
-        raise NotImplementedError
-
-    @property
     def next_workflow(self) -> str:
         """The name of the workflow to execute, if any."""
         return None

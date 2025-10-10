@@ -172,6 +172,11 @@ class ExtractedProject(models.Model):
     finance_types = models.TextField(blank=True, default="")
     """The funding types used for the project. Pipe-delimited."""
 
+    fiscal_year_effective = models.TextField(blank=True, default="")
+    """The fiscal year in which the project funding became effective.
+    Formatted as YYYY.
+    """
+
     name = models.TextField(blank=True, default="")
     """The project name, if any."""
 

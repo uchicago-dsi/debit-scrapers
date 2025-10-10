@@ -180,8 +180,12 @@ class EibResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
             under_appraisal_utc = approved_utc = signed_utc = ""
 
         # Determine loan amount
-        proposed_amt = float(proposed_amt) if proposed_amt else None
-        financed_amt = float(financed_amt) if financed_amt else None
+        proposed_amt = (
+            float(proposed_amt) if proposed_amt is not None else None
+        )
+        financed_amt = (
+            float(financed_amt) if financed_amt is not None else None
+        )
         amount = (
             proposed_amt
             if status in ("Approved", "Under appraisal")

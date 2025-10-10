@@ -8,3 +8,7 @@
     - https://www.eib.org/page-provider/projects/list?pageNumber=0&itemPerPage=500&pageable=true&sortColumn=id
     - https://www.eib.org/page-provider/projects/list?pageNumber=17&itemPerPage=500&pageable=true&sortColumn=id
     - https://www.eib.org/page-provider/projects/list?pageNumber=32&itemPerPage=500&pageable=true&sortColumn=id
+- undp:
+    - http://open.undp.org/download/iati_xml/Belarus_Republic_of_projects.xml
+    - http://open.undp.org/download/iati_xml/Gambia_projects.xml
+    - https://open.undp.org/download/iati_xml/Niue_projects.xml

@@ -47,8 +47,9 @@ from .pro import (
     ProSeedUrlsWorkflow,
 )
 from .undp import (
-    UndpProjectPartialDownloadWorkflow,
     UndpProjectPartialScrapeWorkflow,
+    UndpResultsMultiScrapeWorkflow,
+    UndpSeedUrlsWorkflow,
 )
 from .wb import WbDownloadWorkflow
 
@@ -87,7 +88,8 @@ __all__ = [
     "ProProjectScrapeWorkflow",
     "ProResultsScrapeWorkflow",
     "ProSeedUrlsWorkflow",
-    "UndpProjectPartialDownloadWorkflow",
     "UndpProjectPartialScrapeWorkflow",
+    "UndpResultsMultiScrapeWorkflow",
+    "UndpSeedUrlsWorkflow",
     "WbDownloadWorkflow",
 ]

@@ -11,6 +11,7 @@ import re
 # Third-party imports
 import numpy as np
 import pandas as pd
+from bs4 import BeautifulSoup
 from django.conf import settings
 
 # Application imports
@@ -142,13 +143,20 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
         """Queries an API endpoint for a page of projects.
 
         Args:
-            url: The project download URL.
+            url: The project page URL.
 
         Returns:
             The project records.
         """
+        # Parse URL for request payload
+        try:
+            payload = url.split("?payload=")[1]
+        except IndexError:
+            raise RuntimeError(
+                f'The API URL was not structured as expected: "{payload}".'
+            ) from None
+
         # Fetch page of project records
-        payload = url.split("?payload=")[1]
         r = self._data_request_client.post(
             url=self.search_api_base_url,
             json={"projectNumberSearch": payload},
@@ -181,7 +189,12 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             ) from None
 
         # Read records into Pandas DataFrame
-        df = pd.DataFrame(projects)
+        try:
+            df = pd.DataFrame(projects)
+        except Exception as e:
+            raise RuntimeError(
+                f"Error parsing IFC project records into DataFrame. {e}"
+            ) from None
 
         # Filter records to keep investments only
         doc_type_mapping = {
@@ -202,7 +215,6 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "project_number": "number",
             "project_name": "name",
             "status_description": "status",
-            "investment": "total_amount",
             "industry_description": "sectors",
             "country_description": "countries",
             "company_name": "affiliates",
@@ -268,11 +280,11 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             else:
                 return 1
 
-        df["multiplier"] = df["total_amount"].apply(get_multiplier)
-        df["total_amount_currency"] = df["total_amount"].str.extract(
+        df["multiplier"] = df["investment"].apply(get_multiplier)
+        df["total_amount_currency"] = df["investment"].str.extract(
             r"\((.*?)\)"
         )
-        df["total_amount"] = df["total_amount"].str.extract("(.*?) million")
+        df["total_amount"] = df["investment"].str.extract(r"^([\d.]+)")
         df["total_amount"] = pd.to_numeric(df["total_amount"], errors="coerce")
         df["total_amount"] = df["total_amount"] * df["multiplier"]
         df["total_amount_usd"] = df.apply(
@@ -283,6 +295,48 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             ),
             axis=1,
         )
+
+        # Extract finance types
+        def get_finance_types(investment: str) -> str:
+            """Extracts a project's financing type(s).
+
+            Args:
+                investment: The project's investment details.
+
+            Returns:
+                The finance type(s).
+            """
+            # Return empty string if no investment details given
+            if not investment or investment is np.nan:
+                return ""
+
+            # If investment details given as HTML, parse cell values
+            if "<table>" in investment:
+                investments = []
+                soup = BeautifulSoup(investment, "html.parser")
+                cells = soup.find("table").find_all("td")
+                for i in range(0, len(cells), 2):
+                    category = cells[i].text.strip()
+                    amount = cells[i + 1].text.strip()
+                    if amount:
+                        investments.append(category)
+                return "|".join(investments)
+
+            # Otherwise, parse investment details as regular expression
+            investment_type_regex = [
+                ("Risk Management", r"Risk Management([\d.]+)Guarantee"),
+                ("Guarantee", r"Guarantee([\d.]+)Loan"),
+                ("Loan", r"Loan([\d.]+)Equity"),
+                ("Equity", r"Equity([\d.]+)\*"),
+            ]
+            investment_types = []
+            for inv_type, regex in investment_type_regex:
+                if re.search(regex, investment):
+                    return investment_types.append(inv_type)
+
+            return "|".join(investment_types)
+
+        df["finance_types"] = df["investment"].apply(get_finance_types)
 
         # Parse date columns
         def parse_date(val: str) -> str:
@@ -337,6 +391,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "date_approved",
             "date_disclosed",
             "date_planned_effective",
+            "finance_types",
             "name",
             "number",
             "sectors",
@@ -359,6 +414,7 @@ class IfcProjectScrapeWorkflow(ProjectScrapeWorkflow):
             "date_approved",
             "date_disclosed",
             "date_planned_effective",
+            "finance_types",
             "name",
             "sectors",
             "status",

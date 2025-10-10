@@ -74,6 +74,9 @@ class ProjectUpsertRequest:
     finance_types: str = ""
     """The funding types used for the project. Pipe-delimited."""
 
+    fiscal_year_effective: str = ""
+    """The fiscal year in which the project funding became effective. Formatted as YYYY."""
+
     name: str = ""
     """The project name."""
 

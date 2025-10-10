@@ -1,11 +1,15 @@
 """Inter-American Development Bank (IDB)
 
-Data is retrieved by requesting an authentication token from IDB's backend
-and then using that token to request an Excel file containing project records.
+Data is retrieved through two different strategies and then combined.
+In the first, a workflow requests an authentication token from IDB's backend
+and then uses that token to fetch an Excel file containing project records.
+In the second strategy, a set of workflows are used to crawl IDB's website
+and scrape project webpages for data.
 
-No filters on website:
-Records in Excel file not in search results and (seemingly vice versa)
-Website only shows projects with an approval date
+This two-pronged approach is necessary because, to the best of the author's
+knowledge, some records and fields found in the Excel file are not present on
+the website and vice versa, and the website only shows projects with an
+approval date rather than the full historical record.
 """
 
 # Standard library imports

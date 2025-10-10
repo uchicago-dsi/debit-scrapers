@@ -1,33 +1,93 @@
 """United Nations Development Programme (UNDP)
 
-Data is retrieved by downloading a zip file containing project data and
+Data is retrieved by downloading a ZIP file containing project data and
 then building URLs to project API endpoints, which are queried to gather
 remaining details on financing dates and amounts.
 """
 
 # Standard library imports
 import json
-from collections.abc import Iterator
+import re
 from datetime import datetime
 from logging import Logger
 
 # Third-party imports
-import pandas as pd
 from django.conf import settings
 from lxml import etree
-from stream_unzip import stream_unzip
 
 # Application imports
 from common.http import DataRequestClient
 from common.tasks import MessageQueueClient
 from extract.dal import DatabaseClient
 from extract.workflows.abstract import (
-    ProjectPartialDownloadWorkflow,
     ProjectPartialScrapeWorkflow,
+    ResultsMultiScrapeWorkflow,
+    SeedUrlsWorkflow,
 )
 
 
-class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
+class UndpSeedUrlsWorkflow(SeedUrlsWorkflow):
+    """Retrieves the first set of UNDP URLs to scrape."""
+
+    @property
+    def iati_datasets_url(self) -> int:
+        """The URL to the list of all IATI datasets."""
+        return "https://bulk-data.iatistandard.org/datasets-minimal"
+
+    @property
+    def next_workflow(self) -> str:
+        """The next workflow to execute."""
+        return settings.RESULTS_PAGE_MULTISCRAPE_WORKFLOW
+
+    @property
+    def undp_iati_dataset_regex(self) -> str:
+        """A Regex pattern to identify UNDP IATI activity dataset URLs."""
+        return r"http[s]*:\/\/open\.undp\.org\/download\/iati_xml\/[A-Za-z_()'\- ]+_projects\.xml"
+
+    def generate_seed_urls(self) -> list[str]:
+        """Generates the first set of URLs to scrape.
+
+        Args:
+            `None`
+
+        Returns:
+            A list of URLs to the UNDP IATI activity datasets.
+        """
+        # Fetch IATI datasets
+        r = self._data_request_client.get(
+            url=self.iati_datasets_url,
+            use_random_user_agent=True,
+            use_random_delay=True,
+            min_random_delay=1,
+            max_random_delay=3,
+        )
+
+        # Raise error if request failed
+        if not r.ok:
+            raise RuntimeError(
+                "Error fetching data from UNDP. "
+                f"The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Parse IATI datasets
+        try:
+            datasets = r.json()
+        except Exception as e:
+            raise RuntimeError(
+                f"Error parsing UNDP IATI datasets into JSON. {e}"
+            ) from None
+
+        # Return URLs
+        return [
+            entry["source_url"]
+            for entry in datasets["datasets"]
+            if re.match(self.undp_iati_dataset_regex, entry["source_url"])
+        ]
+
+
+class UndpResultsMultiScrapeWorkflow(ResultsMultiScrapeWorkflow):
     """Downloads and parses a ZIP file containing project URLs and data."""
 
     def __init__(
@@ -37,7 +97,7 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         db_client: DatabaseClient,
         logger: Logger,
     ) -> None:
-        """Initializes a new instance of a `UndpResultsMultiScrapeWorkflow`.
+        """Initializes a new instance of a `UndpProjectPartialDownloadWorkflow`.
 
         Args:
             data_request_client: A client for making HTTP GET requests
@@ -69,11 +129,6 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         )
 
     @property
-    def download_url(self) -> str:
-        """A link to directly download project results as a ZIP file."""
-        return "https://api.open.undp.org/api/download/undp-project-data.zip"
-
-    @property
     def project_details_api_base_url(self) -> str:
         """The base URL for an UNDP project's details, accessible via API."""
         return "https://api.open.undp.org/api/projects/{}.json"
@@ -96,24 +151,52 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             loaded = json.load(f)
             return {entry["code"]: entry["name"] for entry in loaded["data"]}
 
-    def _process_file(self, file: Iterator[bytes]) -> list[dict]:
-        """Parses an IATI file for project records.
+    def scrape_results_page(self, url: str) -> tuple[list[str], list[dict]]:
+        """Fetches and processes an XML file containing UNDP projects.
+
+        Retrieves the file hosted at the given URL, scrapes partial project
+        data, and generates URLs to gather the remaining project information.
+        The data follows the IATI (International Aid Transparency Initiative)
+        standard, so mapping codes are required.
+
+        References:
+        - https://iatistandard.org/en/iati-standard/203/codelists/
 
         Args:
-            file: A stream of data.
+            url: The file URL.
 
         Returns:
-            The partial project records.
+            A two-item tuple consisting of the project URLs
+                and partial project records.
         """
-        # Load raw bytes into lxml parser
-        byte_str = b"".join(file)
-        root = etree.fromstring(byte_str)
+        # Fetch XML file
+        r = self._data_request_client.get(
+            url,
+            use_random_user_agent=True,
+            use_random_delay=True,
+            min_random_delay=1,
+            max_random_delay=3,
+        )
 
-        # Initialize extracted project records
+        # Raise error if request failed
+        if not r.ok:
+            raise RuntimeError(
+                "Error fetching IATI dataset for UNDP. "
+                f"The request failed with a "
+                f'"{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
+        # Otherwise, load raw bytes into lxml parser
+        root = etree.fromstring(r.content)
+
+        # Initialize extracted project records and next URLs to crawl
         projects = []
+        next_urls = []
 
         # Process each development project activity within file
         for activity in root.getchildren():
+
             # Skip child node if not a project activity
             if (
                 activity.tag != "iati-activity"
@@ -149,6 +232,8 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
                     for narrative in activity.findall(
                         "participating-org/narrative"
                     )
+                    if narrative.text.upper()
+                    not in ("UNDP", "UNITED NATIONS DEVELOPMENT PROGRAMME")
                 }
             )
 
@@ -177,60 +262,10 @@ class UndpProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
                 }
             )
 
-        return projects
+            # Update next URLs to crawl
+            next_urls.append(self.project_details_api_base_url.format(number))
 
-    def get_projects(self) -> pd.DataFrame:
-        """Fetches and processes a zipped IATI file containing UNDP projects.
-
-        Streams the ZIP file hosted at the given URL while simultaneously
-        unzipping the contents, scraping partial project data, and generating
-        URLs to gather the remaining project information. Extracted files of
-        relevance are in XML format and processed one at a time. The data
-        follows the IATI (International Aid Transparency Initiative) standard,
-        so mapping codes are required.
-
-        References:
-        - https://iatistandard.org/en/iati-standard/203/codelists/
-
-        Args:
-            url: The download link.
-
-        Returns:
-            The partial project records.
-        """
-        # Initialize generated URLs and extracted project records
-        projects = []
-
-        # Perform a streaming unzip of UNDP ZIP file and process each XML file
-        for file_name_bytes, _, unzipped_chunks in stream_unzip(
-            self._data_request_client.stream_chunks(self.download_url)
-        ):
-            file_name = file_name_bytes.decode("utf-8")
-            if file_name.endswith("_projects.xml"):
-                file_projects = self._process_file(unzipped_chunks)
-                projects.extend(file_projects)
-            else:
-                for _ in unzipped_chunks:
-                    pass
-
-        return pd.DataFrame(projects)
-
-    def clean_projects(
-        self, df: pd.DataFrame
-    ) -> tuple[list[str], pd.DataFrame]:
-        """Cleans project records and parses the next set of URLs to crawl.
-
-        Args:
-            df: The raw project records.
-
-        Returns:
-            A two-item tuple consisting of the new URLs and cleaned records.
-        """
-        urls = [
-            self.project_details_api_base_url.format(number)
-            for number in df["number"].tolist()
-        ]
-        return urls, df
+        return next_urls, projects
 
 
 class UndpProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):

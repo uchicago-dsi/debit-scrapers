@@ -31,7 +31,7 @@ class StarterWorkflowRegistry:
         settings.MIGA_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
         settings.NBIM_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
         settings.PRO_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
-        settings.UNDP_ABBREVIATION: settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW,
+        settings.UNDP_ABBREVIATION: settings.SEED_URLS_WORKFLOW,
         settings.WB_ABBREVIATION: settings.PROJECT_DOWNLOAD_WORKFLOW,
     }
 
@@ -128,7 +128,8 @@ class WorkflowClassRegistry:
         f"{settings.PRO_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.ProSeedUrlsWorkflow,
         f"{settings.PRO_ABBREVIATION}-{settings.RESULTS_PAGE_WORKFLOW}": banks.ProResultsScrapeWorkflow,
         f"{settings.PRO_ABBREVIATION}-{settings.PROJECT_PAGE_WORKFLOW}": banks.ProProjectScrapeWorkflow,
-        f"{settings.UNDP_ABBREVIATION}-{settings.PROJECT_PARTIAL_DOWNLOAD_WORKFLOW}": banks.UndpProjectPartialDownloadWorkflow,
+        f"{settings.UNDP_ABBREVIATION}-{settings.SEED_URLS_WORKFLOW}": banks.UndpSeedUrlsWorkflow,
+        f"{settings.UNDP_ABBREVIATION}-{settings.RESULTS_PAGE_MULTISCRAPE_WORKFLOW}": banks.UndpResultsMultiScrapeWorkflow,
         f"{settings.UNDP_ABBREVIATION}-{settings.PROJECT_PARTIAL_PAGE_WORKFLOW}": banks.UndpProjectPartialScrapeWorkflow,
         f"{settings.WB_ABBREVIATION}-{settings.PROJECT_DOWNLOAD_WORKFLOW}": banks.WbDownloadWorkflow,
     }

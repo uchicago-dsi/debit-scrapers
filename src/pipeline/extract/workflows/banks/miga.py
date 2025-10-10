@@ -245,6 +245,20 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
             else:
                 disclosed_utc = ""
 
+            # Extract and format board approval date
+            raw_approved_utc = safe_nav(
+                lambda s: s.find(
+                    "div", class_="field--name-field-board-date"
+                ).find("div", class_="field--item")
+            )
+            if raw_approved_utc:
+                parsed_approved_utc = datetime.strptime(
+                    raw_approved_utc, "%B %d, %Y"
+                )
+                approved_utc = parsed_approved_utc.strftime("%Y-%m-%d")
+            else:
+                approved_utc = ""
+
             # Extract fiscal year
             fiscal_year = safe_nav(
                 lambda s: s.find(
@@ -343,8 +357,10 @@ class MigaProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 {
                     "affiliates": affiliates,
                     "countries": countries,
+                    "date_approved": approved_utc,
                     "date_disclosed": disclosed_utc,
                     "date_effective": fiscal_year,
+                    "finance_types": "Guarantee",
                     "name": name,
                     "number": number,
                     "sectors": sectors,

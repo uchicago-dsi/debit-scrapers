@@ -197,6 +197,13 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         except (AttributeError, TypeError):
             signed_utc = ""
 
+        # Extract project finance types from table
+        try:
+            raw_finance_types = extract_table_value("Financing tool")
+            finance_types = "|".join(raw_finance_types.split(", "))
+        except (AttributeError, TypeError):
+            finance_types = ""
+
         # Extract project loan amount from table
         try:
             raw_loan_amount = extract_table_value("Financing amount (Euro)")
@@ -240,10 +247,12 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 "affiliates": companies,
                 "countries": countries,
                 "date_signed": signed_utc,
+                "finance_types": finance_types,
                 "name": name,
                 "number": number,
                 "sectors": sectors,
                 "source": settings.PRO_ABBREVIATION.upper(),
+                "status": "Signed" if signed_utc else "",
                 "total_amount": loan_amount,
                 "total_amount_currency": loan_amount_currency,
                 "url": url,

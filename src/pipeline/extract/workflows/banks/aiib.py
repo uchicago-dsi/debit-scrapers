@@ -186,9 +186,16 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
         approved_utc = parse_date(approved)
         closed_original_utc = parse_date(closed)
 
+        # Fall back to data in URL if missing dates
+        if not disclosed_utc and "proposed" in url:
+            disclosed_utc = url.split("/")[-3]
+
+        if not approved_utc and "approved" in url:
+            approved_utc = url.split("/")[-3]
+
         # Parse loan amount field to retrieve value and currency type
         if not proposed_funding_amount and not approved_funding:
-            loan_amount = 0
+            loan_amount = None
             loan_amount_currency = ""
         else:
             loan_str = (
@@ -216,6 +223,9 @@ class AiibProjectScrapeWorkflow(ProjectScrapeWorkflow):
                 "status": status,
                 "total_amount": loan_amount,
                 "total_amount_currency": loan_amount_currency,
+                "total_amount_usd": (
+                    loan_amount if loan_amount_currency == "USD" else None
+                ),
                 "url": url,
             }
         ]

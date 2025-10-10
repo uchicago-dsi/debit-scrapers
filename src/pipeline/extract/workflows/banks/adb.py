@@ -58,6 +58,14 @@ class AdbSeedUrlsWorkflow(SeedUrlsWorkflow):
             max_random_delay=3,
         )
 
+        # Raise error if request failed
+        if not r.ok:
+            raise RuntimeError(
+                f"Error fetching ADB IATI datasets. The request "
+                f'failed with a "{r.status_code} - {r.reason}" status '
+                f'code and the message "{r.text}".'
+            )
+
         # Parse IATI datasets
         try:
             datasets = r.json()
@@ -83,7 +91,7 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         db_client: DatabaseClient,
         logger: Logger,
     ) -> None:
-        """Initializes a new instance of a `UndpResultsMultiScrapeWorkflow`.
+        """Initializes a new instance of a `AdbProjectScrapeWorkflow`.
 
         Args:
             data_request_client: A client for making HTTP GET requests
@@ -217,13 +225,18 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
         # Parse total amount
         for transaction in activity.findall("transaction"):
             if transaction.find("transaction-type").get("code") == "2":
-                project["total_amount"] = project["total_amount_usd"] = float(
-                    transaction.find("value").text
-                )
+                project["total_amount"] = float(transaction.find("value").text)
                 break
 
         # Parse currency
         project["total_amount_currency"] = activity.get("default-currency")
+
+        # Parse total amount in USD
+        project["total_amount_usd"] = (
+            project["total_amount"]
+            if project["total_amount_currency"] == "USD"
+            else None
+        )
 
         # Construct URL to project page
         project["url"] = self.project_page_base_url.format(

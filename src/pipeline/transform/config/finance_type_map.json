@@ -1,0 +1,54 @@
+{
+    "Equity": [
+        "common equity",
+        "equities",
+        "equity",
+        "equity investments"
+    ],
+    "Fixed Income": [
+        "fixed-income"
+    ],
+    "Grant": [
+        "grant",
+        "grant financing product",
+        "investment grants",
+        "standard grant"
+    ],
+    "Guarantee": [
+        "cops ig",
+        "garantie",
+        "guarantee",
+        "guarantees/insurance",
+        "tpl ig"
+    ],
+    "Insurance": [
+        "insurance"
+    ],
+    "Investment Funds": [
+        "investment funds"
+    ],
+    "Mezzanine Loan": [
+        "mezzaninedarlehen"
+    ],
+    "Real Estate": [
+        "real-estate"
+    ],
+    "Standard Loan": [
+        "debt",
+        "di",
+        "entwicklungskredit",
+        "förderkredit",
+        "loan",
+        "loan operation",
+        "standard loan"
+    ],
+    "Technical Assistance": [
+        "pd",
+        "project development",
+        "technical assistance",
+        "technical cooperation"
+    ],
+    "Trust Interest": [
+        "treuhandbeteiligung"
+    ]
+}

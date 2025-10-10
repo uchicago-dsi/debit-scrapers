@@ -5,13 +5,13 @@ from django.contrib import admin
 from django.urls import path
 
 # Application imports
-from extract.views import GoogleCloudTasksView
+from extract.views import ExtractionWorkflowView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(
         "api/v1/gcp/tasks",
-        GoogleCloudTasksView.as_view(),
+        ExtractionWorkflowView.as_view(),
         name="google-cloud-tasks",
     ),
 ]

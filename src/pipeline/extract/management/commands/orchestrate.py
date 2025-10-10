@@ -314,7 +314,7 @@ class Command(BaseCommand):
             "of whether they have previously been attempted.",
         )
 
-    def handle(self, *args, **options) -> None:
+    def handle(self, **options) -> None:
         """Orchestrates tasks for a data extraction job.
 
         A task is a single unit of work to perform on a URL. Tasks are placed
@@ -334,9 +334,8 @@ class Command(BaseCommand):
         reached a terminal state or the configured timeout has been reached.
 
         Args:
-            *args: Positional arguments.
-
-            **options: Keyword arguments that include:
+            **options: A dictionary of the command's positional
+                and optional arguments. Includes:
 
                 `date`: The date to process data for, in YYYY-MM-DD format.
                     Defaults to today/the current date.

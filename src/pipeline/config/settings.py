@@ -16,8 +16,10 @@ DEBUG = os.environ["ENV"].lower() == "dev"
 # FILE PATHS
 # ________________________________________________________________________
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOCAL_STORAGE_DIR = BASE_DIR / "data"
+# Base directory
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+# Data extraction
 EXTRACT_DIR = BASE_DIR / "extract"
 EXTRACT_CONFIG_DIR = EXTRACT_DIR / "config"
 EXTRACT_TEST_DIR = EXTRACT_DIR / "tests"
@@ -37,6 +39,21 @@ IATI_ACTIVITY_STATUS_FPATH = (
 )
 IDB_DOWNLOAD_OPTIONS_FPATH = EXTRACT_CONFIG_DIR / "idb_download_options.json"
 USER_AGENT_HEADERS_FPATH = EXTRACT_CONFIG_DIR / "user_agent_headers.json"
+
+# Data transformation
+TRANSFORM_DIR = BASE_DIR / "transform"
+TRANSFORM_CONFIG_DIR = TRANSFORM_DIR / "config"
+TRANSFORM_OUTPUT_DIR = TRANSFORM_DIR / "output"
+
+COUNTRY_MAP_FPATH = TRANSFORM_CONFIG_DIR / "country_map.json"
+CURRENCY_CROSSWALK_FPATH = TRANSFORM_CONFIG_DIR / "currency_crosswalk.json"
+CURRENCY_MAP_FPATH = TRANSFORM_CONFIG_DIR / "currency_map.json"
+FINANCE_TYPE_MAP_FPATH = TRANSFORM_CONFIG_DIR / "finance_type_map.json"
+SECTOR_MAP_FPATH = TRANSFORM_CONFIG_DIR / "sector_map.json"
+STATUS_MAP_FPATH = TRANSFORM_CONFIG_DIR / "status_map.json"
+
+# Cloud providers
+GOOGLE_CLOUD_URI_SCHEME = "gs://"
 
 # ________________________________________________________________________
 # INSTALLED APPS
@@ -216,9 +233,9 @@ WB_ABBREVIATION = "wb"
 # GOOGLE CLOUD PLATFORM
 # ________________________________________________________________________
 
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-GOOGLE_CLOUD_PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT_ID"]
-GOOGLE_CLOUD_PROJECT_REGION = os.environ["GOOGLE_CLOUD_PROJECT_REGION"]
+GOOGLE_CLOUD_PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID", "")
+GOOGLE_CLOUD_PROJECT_REGION = os.getenv("GOOGLE_CLOUD_PROJECT_REGION", "")
 
 # endregion

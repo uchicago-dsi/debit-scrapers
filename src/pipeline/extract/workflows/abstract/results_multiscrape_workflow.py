@@ -78,7 +78,7 @@ class ResultsMultiScrapeWorkflow(BaseWorkflow):
             url: The URL for the results page.
 
         Returns:
-            A tuple consisting of the project page URLs
+            A two-item tuple consisting of the project URLs
                 and partial project records.
         """
         raise NotImplementedError
