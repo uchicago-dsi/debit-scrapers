@@ -1,8 +1,8 @@
-# Clean Raw
+# Transform
 
-A package used to clean scraped development bank project records.
+A service for cleaning scraped development bank project records.
 
-Fetches a compressed CSV file of records from a local or remote data store. Then transforms the data by applying standard casing and formatting; standardizing categorical values for countries, sectors, and project statuses across banks; transforming delimited columns to lists; and performing nominal conversions from local currencies to U.S. dollars for the project financing year.
+Consists of a single package, `clean_raw`, that fetches a compressed CSV file of records from a local or remote data store and then transforms the data by applying standard casing and formatting; standardizing categorical values for countries, sectors, and project statuses across banks; transforming delimited columns to lists; and performing nominal conversions from local currencies to U.S. dollars for the project financing year.
 
 ## Implementation Details
 

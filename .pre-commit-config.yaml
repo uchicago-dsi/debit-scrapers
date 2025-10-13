@@ -19,10 +19,20 @@ repos:
     hooks:
       - id: ruff-check
         args: ["--verbose"]
-        files: ./src/pyproject.toml
+        files: ^services/extract/src/pipeline/
       - id: ruff-format
         args: ["--verbose"]
-        files: ./src/pyproject.toml
+        files: ^services/extract/src/pipeline/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.11
+    hooks:
+      - id: ruff-check
+        args: ["--verbose"]
+        files: ^services/transform/src/clean_raw/
+      - id: ruff-format
+        args: ["--verbose"]
+        files: ^services/transform/src/clean_raw/
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2

@@ -11,11 +11,12 @@ container_input_dir := "app/input"
 output_dir := $(current_abs_path)output
 container_output_dir := "app/output"
 
-# Define additional additional Docker variables
+# Define additional Docker variables
 project_name := $(current_dir)
 env_path := $(current_abs_path).env.dev
 input_file := extracted.tsv.gz
 
+# Define commands
 build-clean:
 	cd $(current_abs_path)
 	docker build -t $(project_name) .
