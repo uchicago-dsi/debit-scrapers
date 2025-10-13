@@ -1,4 +1,4 @@
-"""Generic module for converting nominal currency amounts."""
+"""Module for converting nominal currency amounts."""
 
 # Standard library imports
 import json
@@ -7,10 +7,10 @@ from typing import Literal
 # Third-party imports
 import numpy as np
 import pandas as pd
-from django.conf import settings
+import requests
 
 # Application imports
-from common.http import DataRequestClient
+from clean_raw.constants import CURRENCY_COUNTRY_MAP_FPATH
 
 
 class CurrencyConverter:
@@ -25,11 +25,8 @@ class CurrencyConverter:
         Returns:
             `None`
         """
-        # Initialize data request client
-        self._data_request_client = DataRequestClient()
-
         # Load crosswalk from currency code to representative country code
-        self._currency_crosswalk = self._load_currency_crosswalk()
+        self._currency_country_map = self._load_currency_county_map()
 
         # Build lookup for annual rates
         annual_rates = self._load_exchange_rates(frequency="A")
@@ -178,16 +175,17 @@ class CurrencyConverter:
         euro_adopt_rate = euro_rates_df[str(self.euro_start_year)].iloc[0]
         return float(euro_adopt_rate)
 
-    def _load_currency_crosswalk(self) -> dict:
-        """Loads a currency crosswalk from a JSON file.
+    def _load_currency_county_map(self) -> dict:
+        """Loads a mapping between currency codes and country codes.
 
         Args:
             `None`
 
         Returns:
-            A dictionary mapping currency codes to their names.
+            A dictionary mapping currency codes to the country codes
+                of the countries where the currencies originated.
         """
-        with open(settings.CURRENCY_CROSSWALK_FPATH, encoding="utf-8") as f:
+        with open(CURRENCY_COUNTRY_MAP_FPATH, encoding="utf-8") as f:
             return json.load(f)
 
     def _load_exchange_rates(
@@ -212,7 +210,7 @@ class CurrencyConverter:
         """
         # Fetch data from the public API
         url = f"https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.STA/ER/4.0.1/*.USD_XDC.PA_RT.{frequency}"
-        r = self._data_request_client.get(url, timeout=60)
+        r = requests.get(url, timeout=60)
         if not r.ok:
             raise RuntimeError(
                 "Error fetching IMF exchange rate data. "
@@ -260,7 +258,7 @@ class CurrencyConverter:
             return 1.0
 
         # Terminate if currency is not registered in crosswalk
-        country_code = self._currency_crosswalk.get(currency)
+        country_code = self._currency_country_map.get(currency)
         if not country_code:
             return None
 
@@ -275,3 +273,97 @@ class CurrencyConverter:
             rate = self._monthly_lookup.get(lookup_key)
 
         return rate
+
+
+def convert_currencies(df: pd.DataFrame) -> pd.DataFrame:
+    """Converts development project nominal currencies to USD.
+
+    Args:
+        df: The input DataFrame. Expected to have the columns
+            "total_amount", "total_amount_currency", "date_effective",
+            "date_planned_effective", "date_signed", "date_approved",
+            "date_disclosed", and "fiscal_year_effective".
+
+    Returns:
+        A new DataFrame with debt amounts converted to USD.
+            Additional columns will include: (1) `currency_year`,
+            the year used for the currency conversion; and (2)
+            `rate_to_usd`, the exchange rate used for the conversion;
+            and (3) `est_total_amount_usd`, the converted amount.
+    """
+    # Copy input DataFrame
+    copy = df.copy()
+
+    # Initialize currency converter
+    converter = CurrencyConverter()
+
+    # Define local function to determine year for currency conversion
+    def get_conversion_year(row: pd.Series) -> str:
+        """Determines the year to use for currency conversion.
+
+        Args:
+            row: A row of data from the DataFrame.
+
+        Returns:
+            The year, formatted as YYYY, or an empty string
+                if the year cannot be determined.
+        """
+        if row["date_signed"]:
+            return row["date_signed"][:4]
+        elif row["date_approved"]:
+            return row["date_approved"][:4]
+        elif row["date_disclosed"]:
+            return row["date_disclosed"][:4]
+        elif row["date_under_appraisal"][:4]:
+            return row["date_under_appraisal"][:4]
+        elif row["date_effective"]:
+            return row["date_effective"][:4]
+        elif row["fiscal_year_effective"]:
+            return row["fiscal_year_effective"]
+        elif row["date_planned_effective"]:
+            return row["date_planned_effective"][:4]
+        else:
+            return ""
+
+    # Calculate year for each project
+    copy["conversion_year"] = copy.apply(get_conversion_year, axis=1)
+
+    # Fetch exchange rate to USD for project year and currency
+    copy["conversion_rate"] = copy.apply(
+        lambda row: converter.get_usd_exchange_rate(
+            currency=row["total_amount_currency"],
+            year=row["conversion_year"],
+        ),
+        axis=1,
+    )
+
+    # Replace NaN values prior to conversion
+    for col in ("conversion_rate", "total_amount"):
+        copy[col] = copy[col].replace({np.nan: None})
+
+    # Define local function to perform conversion
+    def convert(row: pd.Series) -> int | None:
+        """Converts nominal currency to USD.
+
+        Args:
+            row: A row of data from the DataFrame.
+
+        Returns:
+            The exchange rate to USD, or `None`
+                if the rate cannot be determined.
+        """
+        if row["total_amount"] is None or row["conversion_rate"] is None:
+            return None
+        return int(row["total_amount"] * row["conversion_rate"])
+
+    # Convert debt amounts to USD in same year
+    copy["converted_amount_usd"] = copy.apply(convert, axis=1).astype(
+        pd.Int64Dtype()
+    )
+
+    # Replace any NA values resulting from conversion
+    copy["converted_amount_usd"] = copy["converted_amount_usd"].replace(
+        {pd.NA: None}
+    )
+
+    return copy

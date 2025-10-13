@@ -1,0 +1,20 @@
+[project]
+name = "transform"
+version = "0.1.0"
+description = "Standardizes scraped development bank project data values and performs nominal currency conversions."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastparquet>=2024.11.0",
+    "numpy>=2.3.3",
+    "pandas>=2.3.3",
+    "pyarrow>=21.0.0",
+    "requests>=2.32.5",
+    "smart-open>=7.3.1",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["config/*.json"]

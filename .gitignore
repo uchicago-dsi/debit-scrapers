@@ -99,5 +99,7 @@ start-proxy.sh
 
 # Data
 **/tests/results
+**/input/
+**/output/
 
 ### EOF
