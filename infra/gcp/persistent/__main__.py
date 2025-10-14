@@ -379,9 +379,7 @@ pulumi.export("extraction_light_image", light_extract_image.image_name)
 project = gcp.organizations.get_project()
 
 # Build reference to default storage service account
-storage_service_account_member = project.number.apply(
-    lambda num: f"serviceAccount:service-{num}@gs-project-accounts.iam.gserviceaccount.com"
-)
+storage_service_account_member = f"serviceAccount:service-{project.number}@gs-project-accounts.iam.gserviceaccount.com"
 
 # Grant access to PubSub
 gcp.projects.IAMMember(
