@@ -184,6 +184,7 @@ extract_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-extract-bucket",
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
+    force_destroy=ENV == "t",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -195,6 +196,7 @@ transform_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-transform-bucket",
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
+    force_destroy=ENV == "t",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
