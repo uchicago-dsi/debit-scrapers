@@ -9,29 +9,37 @@ on:
 env:
   BUCKET_REGION: ${{ vars.GCP_PROJECT_REGION }}
   BUCKET_URL: gs://${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-cloud-storage-${{ vars.GCP_PULUMI_BUCKET_NAME }}
+  ENV: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   INFRA_DIR: ./infra/gcp/persistent
-  SRC_DIR: ./src
+  EXTRACT_DIR: ./services/extract
+  TRANSFORM_DIR: ./services/transform
 
 jobs:
   lint:
     name: Lint and Format
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run Ruff
+      - name: Scan Extract Directory
         uses: astral-sh/ruff-action@v3
         with:
           args: check
-          src: ${{ env.SRC_DIR}}
+          src: ${{ env.EXTRACT_DIR }}
+
+      - name: Scan Transform Directory
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check
+          src: ${{ env.TRANFORM_DIR }}
 
   scan:
     name: Scan for Secrets
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -46,7 +54,7 @@ jobs:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
     needs: [lint, scan]
-    environment: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
+    environment: ${{ env.ENV }}
     permissions:
       id-token: write
       contents: read
@@ -95,7 +103,7 @@ jobs:
         uses: pulumi/actions@v6
         with:
           command: refresh
-          stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
+          stack-name: ${{ env.ENV }}
           work-dir: ${{ env.INFRA_DIR }}
           cloud-url: ${{ env.BUCKET_URL}}
         env:
@@ -119,7 +127,7 @@ jobs:
         uses: pulumi/actions@v6
         with:
           command: up
-          stack-name: ${{ github.ref_name == 'main' && 'prod' || 'test' }}
+          stack-name: ${{ env.ENV }}
           work-dir: ${{ env.INFRA_DIR }}
           cloud-url: ${{ env.BUCKET_URL}}
           upsert: true
