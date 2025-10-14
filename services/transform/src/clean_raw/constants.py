@@ -23,4 +23,4 @@ GOOGLE_CLOUD_URI_SCHEME = "gs://"
 
 # Environment
 ENV = "ENV"
-PROD = "PROD"
+PROD = "prod"

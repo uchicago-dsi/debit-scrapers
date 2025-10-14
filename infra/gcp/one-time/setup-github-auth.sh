@@ -225,6 +225,7 @@ declare -A ROLES=(
     ["roles/cloudtasks.admin"]="Cloud Tasks Admin"
     ["roles/cloudtasks.queueAdmin"]="Cloud Tasks Queue Admin"
     ["roles/compute.admin"]="Compute Admin"
+    ["roles/eventarc.admin"]="Eventarc Admin"
     ["roles/resourcemanager.projectIamAdmin"]="Project IAM Admin"
     ["roles/secretmanager.admin"]="Secret Manager Admin"
     ["roles/iam.serviceAccountAdmin"]="Service Account Admin"

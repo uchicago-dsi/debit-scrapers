@@ -169,9 +169,9 @@ LOGGING = {
 # ORCHESTRATION
 # ________________________________________________________________________
 
-MAX_TASK_RETRIES = int(os.environ["MAX_TASK_RETRIES"])
-MAX_WAIT_IN_MINUTES = int(os.environ["MAX_WAIT_IN_MINUTES"])
-POLLING_INTERVAL_IN_MINUTES = int(os.environ["POLLING_INTERVAL_IN_MINUTES"])
+MAX_TASK_RETRIES = int(os.getenv("MAX_TASK_RETRIES", 3))
+MAX_WAIT_IN_MINUTES = int(os.getenv("MAX_WAIT_IN_MINUTES", 720))
+POLLING_INTERVAL_IN_MINUTES = int(os.getenv("POLLING_INTERVAL_IN_MINUTES", 10))
 
 # ________________________________________________________________________
 # WORKFLOW TYPES
@@ -212,9 +212,8 @@ WB_ABBREVIATION = "wb"
 # GOOGLE CLOUD PLATFORM
 # ________________________________________________________________________
 
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
-
-GOOGLE_CLOUD_PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT_ID"]
-GOOGLE_CLOUD_PROJECT_REGION = os.environ["GOOGLE_CLOUD_PROJECT_REGION"]
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GOOGLE_CLOUD_PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+GOOGLE_CLOUD_PROJECT_REGION = os.getenv("GOOGLE_CLOUD_PROJECT_REGION")
 
 # endregion

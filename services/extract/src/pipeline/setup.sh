@@ -19,6 +19,7 @@ force_restart=false
 run_server=false
 development=false
 date=""
+truncate=false
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --migrate) migrate=true; shift ;;
@@ -35,6 +36,7 @@ while [[ "$#" -gt 0 ]]; do
                 exit 1
             fi
             ;;
+        --truncate) truncate=true; shift ;;
         *) echo "Unknown command line parameter received: $1"; exit 1 ;;
     esac
 done
@@ -47,6 +49,8 @@ if $migrate ; then
 
     echo "Applying migrations to database."
     yes | uv run python manage.py migrate
+
+    echo "Database setup completed successfully."
 fi
 
 # Extract latest development project data if indicated
@@ -62,8 +66,11 @@ if $extract_data ; then
     eval $orchestrator_cmd
 fi
 
-# Log successful end of database setup
-echo "Database setup completed successfully."
+# Truncate database if indicated
+if $truncate ; then
+    echo "Truncating database."
+    uv run python manage.py truncate
+fi
 
 # Exit if not running server
 if ! $run_server ; then

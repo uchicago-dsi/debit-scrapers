@@ -13,6 +13,7 @@ from constants import (
     DJANGO_SECRET_KEY,
     DJANGO_SETTINGS_MODULE,
     ENV,
+    EXTRACT_DIR,
     EXTRACTION_PIPELINE_MAX_RETRIES,
     EXTRACTION_PIPELINE_MAX_WAIT,
     EXTRACTION_PIPELINE_POLLING_INTERVAL,
@@ -23,8 +24,8 @@ from constants import (
     POSTGRES_USER,
     PROJECT_ID,
     PROJECT_REGION,
+    TRANSFORM_DIR,
     QUEUE_CONFIG,
-    SRC_DIR,
 )
 
 # ------------------------------------------------------------------------
@@ -66,6 +67,8 @@ required_services = [
     "workflows.googleapis.com",
     "cloudscheduler.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "pubsub.googleapis.com",
+    "eventarc.googleapis.com",
 ]
 
 enabled_services = [
@@ -177,16 +180,27 @@ pulumi.export("gemini_api_key", gemini_api_key.name)
 
 # region
 
-data_bucket = gcp.storage.Bucket(
-    f"debit-{ENV}-bucket-data",
+extract_data_bucket = gcp.storage.Bucket(
+    f"debit-{ENV}-extract-bucket",
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
-pulumi.export("data_bucket_name", data_bucket.name)
-pulumi.export("data_bucket_url", data_bucket.url)
+pulumi.export("extract_data_bucket_name", extract_data_bucket.name)
+pulumi.export("extract_data_bucket_url", extract_data_bucket.url)
+
+transform_data_bucket = gcp.storage.Bucket(
+    f"debit-{ENV}-transform-bucket",
+    location=PROJECT_REGION,
+    uniform_bucket_level_access=True,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("transform_data_bucket_name", transform_data_bucket.name)
+pulumi.export("transform_data_bucket_url", transform_data_bucket.url)
 
 # endregion
 
@@ -246,6 +260,24 @@ extraction_repo_heavy = gcp.artifactregistry.Repository(
 )
 pulumi.export("extraction_repo_heavy", extraction_repo_heavy.name)
 
+# Build and push "heavy" image
+heavy_extract_image = docker.Image(
+    f"debit-{ENV}-image-extract-heavy",
+    image_name=extraction_repo_heavy.repository_id.apply(
+        lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/heavy"
+    ),
+    build=docker.DockerBuildArgs(
+        context=EXTRACT_DIR.as_posix(),
+        dockerfile=(EXTRACT_DIR / "Dockerfile.heavy").as_posix(),
+        platform="linux/amd64",
+    ),
+    registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("extraction_heavy_image", heavy_extract_image.image_name)
+
 # Create a Docker image repository for data extraction without a browser
 extraction_repo_light = gcp.artifactregistry.Repository(
     f"debit-{ENV}-repo-extract-light",
@@ -271,24 +303,6 @@ extraction_repo_light = gcp.artifactregistry.Repository(
 )
 pulumi.export("extraction_repo_light", extraction_repo_light.name)
 
-# Build and push "heavy" image
-heavy_extract_image = docker.Image(
-    f"debit-{ENV}-image-extract-heavy",
-    image_name=extraction_repo_heavy.repository_id.apply(
-        lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/heavy"
-    ),
-    build=docker.DockerBuildArgs(
-        context=SRC_DIR.as_posix(),
-        dockerfile=(SRC_DIR / "Dockerfile.heavy").as_posix(),
-        platform="linux/amd64",
-    ),
-    registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-pulumi.export("extraction_heavy_image", heavy_extract_image.image_name)
-
 # Build and push "light" image
 light_extract_image = docker.Image(
     f"debit-{ENV}-image-extract-light",
@@ -296,8 +310,51 @@ light_extract_image = docker.Image(
         lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/light"
     ),
     build=docker.DockerBuildArgs(
-        context=SRC_DIR.as_posix(),
-        dockerfile=(SRC_DIR / "Dockerfile.light").as_posix(),
+        context=EXTRACT_DIR.as_posix(),
+        dockerfile=(EXTRACT_DIR / "Dockerfile.light").as_posix(),
+        platform="linux/amd64",
+    ),
+    registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("extraction_light_image", light_extract_image.image_name)
+
+# Create a Docker image repository for data cleaning
+clean_repo = gcp.artifactregistry.Repository(
+    f"debit-{ENV}-repo-clean",
+    repository_id=f"debit-{ENV}-repo-clean",
+    location=PROJECT_REGION,
+    description="Holds Docker images for cleaning scraped project data.",
+    cleanup_policies=[
+        gcp.artifactregistry.RepositoryCleanupPolicyArgs(
+            id="keep-clean-latest",
+            action="KEEP",
+            most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
+                keep_count=1, package_name_prefixes=[]
+            ),
+        ),
+    ],
+    format="DOCKER",
+    docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
+        immutable_tags=False
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("clean_repo", clean_repo.name)
+
+# Build and push data cleaning image
+clean_image = docker.Image(
+    f"debit-{ENV}-image-clean",
+    image_name=clean_repo.repository_id.apply(
+        lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/cleaning-pipeline"
+    ),
+    build=docker.DockerBuildArgs(
+        context=TRANSFORM_DIR.as_posix(),
+        dockerfile=(TRANSFORM_DIR / "Dockerfile").as_posix(),
         platform="linux/amd64",
     ),
     registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
@@ -315,6 +372,27 @@ pulumi.export("extraction_light_image", light_extract_image.image_name)
 # ------------------------------------------------------------------------
 
 # region
+
+# CLOUD STORAGE
+
+# Get reference to current cloud project
+project = gcp.organizations.get_project()
+
+# Build reference to default storage service account
+storage_service_account_member = project.number.apply(
+    lambda num: f"serviceAccount:service-{num}@gs-project-accounts.iam.gserviceaccount.com"
+)
+
+# Grant access to PubSub
+gcp.projects.IAMMember(
+    f"debit-{ENV}-stg-pub-access",
+    project=PROJECT_ID,
+    role="roles/pubsub.publisher",
+    member=storage_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
 
 # CLOUD RUN
 
@@ -366,7 +444,7 @@ gcp.projects.IAMMember(
 # Grant account access to Cloud Storage bucket
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-run-stg-access",
-    bucket=data_bucket.name,
+    bucket=extract_data_bucket.name,
     role="roles/storage.objectAdmin",
     member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
@@ -472,7 +550,7 @@ gcp.projects.IAMMember(
 # Grant DB instance's service account object admin permissions on data bucket
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-db-stg-access",
-    bucket=data_bucket.name,
+    bucket=extract_data_bucket.name,
     role="roles/storage.objectAdmin",
     member=pulumi.Output.concat(
         "serviceAccount:", pipeline_db.service_account_email_address
@@ -514,6 +592,46 @@ gcp.projects.IAMMember(
     project=PROJECT_ID,
     role="roles/workflows.invoker",
     member=cloud_scheduler_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# EVENTARC
+
+# Create a service account for Eventarc
+eventarc_service_account = gcp.serviceaccount.Account(
+    f"debit-{ENV}-sa-eventarc",
+    account_id=f"debit-{ENV}-sa-eventarc",
+    display_name="Eventarc Trigger Service Account",
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("eventarc_service_account", eventarc_service_account.email)
+
+# Store reference to service account email
+eventarc_service_account_member = eventarc_service_account.email.apply(
+    lambda email: f"serviceAccount:{email}"
+)
+
+# Grant the service account permission to invoke workflows
+gcp.projects.IAMMember(
+    f"debit-{ENV}-arc-flows-access",
+    project=PROJECT_ID,
+    role="roles/workflows.invoker",
+    member=eventarc_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant Eventarc event receiver role
+gcp.projects.IAMMember(
+    f"debit-{ENV}-arc-receiver",
+    project=PROJECT_ID,
+    role="roles/eventarc.eventReceiver",
+    member=eventarc_service_account_member,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -696,7 +814,7 @@ light_cloud_run_service = gcp.cloudrunv2.Service(
 pulumi.export("light_cloud_run_service", light_cloud_run_service.name)
 
 # Create Cloud Run Job serving as orchestrator
-orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
+orchestrate_cloud_run_job = gcp.cloudrunv2.Job(
     f"debit-{ENV}-runjob-extract",
     deletion_protection=False,
     launch_stage="BETA",
@@ -815,7 +933,133 @@ orchestrator_cloud_run_job = gcp.cloudrunv2.Job(
         depends_on=enabled_services, provider=gcp_provider
     ),
 )
-pulumi.export("orchestrator_cloud_run_job", orchestrator_cloud_run_job.name)
+pulumi.export("orchestrate_cloud_run_job", orchestrate_cloud_run_job.name)
+
+# Create Cloud Run Job for data truncation
+truncate_cloud_run_job = gcp.cloudrunv2.Job(
+    f"debit-{ENV}-runjob-truncate",
+    deletion_protection=False,
+    launch_stage="BETA",
+    location=PROJECT_REGION,
+    template=gcp.cloudrunv2.JobTemplateArgs(
+        parallelism=1,
+        template=gcp.cloudrunv2.JobTemplateTemplateArgs(
+            containers=[
+                gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
+                    args=["bash", "setup.sh", "--truncate"],
+                    envs=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_ALLOWED_HOST",
+                            value=DJANGO_ALLOWED_HOST,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_SECRET_KEY",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=django_secret.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="DJANGO_SETTINGS_MODULE",
+                            value=DJANGO_SETTINGS_MODULE,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="ENV",
+                            value="prod" if ENV == "p" else "test",
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_DB",
+                            value=POSTGRES_DB,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_HOST",
+                            value=pipeline_db.connection_name.apply(
+                                lambda name: f"/cloudsql/{name}"
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_PASSWORD",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=postgres_password.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="POSTGRES_USER",
+                            value=POSTGRES_USER,
+                        ),
+                    ],
+                    image=light_extract_image.image_name,
+                    ports=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerPortArgs(
+                            container_port=DJANGO_PORT
+                        )
+                    ],
+                    resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
+                        limits={"memory": "512Mi", "cpu": "1"}
+                    ),
+                    volume_mounts=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerVolumeMountArgs(
+                            mount_path="/cloudsql",
+                            name="cloudsql",
+                        )
+                    ],
+                )
+            ],
+            service_account=cloud_run_service_account.email,
+            timeout="86400s",
+            volumes=[
+                gcp.cloudrunv2.JobTemplateTemplateVolumeArgs(
+                    name="cloudsql",
+                    cloud_sql_instance=gcp.cloudrunv2.JobTemplateTemplateVolumeCloudSqlInstanceArgs(
+                        instances=[pipeline_db.connection_name],
+                    ),
+                )
+            ],
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("truncate_cloud_run_job", truncate_cloud_run_job.name)
+
+# Create Cloud Run Job for data cleaning
+clean_cloud_run_job = gcp.cloudrunv2.Job(
+    f"debit-{ENV}-runjob-clean",
+    deletion_protection=False,
+    launch_stage="BETA",
+    location=PROJECT_REGION,
+    template=gcp.cloudrunv2.JobTemplateArgs(
+        parallelism=1,
+        template=gcp.cloudrunv2.JobTemplateTemplateArgs(
+            containers=[
+                gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
+                    envs=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="ENV",
+                            value="prod" if ENV == "p" else "test",
+                        )
+                    ],
+                    image=light_extract_image.image_name,
+                    resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
+                        limits={"memory": "512Mi", "cpu": "1"}
+                    ),
+                )
+            ],
+            service_account=cloud_run_service_account.email,
+            timeout="86400s",
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("clean_cloud_run_job", clean_cloud_run_job.name)
 
 # endregion
 
@@ -939,7 +1183,7 @@ gcp.serviceaccount.IAMMember(
 
 # region
 
-# Create workflow
+# Create extraction workflow
 extraction_workflow = gcp.workflows.Workflow(
     f"debit-{ENV}-flows-extract",
     region=PROJECT_REGION,
@@ -967,13 +1211,16 @@ extraction_workflow = gcp.workflows.Workflow(
         #
         main:
             steps:
-                - getDate:
+                - initializeVariables:
                     assign:
                         - executionId: ${{sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}}
-                        - date: ${{if(len(sys.get_env("DATE_OVERRIDE")) > 0, sys.get_env("DATE_OVERRIDE"), text.substring(time.format(sys.now()), 0, 10))}}
+                        - date: ${{if(len(sys.get_env("DATE_OVERRIDE", "")) > 0, sys.get_env("DATE_OVERRIDE"), text.substring(time.format(sys.now()), 0, 10))}}
                         - bucketUrl: {data_bucket_url}
-                        - parentDir: ${{bucketUrl + "/extraction/" + date + "/"}}
+                        - extractDir: ${{bucketUrl + "/extraction/" + date + "/"}}
                         - fileId: ${{date + "-" + executionId}}
+                        - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
+                        - orchestrateJobFullName: ${{jobPrefix + "{orchestrate_job_name}"}}
+                        - truncateJobFullName: ${{jobPrefix + "{truncate_job_name}"}}
                 - startDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
@@ -986,7 +1233,7 @@ extraction_workflow = gcp.workflows.Workflow(
                 - extractData:
                     call: googleapis.run.v2.projects.locations.jobs.run
                     args:
-                        name: projects/{project_id}/locations/{project_region}/jobs/{job_name}
+                        name: ${{orchestrateJobFullName}}
                         body:
                             overrides:
                                 containerOverrides:
@@ -1016,7 +1263,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: ${{parentDir + "_jobs_" + executionId + ".tsv.gz" }}
+                                uri: ${{extractDir + "_jobs_" + executionId + ".tsv.gz" }}
                     result: jobOperation
                 - exportTasks:
                     call: googleapis.sqladmin.v1.instances.export
@@ -1034,7 +1281,7 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: ${{parentDir + "_tasks_" + executionId + ".tsv.gz" }}
+                                uri: ${{extractDir + "_tasks_" + executionId + ".tsv.gz" }}
                     result: jobOperation
                 - exportProjects:
                     call: googleapis.sqladmin.v1.instances.export
@@ -1052,8 +1299,15 @@ extraction_workflow = gcp.workflows.Workflow(
                                     - {database_name}
                                 fileType: CSV
                                 kind: sql#exportContext
-                                uri: ${{parentDir + "_projects_" + executionId + ".tsv.gz" }}
+                                uri: ${{extractDir + "_projects_" + executionId + ".tsv.gz" }}
                     result: projectOperation
+                - truncateDatabase:
+                    call: googleapis.run.v2.projects.locations.jobs.run
+                    args:
+                        name: ${{truncateJobFullName}}
+                        connector_params:
+                            timeout: 86400
+                    result: truncateDataOperation
                 - stopDatabase:
                     call: googleapis.sqladmin.v1.instances.patch
                     args:
@@ -1066,8 +1320,9 @@ extraction_workflow = gcp.workflows.Workflow(
         """,
         cloud_sql_instance_id=pipeline_db.name,
         database_name=POSTGRES_DB,
-        data_bucket_url=data_bucket.url,
-        job_name=orchestrator_cloud_run_job.name,
+        data_bucket_url=extract_data_bucket.url,
+        orchestrate_job_name=orchestrate_cloud_run_job.name,
+        truncate_job_name=truncate_cloud_run_job.name,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
     ),
@@ -1077,6 +1332,59 @@ extraction_workflow = gcp.workflows.Workflow(
 )
 pulumi.export("extraction_workflow", extraction_workflow.name)
 
+# Create data cleaning workflow
+cleaning_workflow = gcp.workflows.Workflow(
+    f"debit-{ENV}-flows-clean",
+    region=PROJECT_REGION,
+    description="Triggers a Cloud Run Job for cleaning scraped project data.",
+    service_account=cloud_workflow_service_account.email,
+    call_log_level="LOG_ERRORS_ONLY",
+    deletion_protection=False,
+    source_contents=pulumi.Output.format(
+        """
+        # Workflow to clean a file of scraped development bank projects.
+        #
+        # Triggered via Eventarc when a file is written to or updated
+        # within the transformed data bucket.
+        #
+        # References:
+        # - https://cloud.google.com/workflows/docs/tutorials/execute-cloud-run-jobs#deploy-workflow
+        # - https://googleapis.github.io/google-cloudevents/examples/binary/storage/StorageObjectData-simple.json
+        # - https://cloud.google.com/run/docs/tutorials/eventarc
+        # - https://cloud.google.com/run/docs/triggering/storage-triggers
+        # - https://cloudevents.io/
+        # - https://github.com/cloudevents/sdk-python
+        #
+        main:
+            params: [event]
+            steps:-
+                - initializeVariables:
+                    assign:
+                        - filePath: ${{ event.data.bucket + "/" + event.data.name }}
+                        - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
+                        - cleanJobFullName: ${{jobPrefix + "{clean_job_name}"}}
+                - cleanData:
+                    call: googleapis.run.v2.projects.locations.jobs.run
+                    args:
+                        name: ${{cleanJobFullName}}
+                        body:
+                            overrides:
+                                containerOverrides:
+                                    args:
+                                        - ${{ filePath }}
+                        connector_params:
+                            timeout: 86400
+                    result: cleanDataOperation
+        """,
+        clean_job_name=clean_cloud_run_job.name,
+        project_id=PROJECT_ID,
+        project_region=PROJECT_REGION,
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("cleaning_workflow", cleaning_workflow.name)
 
 # endregion
 
@@ -1120,5 +1428,36 @@ scheduled_job = gcp.cloudscheduler.Job(
     ),
 )
 pulumi.export("extraction_scheduled_job", scheduled_job.name)
+
+# endregion
+
+# ------------------------------------------------------------------------
+# Eventarc
+# See: https://www.pulumi.com/registry/packages/gcp/api-docs/eventarc/
+# ------------------------------------------------------------------------
+
+# region
+
+# Create the Eventarc trigger
+clean_workflow_trigger = gcp.eventarc.Trigger(
+    f"debit-{ENV}-trigger-clean",
+    name=f"debit-{ENV}-trigger-clean",
+    location=PROJECT_REGION,
+    matching_criterias=[
+        gcp.eventarc.TriggerMatchingCriteriaArgs(
+            attribute="type", value="google.cloud.storage.object.v1.finalized"
+        ),
+        gcp.eventarc.TriggerMatchingCriteriaArgs(
+            attribute="bucket", value=transform_data_bucket.name
+        ),
+    ],
+    destination=gcp.eventarc.TriggerDestinationArgs(
+        workflow=cleaning_workflow.id
+    ),
+    service_account=eventarc_service_account.email,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
 
 # endregion
