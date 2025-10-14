@@ -1355,7 +1355,7 @@ cleaning_workflow = gcp.workflows.Workflow(
         #
         main:
             params: [event]
-            steps:-
+            steps:
                 - initializeVariables:
                     assign:
                         - filePath: ${{ event.data.bucket + "/" + event.data.name }}
