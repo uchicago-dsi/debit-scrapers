@@ -12,8 +12,8 @@ from django.core.management.base import BaseCommand, CommandParser
 
 # Application imports
 from common.logger import LoggerFactory
-from common.tasks import MessageQueueClient, TaskQueueFactory
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
+from extract.tasks import MessageQueueClient, TaskQueueFactory
 from extract.workflows.registry import StarterWorkflowRegistry
 
 

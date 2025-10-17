@@ -122,3 +122,6 @@ try:
     PROJECT_REGION = os.environ["GCP_PROJECT_REGION"]
 except KeyError as e:
     raise RuntimeError(f"Missing expected environment variable. {e}")
+
+# Create derived variables
+IS_TEST = ENV == "t"

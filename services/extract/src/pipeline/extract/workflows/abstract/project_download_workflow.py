@@ -15,7 +15,7 @@ import pandas as pd
 
 # Application imports
 from common.http import DataRequestClient
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
 from extract.workflows.abstract import BaseWorkflow
 
 

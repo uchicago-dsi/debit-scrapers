@@ -74,9 +74,7 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
 
     # Fetch dataset and read into DataFrame
     try:
-        logger.info(
-            "Fetching scraped project data and reading into DataFrame."
-        )
+        logger.info("Fetching scraped project data and reading into DataFrame.")
         with smart_open.open(fpath, "rb", encoding="utf-8") as f:
             raw_df = pd.read_csv(
                 f,
@@ -96,9 +94,7 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
         logger.info("Standardizing data formatting and categorical values.")
         standardized_df = standardize_columns(raw_df, logger)
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to standardize project data. {e}"
-        ) from None
+        raise RuntimeError(f"Failed to standardize project data. {e}") from None
 
     # Convert project nominal currencies to USD
     try:
@@ -176,12 +172,9 @@ if __name__ == "__main__":
 
     # Parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "input_fpath", type=str, help="The path to the input file."
-    )
+    parser.add_argument("input_fpath", type=str, help="The path to the input file.")
     args = parser.parse_args()
     if not args.input_fpath:
-        print("Missing positional argument for input file path.")
         logger.error("Missing positional argument for input file path.")
         exit(1)
 
@@ -192,13 +185,11 @@ if __name__ == "__main__":
         logger.error(f"Missing expected environment variable. {e}")
         exit(1)
 
-    # Log request
-    logger.info(
-        f'Received request to clean scraped data file at "{args.input_fpath}".'
-    )
-
     # Execute main program logic
     try:
+        logger.info(
+            f'Received request to clean scraped data file at "{args.input_fpath}".'
+        )
         main(args.input_fpath, is_remote, logger)
     except Exception as e:
         logger.error(f"Failed to clean raw development bank project data. {e}")

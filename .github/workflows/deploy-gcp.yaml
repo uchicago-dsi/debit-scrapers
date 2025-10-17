@@ -6,6 +6,10 @@ on:
       - dev
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   BUCKET_REGION: ${{ vars.GCP_PROJECT_REGION }}
   BUCKET_URL: gs://${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-cloud-storage-${{ vars.GCP_PULUMI_BUCKET_NAME }}

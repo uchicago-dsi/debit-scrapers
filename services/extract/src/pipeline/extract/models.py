@@ -26,7 +26,7 @@ class ExtractionJob(models.Model):
 class ExtractionTask(models.Model):
     """Database model for data extraction tasks within a parent job.
 
-    A task is scoped to a single URL (e.g., a webpage or an API ejdpoint).
+    A task is scoped to a single URL (e.g., a webpage or an API endpoint).
     """
 
     class Meta:

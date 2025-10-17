@@ -1,8 +1,14 @@
 """United Nations Development Programme (UNDP)
 
-Data is retrieved by downloading a ZIP file containing project data and
-then building URLs to project API endpoints, which are queried to gather
-remaining details on financing dates and amounts.
+Data is retrieved by downloading UNDP's submissions to the International
+Aid Transparency Initiative (IATI) for each country of operation; parsing
+and mapping project details from each file submission; and then requesting
+additional project details though the UNDP Transparency Portal API.
+
+This approach is more efficient than scraping the UNDP website, which
+contains thousands of projects, and is a satisfactory alternative to
+downloading the bulk project data file from the API given that the
+endpoint is currently broken.
 """
 
 # Standard library imports
@@ -17,8 +23,8 @@ from lxml import etree
 
 # Application imports
 from common.http import DataRequestClient
-from common.tasks import MessageQueueClient
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
+from extract.tasks import MessageQueueClient
 from extract.workflows.abstract import (
     ProjectPartialScrapeWorkflow,
     ResultsMultiScrapeWorkflow,

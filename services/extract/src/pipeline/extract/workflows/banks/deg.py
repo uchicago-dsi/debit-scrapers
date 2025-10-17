@@ -69,8 +69,6 @@ class DegDownloadWorkflow(ProjectDownloadWorkflow):
                 f"Error parsing DEG project CSV file into DataFrame. {e}"
             ) from None
 
-        print(df.columns)
-
         # Finalize columns
         try:
             df = df[

@@ -24,7 +24,7 @@ class TaskUpsertRequest(TypedDict):
 
 @dataclass
 class ProjectUpsertRequest:
-    """Represents a request to upsert astaged project record."""
+    """Represents a request to upsert a staged project record."""
 
     task_id: int
     """The unique identifier for the parent task."""

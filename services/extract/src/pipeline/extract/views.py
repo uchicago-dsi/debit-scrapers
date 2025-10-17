@@ -12,8 +12,8 @@ from django.views import View
 # Application imports
 from common.http import DataRequestClient
 from common.logger import LoggerFactory
-from common.tasks import TaskQueueFactory
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
+from extract.tasks import TaskQueueFactory
 from extract.workflows.registry import WorkflowClassRegistry
 
 # Instantiate global variables

@@ -20,7 +20,7 @@ from extract.workflows.abstract import ProjectScrapeWorkflow, SeedUrlsWorkflow
 
 
 class AiibSeedUrlsWorkflow(SeedUrlsWorkflow):
-    """Retrieves the first set of AIB URLs to scrape."""
+    """Retrieves the first set of AIIB URLs to scrape."""
 
     @property
     def projects_base_url(self) -> str:

@@ -21,7 +21,7 @@ from google import genai
 
 # Application imports
 from common.http import DataRequestClient
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
 from extract.workflows.abstract import (
     ProjectPartialDownloadWorkflow,
     ProjectPartialScrapeWorkflow,

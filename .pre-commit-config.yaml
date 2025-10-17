@@ -13,9 +13,9 @@ repos:
     rev: 0.8.13
     hooks:
       - id: uv-lock
-        files: ^services/extract/
+        files: ./services/extract/
       - id: uv-lock
-        files: ^services/transform/
+        files: ./services/transform/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.11

@@ -1,7 +1,9 @@
 """Asian Development Bank (ADB)
 
-Data is retrieved by scraping all individual project page URLs from
-search result pages and then scraping details from each project page.
+Data is retrieved by downloading ADB's submissions to the International
+Aid Transparency Initiative (IATI) for each country of operation and then
+parsing and mapping project details from each file submission. This approach
+was necessary to avoid throttling by ADB's main website when webscraping.
 """
 
 # Standard library imports
@@ -18,7 +20,7 @@ from lxml import etree
 
 # Application imports
 from common.http import DataRequestClient
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
 from extract.workflows.abstract import ProjectScrapeWorkflow, SeedUrlsWorkflow
 
 

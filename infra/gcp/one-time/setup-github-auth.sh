@@ -9,6 +9,10 @@
 #
 # Created by Claude Sonnet 4 and then edited, extended, and corrected.
 #
+# NOTE: MacOS users should either run the script using their default shell,
+# zsh, or upgrade their system installation of bash to version 4 or later
+# using `brew install bash`.
+#
 
 
 # ------------------------------------------------------------------------
@@ -31,19 +35,19 @@ NO_COLOR='\033[0m'
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}[INFO]${NO_COLOR} $1"
+    printf "${GREEN}[INFO]${NO_COLOR} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NO_COLOR} $1"
+    printf "${YELLOW}[WARNING]${NO_COLOR} $1"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NO_COLOR} $1"
+    printf "${RED}[ERROR]${NO_COLOR} $1"
 }
 
 print_header() {
-    echo -e "${BLUE}=== $1 ===${NO_COLOR}"
+    printf "${BLUE}=== $1 ===${NO_COLOR}"
 }
 
 # Function to check if a command exists
@@ -192,7 +196,7 @@ else
         --workload-identity-pool="$POOL_NAME" \
         --display-name="GitHub Actions Provider" \
         --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
-        --attribute-condition="assertion.repository_owner == '$GITHUB_USERNAME'" \
+        --attribute-condition="assertion.repository == '$GITHUB_USERNAME/$REPO_NAME'" \
         --issuer-uri="https://token.actions.githubusercontent.com"
     print_status "OIDC Provider created successfully"
 fi
@@ -276,9 +280,9 @@ echo
 print_header "GitHub Actions Configuration"
 echo "Add these as repository variables (Settings > Secrets and variables > Actions > Variables):"
 echo
-echo "GCP_WORKLOAD_IDENTITY_PROVIDER: $WORKLOAD_IDENTITY_PROVIDER"
-echo "GCP_GITHUB_SERVICE_ACCOUNT_EMAIL: $SERVICE_ACCOUNT_EMAIL"
-echo "GCP_PROJECT_ID: $PROJECT_ID"
+echo "WORKLOAD_IDENTITY_PROVIDER: $WORKLOAD_IDENTITY_PROVIDER"
+echo "SERVICE_ACCOUNT_EMAIL: $SERVICE_ACCOUNT_EMAIL"
+echo "PROJECT_ID: $PROJECT_ID"
 echo
 print_header "Sample GitHub Actions Workflow"
 cat << EOF

@@ -19,6 +19,7 @@ from constants import (
     EXTRACTION_PIPELINE_POLLING_INTERVAL,
     EXTRACTION_PIPELINE_SCHEDULE,
     GEMINI_API_KEY,
+    IS_TEST,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
     POSTGRES_USER,
@@ -184,7 +185,7 @@ extract_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-extract-bucket",
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
-    force_destroy=ENV == "t",
+    force_destroy=IS_TEST,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -196,7 +197,7 @@ transform_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-transform-bucket",
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
-    force_destroy=ENV == "t",
+    force_destroy=IS_TEST,
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),

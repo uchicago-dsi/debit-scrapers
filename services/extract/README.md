@@ -2,26 +2,26 @@
 
 A service for extracting development bank project finance details from heterogeneous data sources such as APIs, data files, and webpages.
 
-Consists of a Django project, `pipeline`, with "scrapers" for each data source. An orchestrator client queues the first data extraction task for each source. As tasks are completed, subsequent tasks are queued when applicable to continue "crawling" the source (e.g., a search results webpage would generate links to project projects). Meanwhile, full or partial data records are written to a database as the data is encountered.
+Consists of a Django project, `pipeline`, with "scrapers" for each data source. An orchestrator client queues the first data extraction task for each source. As tasks are completed, subsequent tasks are queued when applicable to continue "crawling" the source (e.g., a search results webpage would generate links to project projects) while full or partial project records are written to a database as the data is encountered.
 
 ## Setup
 
-After installing the required project dependencies described in the main `README.md`, create an `.env.dev` file with the following contents and save it under the `./extract/src` directory. NOTE: If you do not provide a Gemini API key, requests made to the API will fail and the program logic will gracefully fall back to traditional webscraping without bubbling up the error.
+After installing the required project dependencies described in the repository's main `README.md`, create an `.env.dev` file with the following contents and save it under the current extract directory. NOTE: If you do not provide a Gemini API key, requests made to the API will fail and the program logic will gracefully fall back to traditional webscraping without bubbling up the error.
 
 ```
 # Django
 DJANGO_ALLOWED_HOST='*'
 DJANGO_PORT='8080'
-DJANGO_SECRET_KEY=
+DJANGO_SECRET_KEY=''
 DJANGO_SETTINGS_MODULE='config.settings'
 
 # Environment
 ENV='DEV'
 
 # Google Cloud Platform
-GEMINI_API_KEY=
-GOOGLE_CLOUD_PROJECT_ID=
-GOOGLE_CLOUD_PROJECT_REGION=
+GEMINI_API_KEY=''
+GOOGLE_CLOUD_PROJECT_ID=''
+GOOGLE_CLOUD_PROJECT_REGION=''
 
 # Orchestration
 MAX_TASK_RETRIES='2'
@@ -47,15 +47,15 @@ POSTGRES_USER='postgres'
 
 The service's Makefile provides simple entrypoints for running the application locally as a Docker Compose application. A few pointers:
 
-- All of the commands listed below must be run directly under the `extract` service folder.
+- All of the commands listed below must be run directly under the current directory.
 
-- Services can be shut down at any point by entering CTRL-C or, for services executing in the background, CTRL-D. This automatically shuts stops and destroys the active Docker containers.
+- Services can be shut down at any point by entering `CTRL-C` or, for services executing in the background, `CTRL-D`. This automatically shuts, stops, and destroys the active Docker containers.
 
-- Data from the PostgreSQL database is persisted in the Docker volume `pgdata`, which is saved under `extract` and ignored by Git. Because the service's Docker containers are run as the root user, you will need to assign yourself ownership of the directory if you'd like to delete or modify it (e.g., `sudo chown -R <username> pgdata`).
+- Data from the PostgreSQL database is persisted in the Docker volume `pgdata`, which is saved under `extract` and ignored by Git. NOTE: Because the service's Docker containers run as the root user, you will need to assign yourself ownership of the directory if you'd like to manually delete or modify it (e.g., `sudo chown -R $(id -un):$(id -gn) .`, assuming `extract` is your current working directory).
 
-- For all commands, pgAdmin is provided as a GUI for the PostgreSQL databases. To use pgAdmin, navigate to localhost:443 in a web browser, select servers in the dropdown in the lefthand sidebar, click on the database you would like to inspect, and then log in with the password `postgres` when prompted. Browse tables and query the loaded data using raw SQL statements.
+- For all commands, pgAdmin is provided as a GUI for the PostgreSQL databases. To use pgAdmin, navigate to localhost:443 in a web browser, select "Servers" from the dropdown in the lefthand sidebar, click on the database you would like to inspect, and then log in with the password `postgres` when prompted. Browse tables through the interface and query data using raw SQL statements.
 
-#### Build Scrapers
+#### Build Image
 
 Builds a Docker image of the scrapers, which was architected as a Django project utilizing Django REST Framework.
 
@@ -65,15 +65,15 @@ WARNING: Playwright and its dependencies are downloaded and installed, so the im
 make build-scrapers
 ```
 
-#### Develop Scrapers
+#### Run Interactive Terminal
 
-Runs a container with an interactive bash terminal from the built Docker image while persisting the entire `src` directory as a volume. This allows you to make changes to scripts and immediately test the results.
+Runs a container with an interactive bash terminal from the built Docker image while persisting the entire `./services/extract/src` directory as a volume. This allows you to make changes to scripts and immediately test the results.
 
 ```bash
 make run-scrapers-bash
 ```
 
-#### Test Scrapers
+#### Run Tests
 
 _Scraping Logic Only_
 
@@ -123,7 +123,7 @@ Here, `id` refers to the id of the task in the database, `job_id` the id of the 
 
 You can make requests one at a time to confirm that the scraper service endpoint works as expected and that there are no errors persisting additional tasks or scraped project records to the database tables. The service will automatically reload whenever it is saved to facilitate development.
 
-#### Tear Down Scrapers
+#### Tear Docker Resources
 
 Removes the Docker compose network and the database volume `pgdata`. It is advised to run `docker system prune` separately as well.
 

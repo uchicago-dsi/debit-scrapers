@@ -6,8 +6,8 @@ from django.conf import settings
 # Application imports
 from common.http import DataRequestClient
 from common.logger import LoggerFactory
-from common.tasks import MessageQueueClient
-from extract.dal import DatabaseClient
+from extract.sql import DatabaseClient
+from extract.tasks import MessageQueueClient
 from extract.workflows.abstract import BaseWorkflow
 from extract.workflows import banks
 
