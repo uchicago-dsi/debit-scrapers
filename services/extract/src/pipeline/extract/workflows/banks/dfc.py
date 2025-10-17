@@ -77,6 +77,12 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             # Drop records w/o project page URLs (public information sheets)
             df = df.query("`Project Profile URL` == `Project Profile URL`")
 
+            # Aggregate project commitments by project number
+            agg_map = {
+                col: "sum" if col == "Committed" else "first" for col in df.columns
+            }
+            df = df.groupby("Project Number").agg(agg_map).reset_index(drop=True)
+
             # Count frequency of project page URLs
             url_frequencies_df = (
                 df[["Project Profile URL"]]
@@ -101,7 +107,7 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
             df["total_amount_currency"] = "USD"
             df["url"] = df.apply(
                 lambda row: row["Project Profile URL"]
-                + ("" if row["URL Frequency"] == 1 else f"#{row['URL Frequency']}"),
+                + ("" if row["URL Frequency"] == 1 else f"#{row['Project Number']}"),
                 axis=1,
             )
 
