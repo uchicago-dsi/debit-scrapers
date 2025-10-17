@@ -83,6 +83,21 @@ target/
 #Pickle files
 *.pkl
 
+# Vite build output
+**/dist/
+
+# Astro generated types
+**/.astro/
+
+# NPM dependencies
+**/node_modules/
+
+# logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
 # Google Cloud SQL Proxy
 *cloud-sql-proxy
 start-proxy.sh
@@ -103,3 +118,7 @@ start-proxy.sh
 **/output/
 
 ### EOF
+
+
+
+

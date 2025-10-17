@@ -1,5 +1,4 @@
-// Standard library imports
-import { JSX } from "react";
+import * as react from "react";
 
 type FieldSchemaProps = {
   name: string;
@@ -13,9 +12,9 @@ type TableSchemaProps = {
   fields: FieldSchemaProps[];
 };
 
-export function SchemaTable({ fields }: TableSchemaProps): JSX.Element {
+export function SchemaTable({ fields }: TableSchemaProps): react.JSX.Element {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 mt-5">
       {fields.map(
         ({ name, description, type, allowsBlank, allowsNull }, idx) => (
           <div key={idx} className="text-sm">
@@ -287,6 +286,14 @@ export const ExtractedProjectSchema = [
   {
     name: "finance_types",
     description: "The funding types used for the project. Pipe-delimited.",
+    type: "char",
+    allowsBlank: true,
+    allowsNull: false,
+  },
+  {
+    name: "fiscal_year_effective",
+    description:
+      "The fiscal year the project became effective. Formatted as YYYY.",
     type: "char",
     allowsBlank: true,
     allowsNull: false,

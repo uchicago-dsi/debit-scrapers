@@ -1,0 +1,53 @@
+---
+title: DeBIT
+description: Documentation for the Development Bank Investment Tracker.
+# template: splash # Remove or comment out this line to display the site sidebar on this page.
+hero:
+  tagline: An open-source web scraping tool for extracting multilateral development bank project data
+  image:
+    file: ../../assets/network.png
+  actions:
+    - text: Read Docs
+      link: /intro
+      icon: right-arrow
+    - text: Visit Site
+      link: https://debit.datascience.uchicago.edu/about
+      icon: external
+      variant: minimal
+---
+
+import { Image } from "astro:assets";
+
+<div class="flex flex-row items-start gap-8">
+
+    {/** INCLUSIVE DEVELOPMENT INTERNATIONAL*/}
+    <a href="https://datascience.uchicago.edu/" target="_blank">
+    	<Image
+    		src="/src/assets/idi-logo.webp"
+    		height={200}
+    		width={150}
+    		alt="inclusive-development-international-logo"
+    		/>
+    </a>
+
+    {/** UNIVERSITY OF CHICAGO DATA SCIENCE INSTITUTE*/}
+    <a href="https://www.inclusivedevelopment.net/" target="_blank">
+    	<Image
+    		src="/src/assets/dsi-logo.webp"
+    		height={250}
+    		width={250}
+    		alt="data-science-institute-logo"
+    	/>
+    </a>
+
+    {/** 11TH HOUR PROJECT*/}
+    <a href="https://11thhourproject.org/" target="_blank">
+    	<Image
+    	src="/src/assets/11th-hour-logo.png"
+    	height={250}
+    	width={250}
+    	alt="11th-hour-logo"
+    	/>
+    </a>
+
+</div>
