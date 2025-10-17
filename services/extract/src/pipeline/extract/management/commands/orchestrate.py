@@ -346,7 +346,7 @@ class Command(BaseCommand):
             `None`
         """
         # Configure logger
-        logger = LoggerFactory.get("ORCHESTRATOR")
+        logger = LoggerFactory.get("ORCHESTRATOR", level=logging.INFO)
 
         # Parse command line options
         try:
