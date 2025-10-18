@@ -443,10 +443,21 @@ gcp.projects.IAMMember(
     ),
 )
 
-# Grant account access to Cloud Storage bucket
+# Grant account access to data extraction Cloud Storage bucket
 gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-run-stg-access",
+    f"debit-{ENV}-run-extractbucket-access",
     bucket=extract_data_bucket.name,
+    role="roles/storage.objectAdmin",
+    member=cloud_run_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant account access to data cleaning Cloud Storage bucket
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-run-cleanbucket-access",
+    bucket=transform_data_bucket.name,
     role="roles/storage.objectAdmin",
     member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
@@ -1380,7 +1391,7 @@ cleaning_workflow = gcp.workflows.Workflow(
                         - outputBucket: {output_bucket_url}
                         - objectKey: ${{ event.data.name }}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
-                        - cleanJobFullName: ${{jobPrefix + "{clean_job_name}"}}
+                        - cleanJobFullName: ${{ jobPrefix + "{clean_job_name}" }}
                 - cleanData:
                     call: googleapis.run.v2.projects.locations.jobs.run
                     args:
