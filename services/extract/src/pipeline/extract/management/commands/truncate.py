@@ -1,5 +1,8 @@
 """Classes used to truncate all database tables."""
 
+# Standard library imports
+import logging
+
 # Third-party imports
 from django.core.management.base import BaseCommand
 
@@ -27,7 +30,7 @@ class Command(BaseCommand):
             `None`
         """
         # Configure logger
-        logger = LoggerFactory.get("TRUNCATE")
+        logger = LoggerFactory.get("TRUNCATE", level=logging.INFO)
 
         # Attempt truncation
         try:

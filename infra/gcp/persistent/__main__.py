@@ -1368,7 +1368,12 @@ cleaning_workflow = gcp.workflows.Workflow(
         main:
             params: [event]
             steps:
-                - initializeVariables:
+                - confirmProjectFile:
+                    switch:
+                        - condition: ${{ not(text.contains(event.data.name, "projects")) }}
+                          return:
+                    next: initializeVariables
+                 - initializeVariables:
                     assign:
                         - filePath: ${{ event.data.bucket + "/" + event.data.name }}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
@@ -1458,7 +1463,7 @@ clean_workflow_trigger = gcp.eventarc.Trigger(
             attribute="type", value="google.cloud.storage.object.v1.finalized"
         ),
         gcp.eventarc.TriggerMatchingCriteriaArgs(
-            attribute="bucket", value=transform_data_bucket.name
+            attribute="bucket", value=extract_data_bucket.name
         ),
     ],
     destination=gcp.eventarc.TriggerDestinationArgs(
