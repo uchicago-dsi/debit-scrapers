@@ -1057,7 +1057,7 @@ clean_cloud_run_job = gcp.cloudrunv2.Job(
                     ],
                     image=clean_image.image_name,
                     resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
-                        limits={"memory": "512Mi", "cpu": "1"}
+                        limits={"memory": "4Gi", "cpu": "1"}
                     ),
                 )
             ],
@@ -1358,6 +1358,7 @@ cleaning_workflow = gcp.workflows.Workflow(
         # within the transformed data bucket.
         #
         # References:
+        # - https://cloud.google.com/workflows/docs/reference/googleapis/run/v2/projects.locations.jobs/run
         # - https://cloud.google.com/workflows/docs/tutorials/execute-cloud-run-jobs#deploy-workflow
         # - https://googleapis.github.io/google-cloudevents/examples/binary/storage/StorageObjectData-simple.json
         # - https://cloud.google.com/run/docs/tutorials/eventarc
@@ -1375,7 +1376,9 @@ cleaning_workflow = gcp.workflows.Workflow(
                     next: initializeVariables
                 - initializeVariables:
                     assign:
-                        - filePath: ${{ "gs://" + event.data.bucket + "/" + event.data.name }}
+                        - inputBucket: ${{ "gs://" + event.data.bucket }}
+                        - outputBucket: {outputBucketUrl}
+                        - objectKey: ${{ event.data.name }}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
                         - cleanJobFullName: ${{jobPrefix + "{clean_job_name}"}}
                 - cleanData:
@@ -1386,7 +1389,12 @@ cleaning_workflow = gcp.workflows.Workflow(
                             overrides:
                                 containerOverrides:
                                     args:
-                                        - ${{ filePath }}
+                                        - ${{ objectKey }}
+                                        - --input_bucket
+                                        - ${{ inputBucket }}
+                                        - --output_bucket
+                                        - ${{ outputBucket }}
+                                        - --remote
                         connector_params:
                             timeout: 86400
                     result: cleanDataOperation
@@ -1394,6 +1402,7 @@ cleaning_workflow = gcp.workflows.Workflow(
         clean_job_name=clean_cloud_run_job.name,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
+        output_bucket_url=transform_data_bucket.url,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

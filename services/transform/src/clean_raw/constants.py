@@ -17,10 +17,3 @@ STATUS_MAP_FPATH = CONFIG_DIR / "status_map.json"
 RUNTIME_DIR = Path.cwd()
 INPUT_DIR = RUNTIME_DIR / "input"
 OUTPUT_DIR = RUNTIME_DIR / "output"
-
-# Cloud providers
-GOOGLE_CLOUD_URI_SCHEME = "gs://"
-
-# Environment
-ENV = "ENV"
-DEV = "dev"

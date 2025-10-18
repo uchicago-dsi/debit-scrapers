@@ -3,7 +3,6 @@
 # Standard library imports
 import argparse
 import logging
-import os
 from datetime import datetime, UTC
 from pathlib import Path
 
@@ -12,35 +11,25 @@ import pandas as pd
 import smart_open
 
 # Package imports
-from clean_raw.constants import (
-    DEV,
-    ENV,
-    GOOGLE_CLOUD_URI_SCHEME,
-    INPUT_DIR,
-    OUTPUT_DIR,
-)
+from clean_raw.constants import INPUT_DIR, OUTPUT_DIR
 from clean_raw.currency import convert_currencies
 from clean_raw.standardize import standardize_columns
 from clean_raw.utils import LoggerFactory
 
 
-def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
+def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
     """Cleans scraped project data and then saves the output in Parquet format.
 
     Args:
-        fpath: The path to the input file. May be local or remote.
+        input_fpath: The path to the input file. May be local or remote.
 
-        is_remote: A flag indicating whether the input file is remote.
+        output_fpath: The path to the output file. May be local or remote.
 
         logger: A standard logger instance.
 
     Returns:
         `None`
     """
-    # Finalize path for input file
-    if not is_remote:
-        fpath = INPUT_DIR / fpath
-
     # Define data types for DataFrame
     dtypes = {
         "id": "object",
@@ -75,7 +64,7 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
     # Fetch dataset and read into DataFrame
     try:
         logger.info("Fetching scraped project data and reading into DataFrame.")
-        with smart_open.open(fpath, "rb", encoding="utf-8") as f:
+        with smart_open.open(input_fpath, "rb", encoding="utf-8") as f:
             raw_df = pd.read_csv(
                 f,
                 names=dtypes.keys(),
@@ -86,7 +75,8 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
         logger.info(f"{len(raw_df):,} record(s) received.")
     except FileNotFoundError as e:
         raise RuntimeError(
-            f'An unexpected error occurred. Cannot find file at "{fpath}". {e}'
+            "An unexpected error occurred. Cannot find "
+            f'input file at "{input_fpath}". {e}'
         ) from None
 
     # Standardize data columns
@@ -145,17 +135,6 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
             f"cleaning pipeline. Missing column. {e}"
         )
 
-    # Determine path for output file
-    logger.info("Determining path for output file.")
-    if is_remote:
-        today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        input_fname = fpath.split("/")[-1]
-        obj_key = f"transformation/{today}/{input_fname}.parquet"
-        output_fpath = f"{GOOGLE_CLOUD_URI_SCHEME}{obj_key}"
-    else:
-        Path.mkdir(OUTPUT_DIR, exist_ok=True)
-        output_fpath = f"{OUTPUT_DIR}/cleaned.parquet"
-
     # Write cleaned data to output file
     try:
         logger.info(f'Writing clean project data to "{output_fpath}".')
@@ -172,25 +151,68 @@ if __name__ == "__main__":
 
     # Parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_fpath", type=str, help="The path to the input file.")
+    parser.add_argument(
+        "object_key",
+        type=str,
+        help="The path to the input file in the storage directory or bucket.",
+    )
+    parser.add_argument(
+        "--input_bucket",
+        type=str,
+        help="The name of the input bucket.",
+        default="",
+    )
+    parser.add_argument(
+        "--output_bucket",
+        type=str,
+        help="The name of the output bucket.",
+        default="",
+    )
+    parser.add_argument(
+        "--remote",
+        action="store_true",
+        help="Indicates whether the input file is hosted in the cloud.",
+    )
     args = parser.parse_args()
-    if not args.input_fpath:
-        logger.error("Missing positional argument for input file path.")
+
+    # Validate object key argument received
+    if not args.object_key:
+        logger.error(
+            "Missing positional argument for the path to the "
+            "input file in the storage directory or bucket."
+        )
         exit(1)
 
-    # Parse environment variables
-    try:
-        is_remote = os.environ[ENV] != DEV
-    except KeyError as e:
-        logger.error(f"Missing expected environment variable. {e}")
-        exit(1)
+    # Determine path for input and output files
+    if args.remote:
+        # Validate bucket options present if files hosted remotely
+        if not args.input_bucket:
+            logger.error("Missing option for input bucket name.")
+            exit(1)
+        if not args.output_bucket:
+            logger.error("Missing option for output bucket name.")
+            exit(1)
+
+        # Compose path to remote input file
+        input_fpath = f"{args.input_bucket}/{args.object_key}"
+
+        # Compose path to remote output file
+        today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
+        input_fname = args.object_key.split("/")[-1]
+        output_obj_key = f"transformation/{today}/{input_fname}.parquet"
+        output_fpath = f"{args.output_bucket}/{output_obj_key}"
+    else:
+        # Compose path to local input file
+        input_fpath = f"{INPUT_DIR}/{args.object_key}"
+
+        # Compose path to local output file
+        Path.mkdir(OUTPUT_DIR, exist_ok=True)
+        output_fpath = f"{OUTPUT_DIR}/cleaned.parquet"
 
     # Execute main program logic
     try:
-        logger.info(
-            f'Received request to clean scraped data file at "{args.input_fpath}".'
-        )
-        main(args.input_fpath, is_remote, logger)
+        logger.info(f'Received request to clean scraped data file at "{input_fpath}".')
+        main(input_fpath, output_fpath, logger)
     except Exception as e:
         logger.error(f"Failed to clean raw development bank project data. {e}")
         exit(1)
