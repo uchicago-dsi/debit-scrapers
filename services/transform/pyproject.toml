@@ -10,7 +10,7 @@ dependencies = [
     "pandas>=2.3.3",
     "pyarrow>=21.0.0",
     "requests>=2.32.5",
-    "smart-open>=7.3.1",
+    "smart-open[gcs]>=7.3.1",
 ]
 
 [tool.setuptools]
