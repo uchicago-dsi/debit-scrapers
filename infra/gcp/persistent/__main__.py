@@ -1375,7 +1375,7 @@ cleaning_workflow = gcp.workflows.Workflow(
                     next: initializeVariables
                 - initializeVariables:
                     assign:
-                        - filePath: ${{ event.data.bucket + "/" + event.data.name }}
+                        - filePath: ${{ "gs://" + event.data.bucket + "/" + event.data.name }}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
                         - cleanJobFullName: ${{jobPrefix + "{clean_job_name}"}}
                 - cleanData:
