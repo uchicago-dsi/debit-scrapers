@@ -16,7 +16,7 @@ DJANGO_SECRET_KEY=''
 DJANGO_SETTINGS_MODULE='config.settings'
 
 # Environment
-ENV='DEV'
+ENV='dev'
 
 # Google Cloud Platform
 GEMINI_API_KEY=''

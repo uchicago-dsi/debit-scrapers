@@ -4,7 +4,40 @@ A service for cleaning scraped development bank project records.
 
 Consists of a single package, `clean_raw`, that fetches a compressed CSV file of records from a local or remote data store and then transforms the data by applying standard casing and formatting; standardizing categorical values for countries, sectors, and project statuses across banks; transforming delimited columns to lists; and performing nominal conversions from local currencies to U.S. dollars for the project financing year.
 
-## Implementation Details
+## Setup
+
+After installing the required project dependencies described in the repository's main `README.md`, create an `.env.dev` file with the following contents and save it under the current transform directory.
+
+```
+# Environment
+ENV='dev'
+```
+
+### Entrypoints
+
+The service's Makefile provides simple entrypoints for running the application locally as a Docker container. A few pointers:
+
+- All of the commands listed below must be run directly under the current directory.
+
+- Services can be shut down at any point by entering `CTRL-C` or, for services executing in the background, `CTRL-D`. This automatically shuts, stops, and destroys the active Docker containers.
+
+#### Build Image
+
+Builds a Docker image of the data cleaning pipeline.
+
+```bash
+make build-clean
+```
+
+#### Run Pipeline
+
+Executes the pipeline script as a Docker container while mounting the directories `./services/transform/input` and `./services/transform/output` as volumes. Download the scraped project file generated from the previous data pipeline step (i.e., data extraction) from Google Cloud Storage and save it under the input directory. After the script runs, a cleaned Parquet file is generated and saved under the output directory.
+
+```bash
+make run-clean
+```
+
+## Implementation
 
 ### Data Standardization
 

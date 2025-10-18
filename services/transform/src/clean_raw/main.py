@@ -13,11 +13,11 @@ import smart_open
 
 # Package imports
 from clean_raw.constants import (
-    GOOGLE_CLOUD_URI_SCHEME,
+    DEV,
     ENV,
+    GOOGLE_CLOUD_URI_SCHEME,
     INPUT_DIR,
     OUTPUT_DIR,
-    PROD,
 )
 from clean_raw.currency import convert_currencies
 from clean_raw.standardize import standardize_columns
@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
     # Parse environment variables
     try:
-        is_remote = os.environ[ENV] == PROD
+        is_remote = os.environ[ENV] != DEV
     except KeyError as e:
         logger.error(f"Missing expected environment variable. {e}")
         exit(1)
