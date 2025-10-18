@@ -12,6 +12,7 @@ TRANSFORM_DIR = SERVICES_DIR / "transform"
 
 # Declare constants
 DJANGO_ALLOWED_HOST = ".run.app"
+DJANGO_API_PATH_DATA_EXTRACTION = "api/v1/gcp/extract"
 DJANGO_SETTINGS_MODULE = "config.settings"
 QUEUE_CONFIG = [
     {

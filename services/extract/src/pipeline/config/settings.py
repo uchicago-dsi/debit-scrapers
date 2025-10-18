@@ -212,8 +212,8 @@ WB_ABBREVIATION = "wb"
 # GOOGLE CLOUD PLATFORM
 # ________________________________________________________________________
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GOOGLE_CLOUD_PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
-GOOGLE_CLOUD_PROJECT_REGION = os.getenv("GOOGLE_CLOUD_PROJECT_REGION")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GOOGLE_CLOUD_PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID", "")
+GOOGLE_CLOUD_PROJECT_REGION = os.getenv("GOOGLE_CLOUD_PROJECT_REGION", "")
 
 # endregion

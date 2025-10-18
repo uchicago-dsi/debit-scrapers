@@ -9,6 +9,7 @@ import pulumi_std as std
 # Application imports
 from constants import (
     DJANGO_ALLOWED_HOST,
+    DJANGO_API_PATH_DATA_EXTRACTION,
     DJANGO_PORT,
     DJANGO_SECRET_KEY,
     DJANGO_SETTINGS_MODULE,
@@ -971,6 +972,14 @@ truncate_cloud_run_job = gcp.cloudrunv2.Job(
                             value="prod" if ENV == "p" else "test",
                         ),
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="GOOGLE_CLOUD_PROJECT_ID",
+                            value=PROJECT_ID,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="GOOGLE_CLOUD_PROJECT_REGION",
+                            value=PROJECT_REGION,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="POSTGRES_DB",
                             value=POSTGRES_DB,
                         ),
@@ -1108,7 +1117,7 @@ for idx, config in enumerate(QUEUE_CONFIG):
                 scheme="HTTPS",
                 host=chosen_host,
                 path_override=gcp.cloudtasks.QueueHttpTargetUriOverridePathOverrideArgs(
-                    path="/api/v1/gcp/tasks",
+                    path=DJANGO_API_PATH_DATA_EXTRACTION,
                 ),
                 uri_override_enforce_mode="ALWAYS",
             ),

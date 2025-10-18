@@ -10,8 +10,8 @@ from extract.views import ExtractionWorkflowView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(
-        "api/v1/gcp/tasks",
+        "api/v1/gcp/extract",
         ExtractionWorkflowView.as_view(),
-        name="google-cloud-tasks",
+        name="gcp-data-extract",
     ),
 ]
