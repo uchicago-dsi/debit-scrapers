@@ -13,14 +13,15 @@ class Command(BaseCommand):
 
     help_text = "Truncates all database tables."
 
-    def handle(self) -> None:
+    def handle(self, **options) -> None:
         """Truncates all tables in the database.
 
         NOTE: Django will perform a cascading delete
         based on the database model definition.
 
         Args:
-           `None`
+           **options: A dictionary of the command's positional
+                and optional arguments.
 
         Returns:
             `None`
