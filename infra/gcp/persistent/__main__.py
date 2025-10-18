@@ -1055,7 +1055,7 @@ clean_cloud_run_job = gcp.cloudrunv2.Job(
                             value="prod" if ENV == "p" else "test",
                         )
                     ],
-                    image=light_extract_image.image_name,
+                    image=clean_image.image_name,
                     resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
                         limits={"memory": "512Mi", "cpu": "1"}
                     ),
