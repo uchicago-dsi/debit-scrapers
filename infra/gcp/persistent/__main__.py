@@ -1373,7 +1373,7 @@ cleaning_workflow = gcp.workflows.Workflow(
                         - condition: ${{ not(text.contains(event.data.name, "projects")) }}
                           return:
                     next: initializeVariables
-                 - initializeVariables:
+                - initializeVariables:
                     assign:
                         - filePath: ${{ event.data.bucket + "/" + event.data.name }}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/

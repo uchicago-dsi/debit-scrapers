@@ -45,9 +45,7 @@ class DataTransformationStep(ABC):
         self._next = step
 
     @abstractmethod
-    def execute(
-        self, df: pd.DataFrame, id_col: str, value_col: str
-    ) -> pd.DataFrame:
+    def execute(self, df: pd.DataFrame, id_col: str, value_col: str) -> pd.DataFrame:
         """Executes the transformation step.
 
         Args:
@@ -143,9 +141,7 @@ class FormatValues(DataTransformationStep):
             The transformed DataFrame.
         """
         df.loc[:, value_col] = (
-            df[value_col]
-            .replace({np.nan: ""})
-            .apply(lambda val: val.strip().upper())
+            df[value_col].replace({np.nan: ""}).apply(lambda val: val.strip().upper())
         )
         return self.next.execute(df, id_col, value_col) if self.next else df
 
@@ -153,9 +149,7 @@ class FormatValues(DataTransformationStep):
 class MakeListColumn(DataTransformationStep):
     """Makes the given value column list-like by aggregating by id."""
 
-    def execute(
-        self, df: pd.DataFrame, id_col: str, value_col: str
-    ) -> pd.DataFrame:
+    def execute(self, df: pd.DataFrame, id_col: str, value_col: str) -> pd.DataFrame:
         """Executes the transformation step.
 
         Args:
@@ -209,12 +203,10 @@ class MapValues(DataTransformationStep):
                 mapping = json.load(f)
         except FileNotFoundError:
             raise RuntimeError(
-                "Error fetching mapping file. " "The file does not exist."
+                "Error fetching mapping file. The file does not exist."
             ) from None
         except json.JSONDecodeError:
-            raise RuntimeError(
-                "Error parsing mapping file into JSON."
-            ) from None
+            raise RuntimeError("Error parsing mapping file into JSON.") from None
 
         # Parse file based on schema
         self._mapping = (
@@ -251,9 +243,7 @@ class MapValues(DataTransformationStep):
             The transformed DataFrame.
         """
         df.loc[:, value_col] = (
-            df[value_col]
-            .map(self._mapping)
-            .replace({np.nan: self._unknown_value})
+            df[value_col].map(self._mapping).replace({np.nan: self._unknown_value})
         )
         return self.next.execute(df, id_col, value_col) if self.next else df
 
@@ -280,9 +270,7 @@ class PreprocessValuesForMapping(DataTransformationStep):
             The transformed DataFrame.
         """
         df.loc[:, value_col] = (
-            df[value_col]
-            .replace({np.nan: ""})
-            .apply(lambda val: val.strip().lower())
+            df[value_col].replace({np.nan: ""}).apply(lambda val: val.strip().lower())
         )
         return self.next.execute(df, id_col, value_col) if self.next else df
 
@@ -309,9 +297,7 @@ class SubsetColumns(DataTransformationStep):
             The transformed DataFrame.
         """
         copy = df[[id_col, value_col]].copy()
-        return (
-            self.next.execute(copy, id_col, value_col) if self.next else copy
-        )
+        return self.next.execute(copy, id_col, value_col) if self.next else copy
 
 
 class PostprocessValuesAfterMapping(DataTransformationStep):
@@ -362,9 +348,7 @@ class ValidateColumns(DataTransformationStep):
         """
         # Validate existence of value column
         if value_col not in df.columns:
-            raise ValueError(
-                f'DataFrame must contain the column "{value_col}".'
-            )
+            raise ValueError(f'DataFrame must contain the column "{value_col}".')
 
         # Validate existence of id column
         if id_col not in df.columns:
@@ -518,9 +502,7 @@ def standardize_finance_types(
     )
 
 
-def standardize_sectors(
-    df: pd.DataFrame, id_col: str, value_col: str
-) -> pd.DataFrame:
+def standardize_sectors(df: pd.DataFrame, id_col: str, value_col: str) -> pd.DataFrame:
     """Standardizes the sectors column.
 
     Args:
@@ -550,9 +532,7 @@ def standardize_sectors(
     )
 
 
-def standardize_statuses(
-    df: pd.DataFrame, id_col: str, value_col: str
-) -> pd.DataFrame:
+def standardize_statuses(df: pd.DataFrame, id_col: str, value_col: str) -> pd.DataFrame:
     """Standardizes the currency codes column.
 
     Args:
@@ -579,9 +559,7 @@ def standardize_statuses(
     )
 
 
-def standardize_columns(
-    df: pd.DataFrame, logger: logging.Logger
-) -> pd.DataFrame:
+def standardize_columns(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFrame:
     """Standardizes the columns of the input project DataFrame.
 
     Args:
@@ -618,9 +596,7 @@ def standardize_columns(
 
     # Standardize project currency codes
     logger.info("Standardizing project currency codes.")
-    mapped_currencies = standardize_currency_codes(
-        df, "id", "total_amount_currency"
-    )
+    mapped_currencies = standardize_currency_codes(df, "id", "total_amount_currency")
 
     # Subset columns
     logger.info("Subsetting columns prior to merge.")
@@ -684,6 +660,7 @@ def standardize_columns(
         "date_revised_close",
         "date_signed",
         "date_under_appraisal",
+        "fiscal_year_effective",
     ]
     for col in date_cols:
         subset_df[col] = subset_df[col].replace({np.nan: ""})

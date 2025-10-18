@@ -59,7 +59,6 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
         "date_signed": "object",
         "date_under_appraisal": "object",
         "finance_types": "object",
-        "fiscal_year_effective": "object",
         "name": "object",
         "number": "object",
         "sectors": "object",
@@ -70,6 +69,7 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
         "total_amount_usd": "float64",
         "url": "object",
         "task_id": "object",
+        "fiscal_year_effective": "object",
     }
 
     # Fetch dataset and read into DataFrame
@@ -159,7 +159,7 @@ def main(fpath: str, is_remote: bool, logger: logging.Logger) -> None:
     # Write cleaned data to output file
     try:
         logger.info(f'Writing clean project data to "{output_fpath}".')
-        with smart_open.open(output_fpath, "wb", encoding="utf-8") as f:
+        with smart_open.open(output_fpath, "wb") as f:
             clean_df.to_parquet(f, index=False, compression="gzip")
     except Exception as e:
         logger.error(f"Failed to write clean project data to file. {e}")
