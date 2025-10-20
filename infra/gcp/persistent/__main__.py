@@ -1484,7 +1484,7 @@ cleaning_workflow = gcp.workflows.Workflow(
             steps:
                 - confirmProjectFile:
                     switch:
-                        - condition: ${{ text.match_regex(event.data.name, "projects") }}
+                        - condition: ${{ not text.match_regex(event.data.name, "projects") }}
                           return:
                     next: initializeVariables
                 - initializeVariables:
