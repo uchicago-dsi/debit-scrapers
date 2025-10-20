@@ -21,6 +21,7 @@ from constants import (
     EXTRACTION_PIPELINE_SCHEDULE,
     GEMINI_API_KEY,
     IS_TEST,
+    MAPPING_DIR,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
     POSTGRES_USER,
@@ -415,8 +416,8 @@ map_image = docker.Image(
         lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/mapping-pipeline"
     ),
     build=docker.DockerBuildArgs(
-        context=TRANSFORM_DIR.as_posix(),
-        dockerfile=(TRANSFORM_DIR / "Dockerfile").as_posix(),
+        context=MAPPING_DIR.as_posix(),
+        dockerfile=(MAPPING_DIR / "Dockerfile").as_posix(),
         platform="linux/amd64",
     ),
     registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),

@@ -9,6 +9,7 @@ ROOT_DIR = pathlib.Path(__file__).resolve().parents[3]
 SERVICES_DIR = ROOT_DIR / "services"
 EXTRACT_DIR = SERVICES_DIR / "extract"
 TRANSFORM_DIR = SERVICES_DIR / "transform"
+MAPPING_DIR = SERVICES_DIR / "map"
 
 # Declare constants
 DJANGO_ALLOWED_HOST = ".run.app"
