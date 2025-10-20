@@ -62,9 +62,19 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
     }
 
     # Fetch dataset and read into DataFrame
+    #
+    # NOTE: Here, we must explicitly specify the compression type when opening
+    # the input file because smart_open can't automatically detect it. As a
+    # consequence of the way bulk database exports are configured, the input
+    # file is assigned an extension of "csv" even though its true MIME type is
+    # "application/gzip". For a list of all available compression types, see:
+    # https://github.com/piskvorky/smart_open/blob/master/smart_open/compression.py
+    #
     try:
         logger.info("Fetching scraped project data and reading into DataFrame.")
-        with smart_open.open(input_fpath, "rb", encoding="utf-8") as f:
+        with smart_open.open(
+            input_fpath, "rb", encoding="utf-8", compression=".gz"
+        ) as f:
             raw_df = pd.read_csv(
                 f,
                 names=dtypes.keys(),
