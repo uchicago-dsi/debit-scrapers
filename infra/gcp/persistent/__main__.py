@@ -182,6 +182,7 @@ pulumi.export("gemini_api_key", gemini_api_key.name)
 
 # region
 
+# Data extraction
 extract_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-extract-bucket",
     location=PROJECT_REGION,
@@ -194,6 +195,7 @@ extract_data_bucket = gcp.storage.Bucket(
 pulumi.export("extract_data_bucket_name", extract_data_bucket.name)
 pulumi.export("extract_data_bucket_url", extract_data_bucket.url)
 
+# Data transformation
 transform_data_bucket = gcp.storage.Bucket(
     f"debit-{ENV}-transform-bucket",
     location=PROJECT_REGION,
@@ -205,6 +207,19 @@ transform_data_bucket = gcp.storage.Bucket(
 )
 pulumi.export("transform_data_bucket_name", transform_data_bucket.name)
 pulumi.export("transform_data_bucket_url", transform_data_bucket.url)
+
+# Data mapping
+map_data_bucket = gcp.storage.Bucket(
+    f"debit-{ENV}-map-bucket",
+    location=PROJECT_REGION,
+    uniform_bucket_level_access=True,
+    force_destroy=IS_TEST,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("map_data_bucket_name", map_data_bucket.name)
+pulumi.export("map_data_bucket_url", map_data_bucket.url)
 
 # endregion
 
@@ -368,6 +383,49 @@ clean_image = docker.Image(
 )
 pulumi.export("extraction_light_image", light_extract_image.image_name)
 
+# Create a Docker image repository for data mapping
+map_repo = gcp.artifactregistry.Repository(
+    f"debit-{ENV}-repo-map",
+    repository_id=f"debit-{ENV}-repo-map",
+    location=PROJECT_REGION,
+    description="Holds Docker images for mapping cleaned project data.",
+    cleanup_policies=[
+        gcp.artifactregistry.RepositoryCleanupPolicyArgs(
+            id="keep-mapped-latest",
+            action="KEEP",
+            most_recent_versions=gcp.artifactregistry.RepositoryCleanupPolicyMostRecentVersionsArgs(
+                keep_count=1, package_name_prefixes=[]
+            ),
+        ),
+    ],
+    format="DOCKER",
+    docker_config=gcp.artifactregistry.RepositoryDockerConfigArgs(
+        immutable_tags=False
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("map_repo", map_repo.name)
+
+# Build and push data mapping image
+map_image = docker.Image(
+    f"debit-{ENV}-image-map",
+    image_name=map_repo.repository_id.apply(
+        lambda id: f"{PROJECT_REGION}-docker.pkg.dev/{PROJECT_ID}/{id}/mapping-pipeline"
+    ),
+    build=docker.DockerBuildArgs(
+        context=TRANSFORM_DIR.as_posix(),
+        dockerfile=(TRANSFORM_DIR / "Dockerfile").as_posix(),
+        platform="linux/amd64",
+    ),
+    registry=docker.RegistryArgs(server=f"{PROJECT_REGION}-docker.pkg.dev"),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("map_image", map_image.image_name)
+
 # endregion
 
 # ------------------------------------------------------------------------
@@ -458,6 +516,17 @@ gcp.storage.BucketIAMMember(
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-run-cleanbucket-access",
     bucket=transform_data_bucket.name,
+    role="roles/storage.objectAdmin",
+    member=cloud_run_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Grant account access to data mapping Cloud Storage bucket
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-run-mapbucket-access",
+    bucket=map_data_bucket.name,
     role="roles/storage.objectAdmin",
     member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
@@ -1082,6 +1151,39 @@ clean_cloud_run_job = gcp.cloudrunv2.Job(
 )
 pulumi.export("clean_cloud_run_job", clean_cloud_run_job.name)
 
+# Create Cloud Run Job for data mapping
+map_cloud_run_job = gcp.cloudrunv2.Job(
+    f"debit-{ENV}-runjob-map",
+    deletion_protection=False,
+    launch_stage="BETA",
+    location=PROJECT_REGION,
+    template=gcp.cloudrunv2.JobTemplateArgs(
+        parallelism=1,
+        template=gcp.cloudrunv2.JobTemplateTemplateArgs(
+            containers=[
+                gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
+                    envs=[
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="ENV",
+                            value="prod" if ENV == "p" else "test",
+                        )
+                    ],
+                    image=map_image.image_name,
+                    resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
+                        limits={"memory": "4Gi", "cpu": "1"}
+                    ),
+                )
+            ],
+            service_account=cloud_run_service_account.email,
+            timeout="86400s",
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("map_cloud_run_job", map_cloud_run_job.name)
+
 # endregion
 
 # ------------------------------------------------------------------------
@@ -1421,6 +1523,69 @@ cleaning_workflow = gcp.workflows.Workflow(
 )
 pulumi.export("cleaning_workflow", cleaning_workflow.name)
 
+# Create data mapping workflow
+mapping_workflow = gcp.workflows.Workflow(
+    f"debit-{ENV}-flows-map",
+    region=PROJECT_REGION,
+    description="Triggers a Cloud Run Job for mapping cleaned project data.",
+    service_account=cloud_workflow_service_account.email,
+    call_log_level="LOG_ERRORS_ONLY",
+    deletion_protection=False,
+    source_contents=pulumi.Output.format(
+        """
+        # Workflow to map clean development bank projects for the DeBIT website.
+        #
+        # Triggered via Eventarc when a file is written to
+        # or updated within the cleaned data bucket.
+        #
+        # References:
+        # - https://cloud.google.com/workflows/docs/reference/googleapis/run/v2/projects.locations.jobs/run
+        # - https://cloud.google.com/workflows/docs/tutorials/execute-cloud-run-jobs#deploy-workflow
+        # - https://googleapis.github.io/google-cloudevents/examples/binary/storage/StorageObjectData-simple.json
+        # - https://cloud.google.com/run/docs/tutorials/eventarc
+        # - https://cloud.google.com/run/docs/triggering/storage-triggers
+        # - https://cloudevents.io/
+        # - https://github.com/cloudevents/sdk-python
+        #
+        main:
+            params: [event]
+            steps:
+                - initializeVariables:
+                    assign:
+                        - inputBucket: ${{ "gs://" + event.data.bucket }}
+                        - outputBucket: {output_bucket_url}
+                        - objectKey: ${{ event.data.name }}
+                        - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
+                        - mapJobFullName: ${{ jobPrefix + "{map_job_name}" }}
+                - mapData:
+                    call: googleapis.run.v2.projects.locations.jobs.run
+                    args:
+                        name: ${{mapJobFullName}}
+                        body:
+                            overrides:
+                                containerOverrides:
+                                    args:
+                                        - ${{ objectKey }}
+                                        - --input_bucket
+                                        - ${{ inputBucket }}
+                                        - --output_bucket
+                                        - ${{ outputBucket }}
+                                        - --remote
+                        connector_params:
+                            timeout: 86400
+                    result: mapDataOperation
+        """,
+        map_job_name=map_cloud_run_job.name,
+        project_id=PROJECT_ID,
+        project_region=PROJECT_REGION,
+        output_bucket_url=map_data_bucket.url,
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("mapping_workflow", mapping_workflow.name)
+
 # endregion
 
 # ------------------------------------------------------------------------
@@ -1473,7 +1638,7 @@ pulumi.export("extraction_scheduled_job", scheduled_job.name)
 
 # region
 
-# Create the Eventarc trigger
+# Create the data cleaning Eventarc trigger
 clean_workflow_trigger = gcp.eventarc.Trigger(
     f"debit-{ENV}-trigger-clean",
     name=f"debit-{ENV}-trigger-clean",
@@ -1488,6 +1653,28 @@ clean_workflow_trigger = gcp.eventarc.Trigger(
     ],
     destination=gcp.eventarc.TriggerDestinationArgs(
         workflow=cleaning_workflow.id
+    ),
+    service_account=eventarc_service_account.email,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# Create the data mapping workflow trigger
+map_workflow_trigger = gcp.eventarc.Trigger(
+    f"debit-{ENV}-trigger-map",
+    name=f"debit-{ENV}-trigger-map",
+    location=PROJECT_REGION,
+    matching_criterias=[
+        gcp.eventarc.TriggerMatchingCriteriaArgs(
+            attribute="type", value="google.cloud.storage.object.v1.finalized"
+        ),
+        gcp.eventarc.TriggerMatchingCriteriaArgs(
+            attribute="bucket", value=transform_data_bucket.name
+        ),
+    ],
+    destination=gcp.eventarc.TriggerDestinationArgs(
+        workflow=mapping_workflow.id
     ),
     service_account=eventarc_service_account.email,
     opts=pulumi.ResourceOptions(

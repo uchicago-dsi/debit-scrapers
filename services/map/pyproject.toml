@@ -1,0 +1,12 @@
+[project]
+name = "map"
+version = "0.1.0"
+description = "Maps clean project data to the format required for the DeBIT website."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastparquet>=2024.11.0",
+    "pandas>=2.3.3",
+    "pyarrow>=21.0.0",
+    "smart-open>=7.4.0",
+]
