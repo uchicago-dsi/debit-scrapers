@@ -67,14 +67,11 @@ class CurrencyConverter:
                 exchange rate for that year.
         """
         # Group annual exchange rates by country and convert to dict
-        country_rates = annual_rates.set_index("COUNTRY").to_dict(
-            orient="index"
-        )
+        country_rates = annual_rates.set_index("COUNTRY").to_dict(orient="index")
 
         # Create lookup for annual exchange rates
         lookup = {}
         for country_code, rates in country_rates.items():
-
             # Parse rates into DataFrame, with each row representing a year
             country_df = pd.DataFrame([rates]).T.reset_index()
 
@@ -119,14 +116,11 @@ class CurrencyConverter:
                 average exchange rate for the months in that year.
         """
         # Group monthly exchange rates by country and convert to dict
-        country_rates = monthly_rates.set_index("COUNTRY").to_dict(
-            orient="index"
-        )
+        country_rates = monthly_rates.set_index("COUNTRY").to_dict(orient="index")
 
         # Create lookup for averaged monthly exchange rates
         lookup = {}
         for country_code, rates in country_rates.items():
-
             # Parse rates into DataFrame, with each row representing a reporting period
             country_df = pd.DataFrame([rates]).T.reset_index()
 
@@ -188,9 +182,7 @@ class CurrencyConverter:
         with open(CURRENCY_COUNTRY_MAP_FPATH, encoding="utf-8") as f:
             return json.load(f)
 
-    def _load_exchange_rates(
-        self, frequency: Literal["A", "M" "Q"]
-    ) -> pd.DataFrame:
+    def _load_exchange_rates(self, frequency: Literal["A", "MQ"]) -> pd.DataFrame:
         """Loads exchange rates from the International Monetary Fund (IMF).
 
         NOTE: Here, rates represent conversions from domestic/local currency
@@ -308,22 +300,19 @@ def convert_currencies(df: pd.DataFrame) -> pd.DataFrame:
             The year, formatted as YYYY, or an empty string
                 if the year cannot be determined.
         """
-        if row["date_signed"]:
-            return row["date_signed"][:4]
-        elif row["date_approved"]:
-            return row["date_approved"][:4]
-        elif row["date_disclosed"]:
-            return row["date_disclosed"][:4]
-        elif row["date_under_appraisal"][:4]:
-            return row["date_under_appraisal"][:4]
-        elif row["date_effective"]:
-            return row["date_effective"][:4]
-        elif row["fiscal_year_effective"]:
-            return row["fiscal_year_effective"]
-        elif row["date_planned_effective"]:
-            return row["date_planned_effective"][:4]
-        else:
-            return ""
+        ranked_date_types = [
+            "date_signed",
+            "date_approved",
+            "date_disclosed",
+            "date_under_appraisal",
+            "date_effective",
+            "fiscal_year_effective",
+            "date_planned_effective",
+        ]
+        for date_type in ranked_date_types:
+            if row[date_type]:
+                return row[date_type][:4]
+        return ""
 
     # Calculate year for each project
     copy["conversion_year"] = copy.apply(get_conversion_year, axis=1)
@@ -357,13 +346,9 @@ def convert_currencies(df: pd.DataFrame) -> pd.DataFrame:
         return int(row["total_amount"] * row["conversion_rate"])
 
     # Convert debt amounts to USD in same year
-    copy["converted_amount_usd"] = copy.apply(convert, axis=1).astype(
-        pd.Int64Dtype()
-    )
+    copy["converted_amount_usd"] = copy.apply(convert, axis=1).astype(pd.Int64Dtype())
 
     # Replace any NA values resulting from conversion
-    copy["converted_amount_usd"] = copy["converted_amount_usd"].replace(
-        {pd.NA: None}
-    )
+    copy["converted_amount_usd"] = copy["converted_amount_usd"].replace({pd.NA: None})
 
     return copy

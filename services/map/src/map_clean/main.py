@@ -48,6 +48,46 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
     logger.info("Dropping NBIM records.")
     clean_df = clean_df.query("source != 'NBIM'")
 
+    # Define local function to generate display date
+    def get_display_date(row: pd.Series) -> tuple[str, str]:
+        """Determines the project date to display on the website.
+
+        Args:
+            row: A row of data from the DataFrame.
+
+        Returns:
+            A two-item tuple consisting of the date field name
+                (e.g., "date_signed", "date_effective") and
+                value (e.g., "2023-04-19") for display on the
+                website. If a project does not have any dates
+                populated, a two-item tuple of empty strings
+                is returned instead.
+        """
+        ranked_date_types = [
+            "date_signed",
+            "date_approved",
+            "date_disclosed",
+            "date_under_appraisal",
+            "date_effective",
+            "fiscal_year_effective",
+            "date_planned_effective",
+            "date_last_updated",
+            "date_actual_close",
+            "date_revised_close",
+            "date_planned_close",
+        ]
+        for date_type in ranked_date_types:
+            if row[date_type]:
+                return date_type, row[date_type]
+        return "", ""
+
+    # Add "Display Date" and "Display Date Type" columns
+    logger.info("Adding display date name and type columns.")
+    (
+        clean_df.loc[:, ["display_date"]],
+        clean_df.loc[:, ["display_date_type"]],
+    ) = zip(*clean_df.apply(get_display_date, axis=1))
+
     # Write mapped data to output file
     try:
         logger.info(f'Writing mapped project data to "{output_fpath}".')
