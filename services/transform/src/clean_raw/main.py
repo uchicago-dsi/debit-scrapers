@@ -143,7 +143,7 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
         raise RuntimeError(
             "An unexpected error occurred in the data "
             f"cleaning pipeline. Missing column. {e}"
-        )
+        ) from None
 
     # Write cleaned data to output file
     try:

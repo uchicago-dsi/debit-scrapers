@@ -181,11 +181,11 @@ class MapValues(DataTransformationStep):
             "standard-to-raw-list", "raw-to-standard"
         ] = "standard-to-raw-list",
         unknown_value: str = "Unknown",
-    ):
+    ) -> None:
         """Initializes a new instance of `MapValues`.
 
         Args:
-            mapping_file: The path to the mapping file.
+            mapping_fpath: The path to the mapping file.
                 Assumed to be JSON.
 
             mapping_schema: The schema of the mapping file.
