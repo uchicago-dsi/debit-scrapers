@@ -2,7 +2,7 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-This repository houses open source data scrapers for **[DeBIT](https://debit.datascience.uchicago.edu)** (**De**velopment **B**ank **I**nvestment **T**racker), an online research tool developed by **[Inclusive Development International](https://www.inclusivedevelopment.net/)** and the **[University of Chicago Data Science Institute (DSI)](https://datascience.uchicago.edu/)**. DeBIT empowers community advocates to track investments made by development finance institutions and other entities that have independent accountability mechanisms (IAMs). Every two weeks, its scrapers extract data from all investment projects publicly disclosed by the following 17 institutions:
+This monorepo houses open source data scrapers for **[DeBIT](https://debit.datascience.uchicago.edu)** (**De**velopment **B**ank **I**nvestment **T**racker), an online research tool developed by **[Inclusive Development International](https://www.inclusivedevelopment.net/)** and the **[University of Chicago Data Science Institute (DSI)](https://datascience.uchicago.edu/)**. DeBIT empowers community advocates to track investments made by development finance institutions and other entities that have independent accountability mechanisms (IAMs). Every two weeks, its scrapers extract data from all investment projects publicly disclosed by the following 17 institutions:
 
 - African Development Bank (AfDB)
 - Asian Development Bank (ADB)
@@ -23,6 +23,26 @@ This repository houses open source data scrapers for **[DeBIT](https://debit.dat
 - World Bank (WB)
 
 These scraped projects are then aggregated, cleaned, and standardized to provide a searchable **["database"](https://debit.datascience.uchicago.edu/database)** of projects by date, country, bank, completion status, and original loan amount, among other fields.
+
+## Structure
+
+### docs
+
+[In Progress] The documentation website. Scaffolded with Astro Starlight. Describes the architectural patterns, infrastructure, and data schemas used for the backend.
+
+### infra
+
+Bash and Python scripts used to deploy the backend infrastructure to the cloud. Currently utilizes Pulumi to deploy to Google Cloud Platform.
+
+### services
+
+Independently deployable stages of the DeBIT backend data processing pipeline.
+
+- **extract**: A Django project for extracting development project data. Contains the business logic of the scrapers, as well as management commands and API endpoints for triggering and monitoring scraper workflows.
+
+- **transform**: Packages for transforming the scraped data into cleaned output. Currently standarizes the data columns and performs nominal currency conversions of the project financing amounts.
+
+- **map**: Packages for mapping the cleaned data to the schema expected by the DeBIT website.
 
 ## Getting Started
 
@@ -51,7 +71,8 @@ Windows users should clone the repo in their WSL file system for the **[fastest 
 
 (4) Install **[make](https://sites.ualberta.ca/dept/chemeng/AIX-43/share/man/info/C/a_doc_lib/aixprggd/genprogc/make.htm)** for your operating system. On macOS and Windows Subsystem for Linux, which runs on Ubuntu, make should be installed by default, which you can verify with `make --version`. If the package is not found, install build-essential (e.g., `sudo apt-get install build-essential`) and then reattempt to verify. If you are working on a Windows PC outside of WSL, follow the instructions **[here](https://gist.github.com/evanwill/0207876c3243bbb6863e65ec5dc3f058)**.
 
-(5) Navigate to the `services` directory and follow the instructions in either the `extract` or `transform` subfolder to scrape or clean data, respectively.
+(5) Navigate to the `services` directory and follow the instructions in the `extract`, `transform`, or `map` subfolder to scrape, clean, or map data, respectively.
+s
 
 ## Contributions
 

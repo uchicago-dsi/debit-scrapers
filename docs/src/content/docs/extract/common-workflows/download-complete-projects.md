@@ -1,6 +1,6 @@
 ---
 title: Download Complete Projects
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Request a project file (e.g., JSON, Excel, CSV, ZIP) hosted at a known URL, download its contents, unzip it if necessary, and map the project records to the common output schema. Persist the project data to the database and mark the current task a success.

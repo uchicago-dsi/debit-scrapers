@@ -45,7 +45,7 @@ POSTGRES_USER='postgres'
 
 ### Entrypoints
 
-The service's Makefile provides simple entrypoints for running the application locally as a Docker Compose application. A few pointers:
+The service's Makefile provides simple entrypoints for running the application locally as a Docker container or as a network of Docker Compose services. A few pointers:
 
 - All of the commands listed below must be run directly under the current directory.
 
@@ -53,13 +53,13 @@ The service's Makefile provides simple entrypoints for running the application l
 
 - Data from the PostgreSQL database is persisted in the Docker volume `pgdata`, which is saved under `extract` and ignored by Git. NOTE: Because the service's Docker containers run as the root user, you will need to assign yourself ownership of the directory if you'd like to manually delete or modify it (e.g., `sudo chown -R $(id -un):$(id -gn) .`, assuming `extract` is your current working directory).
 
-- For all commands, pgAdmin is provided as a GUI for the PostgreSQL databases. To use pgAdmin, navigate to localhost:443 in a web browser, select "Servers" from the dropdown in the lefthand sidebar, click on the database you would like to inspect, and then log in with the password `postgres` when prompted. Browse tables through the interface and query data using raw SQL statements.
+- When running the scraper network, pgAdmin is provided as a GUI for the PostgreSQL database. To use pgAdmin, navigate to localhost:443 in a web browser, select "Servers" from the dropdown in the lefthand sidebar, click on the database you would like to inspect, and then log in with the password `postgres` when prompted. Browse tables through the interface and query data using raw SQL statements.
+
+- The final size of the Docker image for the scrapers is quite large (around 1GB) because Playwright and its dependencies are downloaded and installed.
 
 #### Build Image
 
-Builds a Docker image of the scrapers, which was architected as a Django project utilizing Django REST Framework.
-
-WARNING: Playwright and its dependencies are downloaded and installed, so the image is large (around 1GB).
+Builds a Docker image of the scrapers, architected as a Django project utilizing Django REST Framework.
 
 ```bash
 make build-scrapers
@@ -67,7 +67,7 @@ make build-scrapers
 
 #### Run Interactive Terminal
 
-Runs a container with an interactive bash terminal from the built Docker image while persisting the entire `./services/extract/src` directory as a volume. This allows you to make changes to scripts and immediately test the results.
+Builds and runs a container with an interactive bash terminal while persisting the entire `./services/extract/src` directory as a volume. This allows you to make changes to scripts and immediately test the results.
 
 ```bash
 make run-scrapers-bash
@@ -80,7 +80,6 @@ _Scraping Logic Only_
 Set up an interactive terminal to the scraper service:
 
 ```bash
-make build-scrapers
 make run-scrapers-bash
 ```
 
@@ -94,16 +93,15 @@ Tests for scrapers that involve downloading data or seeding URLs are generated a
 
 _Scraper Service API Endpoint_
 
-Simulate the cloud-based production environment by spinning up a database, orchestrator service, and scraper service as a network of Docker containers. (NOTE: The cloud task queues are mocked, and tasks are simply printed to the console when enqueued.)
+Simulate the cloud-based production environment by spinning up a database, orchestrator service, and scraper service as a network of Docker containers. (NOTE: The cloud task queues are mocked, and tasks are simply printed to the console when enqueued. The containers are rebuilt every time the command is executed.)
 
 ```bash
-make build-scrapers
-make run-scrapers
+make run-scrapers-network
 ```
 
 When the orchestrator container starts, it will create a new job for the current date in the database, write the first set of scraping tasks to the database, and then queue those tasks to be processed. Afterwards, it will poll the database periodically until the timeout is reached or all of the tasks corresponding to the job have reached a terminal state (i.e., "Completed" or "Error" with no more retries).
 
-Once the orchestrator begins polling, log into pgAdmin as described above and view the rows of the `extraction_task` database table. Use the data there to compose HTTP POST requests for the scraper service API endpoint. For example, the following request would conduct a partial page scrape of the IDB webpage at https://www.iadb.org/en/project/BO0060 for task 22860, a child of job 1:
+Once the orchestrator begins polling, log into pgAdmin as described above and view the rows of the `extraction_task` database table. Use the data there to compose HTTP POST requests for the scraper service API endpoint. For example, the following request would conduct a partial page scrape of the IDB webpage at "https://www.iadb.org/en/project/BO0060" for task 22860, a child of job 1:
 
 ```
 ENDPOINT:
@@ -128,5 +126,5 @@ You can make requests one at a time to confirm that the scraper service endpoint
 Removes the Docker compose network and the database volume `pgdata`. It is advised to run `docker system prune` separately as well.
 
 ```bash
-make tear-down-scrapers
+make tear-down-scrapers-network
 ```

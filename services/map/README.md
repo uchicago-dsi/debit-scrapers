@@ -29,7 +29,7 @@ make build-mapper
 
 #### Run Pipeline
 
-Executes the pipeline script as a Docker container while mounting the directories `./services/map/input` and `./services/map/output` as volumes.
+Builds and runs the pipeline script as a Docker container while mounting the directories `./services/map/input` and `./services/map/output` as volumes.
 
 Download the clean project file generated from the previous data pipeline step and save it under the input directory. After the script runs, a mapped Parquet file is generated and saved under the output directory.
 

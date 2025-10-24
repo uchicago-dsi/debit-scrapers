@@ -19,12 +19,7 @@ build-scrapers:
 	cd $(current_abs_path)
 	docker build -t $(project_name) -f $(dockerfile_path) .
 
-run-scrapers:
-	cd $(current_abs_path)
-	docker compose up --build
-
-run-scrapers-bash:
-	cd $(current_abs_path)
+run-scrapers-bash: build-scrapers
 	docker run --name $(project_name) \
 		-v $(project_src_dir):/$(container_src_dir) \
 		-it \
@@ -32,7 +27,11 @@ run-scrapers-bash:
 		--rm $(project_name) \
 		bash
 
-tear-down-scrapers:
+run-scrapers-network:
+	cd $(current_abs_path)
+	docker compose up --build
+
+tear-down-scrapers-network:
 	cd $(current_abs_path)
 	docker compose down
 	sudo chown -R $(USER) pgdata

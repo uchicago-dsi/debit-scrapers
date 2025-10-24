@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 To shed light on the opaque world of international development finance, the **Development Bank Investment Tracker (DeBIT)** collects, standardizes, augments, and aggregates data on projects funded by high-profile financial institutions with independent acountability mechanisms (IAMs). Currently, there are 16 such institutions:

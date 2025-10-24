@@ -1,6 +1,6 @@
 ---
 title: Bank Workflows
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Custom workflows have been written for each financial institution by overriding the **[common/template workflows](/extraction/common-workflows)**. To extract data for a given bank, one or more of these workflows are executed in sequence.

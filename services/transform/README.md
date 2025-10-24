@@ -31,7 +31,9 @@ make build-clean
 
 #### Run Pipeline
 
-Executes the pipeline script as a Docker container while mounting the directories `./services/transform/input` and `./services/transform/output` as volumes. Download the scraped project file generated from the previous data pipeline step (i.e., data extraction) from Google Cloud Storage and save it under the input directory. After the script runs, a cleaned Parquet file is generated and saved under the output directory.
+Builds and runs the pipeline script as a Docker container while mounting the directories `./services/transform/input` and `./services/transform/output` as volumes.
+
+Download the scraped project file generated from the previous data pipeline step (i.e., data extraction) from Google Cloud Storage and save it under the input directory. After the script runs, a cleaned Parquet file is generated and saved under the output directory.
 
 ```bash
 make run-clean

@@ -1,6 +1,6 @@
 ---
 title: Crawl Search Results
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Given a URL to a less-detailed list view of projects, request the URL and then construct links to individual project resources using the request body content. Finally, queue new tasks for processing those links and mark the current task a success.

@@ -1,6 +1,6 @@
 ---
 title: Insert Project Details
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Given a URL to one or more detailed project resources, request the URL, extract project data from the response content, map the projects to a common output schema, insert the projects into the database, and mark the current task a success.

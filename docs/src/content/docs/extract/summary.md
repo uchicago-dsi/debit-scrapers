@@ -1,6 +1,6 @@
 ---
 title: Data Extraction Pipeline
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 The DeBIT data extraction pipeline retrieves project data by crawling and scraping webpages, programmatically downloading data files, querying APIs, or some combination of these methods. Because this process largely consists of awaiting network requests, it is I/O bound and requests can be parallelized for greater efficiency.

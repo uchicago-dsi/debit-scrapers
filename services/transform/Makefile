@@ -21,7 +21,7 @@ build-clean:
 	cd $(current_abs_path)
 	docker build -t $(project_name) .
 
-run-clean:
+run-clean: build-clean
 	cd $(current_abs_path)
 	docker run --name $(project_name) \
 		-v $(input_dir):/$(container_input_dir) \

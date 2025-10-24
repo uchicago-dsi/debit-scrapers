@@ -134,6 +134,29 @@ wheels = [
 ]
 
 [[package]]
+name = "debit-transform"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "fastparquet" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+    { name = "requests" },
+    { name = "smart-open", extra = ["gcs"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastparquet", specifier = ">=2024.11.0" },
+    { name = "numpy", specifier = ">=2.3.3" },
+    { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pyarrow", specifier = ">=21.0.0" },
+    { name = "requests", specifier = ">=2.32.5" },
+    { name = "smart-open", extras = ["gcs"], specifier = ">=7.3.1" },
+]
+
+[[package]]
 name = "fastparquet"
 version = "2024.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -554,29 +577,6 @@ wheels = [
 [package.optional-dependencies]
 gcs = [
     { name = "google-cloud-storage" },
-]
-
-[[package]]
-name = "transform"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "fastparquet" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "pyarrow" },
-    { name = "requests" },
-    { name = "smart-open", extra = ["gcs"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastparquet", specifier = ">=2024.11.0" },
-    { name = "numpy", specifier = ">=2.3.3" },
-    { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pyarrow", specifier = ">=21.0.0" },
-    { name = "requests", specifier = ">=2.32.5" },
-    { name = "smart-open", extras = ["gcs"], specifier = ">=7.3.1" },
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 ---
 title: Crawl & Scrape Search Results
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Given a URL to a less-detailed list view of projects, request the URL, construct links to individual project resources, _and_ extract incomplete project records using the request body content. Insert the incomplete project records into the database, queue new tasks for processing the remaining project data at those links, and mark the current task a success.

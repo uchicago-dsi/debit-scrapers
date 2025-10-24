@@ -1,6 +1,6 @@
 ---
 title: Download Partial Projects
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Request a project file (e.g., JSON, Excel, CSV, ZIP) hosted at a known URL, download its contents, and unzip it if necessary. Extract select fields from the project records and map them to the common output schema. In addition, generate URLs to detailed project resources to get remaining data. Persist the project data to the database, queue the next set of tasks, to process the URLs, and mark the current task a success.

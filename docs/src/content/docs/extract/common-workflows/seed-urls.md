@@ -1,6 +1,6 @@
 ---
 title: Seed URLs
-description: A guide in my new Starlight docs site.
+description:
 ---
 
 Request a known starting point for web crawling and then use data from the response to generate the next set of URLs to crawl. Queue those tasks and mark the current task a success.

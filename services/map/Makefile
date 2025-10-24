@@ -21,7 +21,7 @@ build-mapper:
 	cd $(current_abs_path)
 	docker build -t $(project_name) .
 
-run-mapper:
+run-mapper: build-mapper
 	cd $(current_abs_path)
 	docker run --name $(project_name) \
 		-v $(input_dir):/$(container_input_dir) \

@@ -1,6 +1,5 @@
 [project]
-requires-python = ">=3.11"
-name = "debit-scrapers-idi"
+name = "debit-scrapers"
 version = "0.0.1"
 authors = [
     {name = "DSI Core Facility", email = "DSICoreFacility@uchicago.edu"}
@@ -10,6 +9,7 @@ maintainers = [
 ]
 description = "Framework for extracting project data from international development institutions."
 readme = "README.md"
+requires-python = ">=3.11"
 dependencies = [
     "beautifulsoup4>=4.13.4",
     "django>=5.2.5",
