@@ -32,6 +32,12 @@ repos:
       - id: ruff-format
         args: ["--verbose"]
         files: ^services/transform/src/clean_raw/
+      - id: ruff-check
+        args: ["--verbose"]
+        files: ^services/map/src/map_clean/
+      - id: ruff-format
+        args: ["--verbose"]
+        files: ^services/map/src/map_clean/
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2
