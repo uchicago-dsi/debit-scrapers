@@ -216,7 +216,7 @@ map_data_bucket = gcp.storage.Bucket(
     uniform_bucket_level_access=True,
     force_destroy=IS_TEST,
     cors=[
-        gcp.storage.BucketCorsArgs(
+        gcp.storage.BucketCorArgs(
             max_age_seconds=3600,
             methods=["GET", "HEAD"],
             origins=["*"],
