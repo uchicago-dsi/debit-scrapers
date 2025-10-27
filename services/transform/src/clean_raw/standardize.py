@@ -570,9 +570,17 @@ def standardize_columns(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFram
     Returns:
         The standardized DataFrame.
     """
-    # Make name column uppercase
-    logger.info("Applying uppercase format to name column.")
-    df["name"] = df["name"].str.upper()
+    # Strip leading and trailing whitespace for number column
+    logger.info("Formatting number column.")
+    df.loc[:, "number"] = df["number"].apply(
+        lambda val: val.strip() if isinstance(val, str) else val
+    )
+
+    # Make name column uppercase and strip leading and trailing whitespace
+    logger.info("Formatting name column.")
+    df.loc[:, "name"] = df["name"].apply(
+        lambda val: val.strip().upper() if isinstance(val, str) else val
+    )
 
     # Standardize project affiliates
     logger.info("Standardizing project affiliates.")
@@ -647,9 +655,11 @@ def standardize_columns(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFram
     logger.info("Merging mapped currencies with projects.")
     subset_df = subset_df.merge(mapped_currencies, how="left", on="id")
 
-    # Replace NaN values with empty strings in date columns
+    # Replace NaN values with empty strings in object columns
     logger.info("Replacing missing values.")
-    date_cols = [
+    obj_cols = [
+        "name",
+        "number",
         "date_actual_close",
         "date_approved",
         "date_disclosed",
@@ -662,7 +672,7 @@ def standardize_columns(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFram
         "date_under_appraisal",
         "fiscal_year_effective",
     ]
-    for col in date_cols:
+    for col in obj_cols:
         subset_df[col] = subset_df[col].replace({np.nan: ""})
 
     # Replace NaN values with None in number columns

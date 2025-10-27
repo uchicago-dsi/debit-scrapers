@@ -84,9 +84,40 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
     # Add "Display Date" and "Display Date Type" columns
     logger.info("Adding display date name and type columns.")
     (
-        clean_df.loc[:, ["display_date"]],
         clean_df.loc[:, ["display_date_type"]],
+        clean_df.loc[:, ["display_date"]],
     ) = zip(*clean_df.apply(get_display_date, axis=1))
+
+    # Define local function to generate "Document" column
+    def get_document(row: pd.Series) -> str:
+        """Generates a document column to facilitate searches.
+
+        The field will be a space-separated string containing
+        the project's source, name, number, status, affiliates,
+        countries, sectors, and finance types.
+
+        Args:
+            row: A row of data from the DataFrame.
+
+        Returns:
+            A document field for the project.
+        """
+        return " ".join(
+            [
+                row["source"] or "",
+                row["name"] or "",
+                row["number"] or "",
+                row["status"] or "",
+                " ".join(row["affiliates"] if len(row["affiliates"]) else []),
+                " ".join(row["countries"] if len(row["countries"]) else []),
+                " ".join(row["sectors"] if len(row["sectors"]) else []),
+                " ".join(row["finance_types"] if len(row["finance_types"]) else []),
+            ]
+        )
+
+    # Add document column to facilitate search
+    logger.info("Adding document column.")
+    clean_df.loc[:, ["document"]] = clean_df.apply(get_document, axis=1)
 
     # Write mapped data to output file
     try:
@@ -161,9 +192,7 @@ if __name__ == "__main__":
 
     # Execute main program logic
     try:
-        logger.info(
-            f'Received request to map clean data file at "{input_fpath}".'
-        )
+        logger.info(f'Received request to map clean data file at "{input_fpath}".')
         main(input_fpath, output_fpath, logger)
     except Exception as e:
         logger.error(f"Failed to map clean development bank project data. {e}")

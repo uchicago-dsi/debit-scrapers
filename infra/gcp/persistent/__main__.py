@@ -215,6 +215,13 @@ map_data_bucket = gcp.storage.Bucket(
     location=PROJECT_REGION,
     uniform_bucket_level_access=True,
     force_destroy=IS_TEST,
+    cors=[
+        gcp.storage.BucketCorsArgs(
+            max_age_seconds=3600,
+            methods=["GET", "HEAD"],
+            origins=["*"],
+        )
+    ],
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -715,6 +722,19 @@ gcp.projects.IAMMember(
     project=PROJECT_ID,
     role="roles/eventarc.eventReceiver",
     member=eventarc_service_account_member,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+
+# PUBLIC
+
+# Grant open access to the storage bucket with mapped data
+gcp.storage.BucketIAMMember(
+    f"debit-{ENV}-public-mapbucket-access",
+    bucket=map_data_bucket.name,
+    role="roles/storage.objectViewer",
+    member="allUsers",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
