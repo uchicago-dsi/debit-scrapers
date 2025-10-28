@@ -1,0 +1,31 @@
+---
+title: Data Schema
+description:
+---
+
+import {
+  ExtractedJobSchema,
+  ExtractedProjectSchema,
+  ExtractedTaskSchema,
+  SchemaTable,
+} from "/src/components/Schema/index.tsx";
+
+The following database models are used to persist data during the extraction process.
+
+## ExtractionJob
+
+A job to extract development project records from a set of configured data sources. Triggered by an external service.
+
+<SchemaTable fields={ExtractedJobSchema} />
+
+## ExtractionTask
+
+A task to extract data from a single endpoint (e.g., a webpage URL or API call) as part of a larger **ExtractionJob**.
+
+<SchemaTable fields={ExtractedTaskSchema} />
+
+## ExtractedProject
+
+A development project extracted from a data source.
+
+<SchemaTable fields={ExtractedProjectSchema} />

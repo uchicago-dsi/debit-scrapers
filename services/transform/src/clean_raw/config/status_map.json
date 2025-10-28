@@ -1,0 +1,78 @@
+{
+    "Active": [
+        "active",
+        "aktiv",
+        "disbursing",
+        "fully disbursed",
+        "implementation",
+        "ongoing",
+        "partially disbursed",
+        "pipeline",
+        "repaying"
+    ],
+    "Approved": [
+        "approved",
+        "approved investment",
+        "board approved",
+        "sp and tc com approved",
+        "sp com approved",
+        "sp com and tc com approved",
+        "tc and sp com approved",
+        "tc approved",
+        "tc com approved"
+    ],
+    "Cancelled": [
+        "cancelled",
+        "cancelled after signature",
+        "dropped",
+        "terminated / cancelled"
+    ],
+    "Completed": [
+        "abgeschlossen",
+        "closed",
+        "complete",
+        "completed",
+        "completed investment",
+        "completion",
+        "fully reimbursed"
+    ],
+    "Other": [
+        "other"
+    ],
+    "Pending": [
+        "board approved, pending signing",
+        "concept reviewed",
+        "exploratory",
+        "finalisation",
+        "hold",
+        "inactive",
+        "in exploratory",
+        "in exploratory, pending final review",
+        "investment in contracting phase",
+        "not active",
+        "not signed",
+        "on hold",
+        "partially disbursed",
+        "passed concept review",
+        "passed concept review, pending final review",
+        "passed concept review, pending structure review",
+        "passed final review",
+        "passed final review, pending approval",
+        "passed structure review",
+        "passed structure review, pending final review",
+        "pending",
+        "pending approval",
+        "pending concept review",
+        "pending final review",
+        "pending structure review",
+        "preparation",
+        "promotion",
+        "proposed",
+        "proposed investment",
+        "status pending",
+        "under appraisal"
+    ],
+    "Signed": [
+        "signed"
+    ]
+}

@@ -1,0 +1,174 @@
+{
+    "ALL": [
+        "all"
+    ],
+    "AMD": [
+        "amd"
+    ],
+    "AUD": [
+        "aud"
+    ],
+    "AZN": [
+        "azn"
+    ],
+    "BOB": [
+        "bob"
+    ],
+    "BRL": [
+        "brl"
+    ],
+    "BYR": [
+        "byr"
+    ],
+    "CAD": [
+        "cad"
+    ],
+    "CHF": [
+        "chf"
+    ],
+    "CNH": [
+        "cnh"
+    ],
+    "CNY": [
+        "cny"
+    ],
+    "CZK": [
+        "czk"
+    ],
+    "DEM": [
+        "dem",
+        "dm"
+    ],
+    "DKK": [
+        "dkk"
+    ],
+    "ECU": [
+        "ecu"
+    ],
+    "EGP": [
+        "egp"
+    ],
+    "ETB": [
+        "etb"
+    ],
+    "EUR": [
+        "eur",
+        "euro",
+        "euros",
+        "€"
+    ],
+    "FRF": [
+        "ff"
+    ],
+    "GBP": [
+        "gbp"
+    ],
+    "GEL": [
+        "gel"
+    ],
+    "HRK": [
+        "hrk"
+    ],
+    "HUF": [
+        "huf"
+    ],
+    "INR": [
+        "inr"
+    ],
+    "JOD": [
+        "jod"
+    ],
+    "JPY": [
+        "jpy"
+    ],
+    "KES": [
+        "kes"
+    ],
+    "KGS": [
+        "kgs"
+    ],
+    "KZT": [
+        "kzt"
+    ],
+    "LKR": [
+        "lkr"
+    ],
+    "LVL": [
+        "lvl"
+    ],
+    "MAD": [
+        "mad"
+    ],
+    "MNT": [
+        "mnt"
+    ],
+    "MXN": [
+        "mxn"
+    ],
+    "NGN": [
+        "ngn"
+    ],
+    "NOK": [
+        "nok"
+    ],
+    "NPR": [
+        "npr"
+    ],
+    "PHP": [
+        "php"
+    ],
+    "PLN": [
+        "pln",
+        "polish zloty"
+    ],
+    "RON": [
+        "ron"
+    ],
+    "RSD": [
+        "rsd"
+    ],
+    "RUB": [
+        "rouble",
+        "rouble",
+        "rub",
+        "russian rouble"
+    ],
+    "RUR": [
+        "rur"
+    ],
+    "RWF": [
+        "rwf"
+    ],
+    "SKK": [
+        "skk"
+    ],
+    "THB": [
+        "thb"
+    ],
+    "TND": [
+        "tnd"
+    ],
+    "TRY": [
+        "tl",
+        "try"
+    ],
+    "TZS": [
+        "tzs"
+    ],
+    "XUA": [
+        "ua"
+    ],
+    "UAH": [
+        "uah"
+    ],
+    "USD": [
+        "us$",
+        "usd"
+    ],
+    "UZS": [
+        "uzs"
+    ],
+    "ZAR": [
+        "zar"
+    ]
+}

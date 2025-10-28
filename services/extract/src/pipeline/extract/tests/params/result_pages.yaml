@@ -1,0 +1,18 @@
+---
+# Parameters (i.e., bank and URL) used to test scraping of project search result pages for project page URLs.
+- fmo:
+    - https://www.fmo.nl/worldmap?page=1
+    - https://www.fmo.nl/worldmap?page=30
+    - https://www.fmo.nl/worldmap?page=55
+- idb:
+    - https://www.iadb.org/en/project-search?page=0
+    - https://www.iadb.org/en/project-search?page=400
+    - https://www.iadb.org/en/project-search?page=997
+- miga:
+    - https://www.miga.org/projects?page=0
+    - https://www.miga.org/projects?page=68
+    - https://www.miga.org/projects?page=118
+- pro:
+    - https://www.proparco.fr/en/projects/list?page=0
+    - https://www.proparco.fr/en/projects/list?page=25
+    - https://www.proparco.fr/en/projects/list?page=39

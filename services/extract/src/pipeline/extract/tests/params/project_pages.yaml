@@ -1,0 +1,29 @@
+---
+# Parameters (i.e., bank and URL) used to test scraping of project pages.
+- adb:
+    - https://www.adb.org/iati/iati-activities-af.xml
+    - https://www.adb.org/iati/iati-activities-kh.xml
+    - http://www.adb.org/iati/iati-activities-in.xml
+    - https://www.adb.org/iati/iati-activities-reg.xml
+- aiib:
+    - https://www.aiib.org/en/projects/details/2023/proposed/Viet-Nam-Gia-Lai-Wind-Power-Project.html
+    - https://www.aiib.org/en/projects/details/2023/approved/Egypt-Sustainable-Transport-and-Digital-Infrastructure-Guarantee.html
+    - https://www.aiib.org/en/projects/details/2016/approved/Tajikistan-Dushanbe-Uzbekistan-Border-Road-Improvement.html
+- fmo:
+    - https://www.fmo.nl/project-detail/60377
+    - https://www.fmo.nl/project-detail/62828
+    - https://www.fmo.nl/project-detail/45033
+- ifc:
+    - https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects?payload=*&$start=11900$srt=disclosed_date$order=desc$rows=100
+    - https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects?payload=*&$start=11800$srt=disclosed_date$order=desc$rows=100
+    - https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects?payload=*&$start=0$srt=disclosed_date$order=desc$rows=100
+    - https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects?payload=*&$start=200$srt=disclosed_date$order=desc$rows=100
+    - https://disclosuresservice.ifc.org/api/searchprovider/searchenterpriseprojects?payload=*&$start=8300$srt=disclosed_date$order=desc$rows=100
+- miga:
+    - https://www.miga.org/project/bboxx-rwanda-kenya-and-drc-0
+    - https://www.miga.org/project/koridori-srbije-ltd-morava-motorway-0
+    - https://www.miga.org/project/dedicated-freight-corridor-corporation-india-limited-1
+- pro:
+    - https://www.proparco.fr/en/carte-des-projets/ecobank-trade-finance
+    - https://www.proparco.fr/en/carte-des-projets/darby-latam-pf-iii
+    - https://www.proparco.fr/en/carte-des-projets/mpef-iv

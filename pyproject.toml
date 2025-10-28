@@ -1,9 +1,0 @@
-[project]
-name = "scrapers"
-version = "0.0.1"
-dependencies = [
-    'importlib-metadata; python_version<"3.8"',
-]
-
-[tool.setuptools.packages.find]
-include = ["scrapers*"]
