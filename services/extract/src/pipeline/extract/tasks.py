@@ -66,7 +66,17 @@ class DummyQueue(MessageQueueClient):
             `None`
         """
         self._logger.info(f"Queueing {len(tasks)} tasks.")
-        self._logger.info(json.dumps(tasks))
+        formatted_tasks = [
+            {
+                "id": task["id"],
+                "job": task["job"],
+                "source": task["source"],
+                "workflow_type": task["workflow_type"],
+                "url": task["url"],
+            }
+            for task in tasks
+        ]
+        self._logger.info(json.dumps(formatted_tasks))
 
     def purge(self) -> None:
         """Purges all tasks from the configured queues.

@@ -8,7 +8,7 @@ dockerfile_path := $(current_abs_path)Dockerfile.heavy
 
 # Define source directories for mounting
 project_src_dir := $(current_abs_path)src
-container_src_dir := "src"
+container_src_dir := "app/src"
 
 # Define additional additional Docker variables
 project_name := "debit-scrapers"
