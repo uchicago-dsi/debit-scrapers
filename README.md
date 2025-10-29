@@ -72,7 +72,6 @@ Windows users should clone the repo in their WSL file system for the **[fastest 
 (4) Install **[make](https://sites.ualberta.ca/dept/chemeng/AIX-43/share/man/info/C/a_doc_lib/aixprggd/genprogc/make.htm)** for your operating system. On macOS and Windows Subsystem for Linux, which runs on Ubuntu, make should be installed by default, which you can verify with `make --version`. If the package is not found, install build-essential (e.g., `sudo apt-get install build-essential`) and then reattempt to verify. If you are working on a Windows PC outside of WSL, follow the instructions **[here](https://gist.github.com/evanwill/0207876c3243bbb6863e65ec5dc3f058)**.
 
 (5) Navigate to the `services` directory and follow the instructions in the `extract`, `transform`, or `map` subfolder to scrape, clean, or map data, respectively.
-s
 
 ## Contributions
 
