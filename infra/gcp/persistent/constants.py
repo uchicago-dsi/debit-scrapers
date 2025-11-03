@@ -105,6 +105,7 @@ QUEUE_CONFIG = [
 
 # Parse environment variables
 try:
+    CLOUDFLARE_R2_BUCKET = os.environ["CLOUDFLARE_R2_BUCKET"]
     DJANGO_PORT = os.environ["DJANGO_PORT"]
     DJANGO_SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
     ENV = "p" if os.environ["ENV"] == "prod" else "t"

@@ -8,6 +8,7 @@ import pulumi_std as std
 
 # Application imports
 from constants import (
+    CLOUDFLARE_R2_BUCKET,
     DJANGO_ALLOWED_HOST,
     DJANGO_API_PATH_DATA_EXTRACTION,
     DJANGO_PORT,
@@ -208,26 +209,6 @@ transform_data_bucket = gcp.storage.Bucket(
 )
 pulumi.export("transform_data_bucket_name", transform_data_bucket.name)
 pulumi.export("transform_data_bucket_url", transform_data_bucket.url)
-
-# Data mapping
-map_data_bucket = gcp.storage.Bucket(
-    f"debit-{ENV}-map-bucket",
-    location=PROJECT_REGION,
-    uniform_bucket_level_access=True,
-    force_destroy=IS_TEST,
-    cors=[
-        gcp.storage.BucketCorArgs(
-            max_age_seconds=3600,
-            methods=["GET", "HEAD"],
-            origins=["*"],
-        )
-    ],
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-pulumi.export("map_data_bucket_name", map_data_bucket.name)
-pulumi.export("map_data_bucket_url", map_data_bucket.url)
 
 # endregion
 
@@ -531,17 +512,6 @@ gcp.storage.BucketIAMMember(
     ),
 )
 
-# Grant account access to data mapping Cloud Storage bucket
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-run-mapbucket-access",
-    bucket=map_data_bucket.name,
-    role="roles/storage.objectAdmin",
-    member=cloud_run_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
 # Grant account access to Cloud Tasks
 gcp.projects.IAMMember(
     f"debit-{ENV}-run-tsk-access",
@@ -722,19 +692,6 @@ gcp.projects.IAMMember(
     project=PROJECT_ID,
     role="roles/eventarc.eventReceiver",
     member=eventarc_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# PUBLIC
-
-# Grant open access to the storage bucket with mapped data
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-public-mapbucket-access",
-    bucket=map_data_bucket.name,
-    role="roles/storage.objectViewer",
-    member="allUsers",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -1599,7 +1556,7 @@ mapping_workflow = gcp.workflows.Workflow(
         map_job_name=map_cloud_run_job.name,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
-        output_bucket_url=map_data_bucket.url,
+        output_bucket_url=CLOUDFLARE_R2_BUCKET,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

@@ -1,3 +1,3 @@
-encryptionsalt: v1:bJildeOI+w0=:v1:1CG/PtkwXp0lXQPg:7p/rvVA82HNJw5a1Lh6OXWayzxQylA==
+encryptionsalt: v1:rfv8glvbU1I=:v1:31sEsehdGbmfaEGq:HYGDK4abDlhh7AKzprzFpmD8j/bYJA==
 config:
-  gcp:region: "us-central1"
+  gcp:region: us-central1
