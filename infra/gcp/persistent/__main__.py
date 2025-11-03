@@ -8,7 +8,9 @@ import pulumi_std as std
 
 # Application imports
 from constants import (
-    CLOUDFLARE_R2_BUCKET,
+    CLOUDFLARE_R2_ACCESS_KEY_ID,
+    CLOUDFLARE_R2_BUCKET_URL,
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY,
     DJANGO_ALLOWED_HOST,
     DJANGO_API_PATH_DATA_EXTRACTION,
     DJANGO_PORT,
@@ -23,6 +25,8 @@ from constants import (
     GEMINI_API_KEY,
     IS_TEST,
     MAPPING_DIR,
+    OUTPUT_FILE_MAX_AGE,
+    OUTPUT_FILE_TOTAL_MAX_ATTEMPTS,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
     POSTGRES_USER,
@@ -1142,9 +1146,25 @@ map_cloud_run_job = gcp.cloudrunv2.Job(
                 gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
                     envs=[
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_ACCESS_KEY_ID",
+                            value=CLOUDFLARE_R2_ACCESS_KEY_ID,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+                            value=CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="ENV",
                             value="prod" if ENV == "p" else "test",
-                        )
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="OUTPUT_FILE_MAX_AGE",
+                            value=OUTPUT_FILE_MAX_AGE,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="OUTPUT_FILE_TOTAL_MAX_ATTEMPTS",
+                            value=OUTPUT_FILE_TOTAL_MAX_ATTEMPTS,
+                        ),
                     ],
                     image=map_image.image_name,
                     resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
@@ -1556,7 +1576,7 @@ mapping_workflow = gcp.workflows.Workflow(
         map_job_name=map_cloud_run_job.name,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
-        output_bucket_url=CLOUDFLARE_R2_BUCKET,
+        output_bucket_url=CLOUDFLARE_R2_BUCKET_URL,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
