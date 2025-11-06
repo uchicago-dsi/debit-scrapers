@@ -3,7 +3,6 @@
 # Standard library imports
 import argparse
 import logging
-from datetime import datetime, UTC
 from pathlib import Path
 
 # Third-party imports
@@ -206,10 +205,13 @@ if __name__ == "__main__":
         # Compose path to remote input file
         input_fpath = f"{args.input_bucket}/{args.object_key}"
 
+        # Parse input file name and date from input file object key
+        input_fpath_segments = args.object_key.split("/")
+        input_fname = input_fpath_segments[-1]
+        input_date = input_fpath_segments[-2]
+
         # Compose path to remote output file
-        today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        input_fname = args.object_key.split("/")[-1]
-        output_obj_key = f"transformation/{today}/{input_fname}.parquet"
+        output_obj_key = f"transformation/{input_date}/{input_fname}.parquet"
         output_fpath = f"{args.output_bucket}/{output_obj_key}"
     else:
         # Compose path to local input file

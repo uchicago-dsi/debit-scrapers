@@ -11,10 +11,12 @@ description = "Maps clean project data to the format required for the DeBIT webs
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.40.64",
+    "botocore>=1.40.64",
     "fastparquet>=2024.11.0",
     "pandas>=2.3.3",
     "pyarrow>=21.0.0",
-    "smart-open[gcs]>=7.4.0",
+    "smart-open[gcs,s3]>=7.4.0",
 ]
 
 [tool.ruff.lint]

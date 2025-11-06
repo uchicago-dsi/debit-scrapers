@@ -2,7 +2,7 @@
 
 A service for extracting development bank project finance details from heterogeneous data sources such as APIs, data files, and webpages.
 
-Consists of a Django project, `pipeline`, with "scrapers" for each data source. An orchestrator client queues the first data extraction task for each source. As tasks are completed, subsequent tasks are queued when applicable to continue "crawling" the source (e.g., a search results webpage would generate links to project projects) while full or partial project records are written to a database as the data is encountered.
+Consists of a Django project, `pipeline`, with "scrapers" for each data source. An orchestrator client queues the first data extraction task for each source. As tasks are completed, subsequent tasks are queued when applicable to continue "crawling" the source (e.g., a search results webpage would generate links to individual project webpages) while full or partial project records are written to a database as data is encountered.
 
 ## Setup
 
@@ -105,7 +105,7 @@ Once the orchestrator begins polling, log into pgAdmin as described above and vi
 
 ```
 ENDPOINT:
-http://0.0.0.0:8000/api/v1/gcp/tasks
+http://0.0.0.0:8000/api/v1/gcp/extract
 
 EXAMPLE REQUEST BODY:
 {

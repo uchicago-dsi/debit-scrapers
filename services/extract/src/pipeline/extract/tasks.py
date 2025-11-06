@@ -2,6 +2,7 @@
 
 # Standard library imports
 import json
+import os
 import time
 from abc import ABC, abstractmethod
 
@@ -66,7 +67,17 @@ class DummyQueue(MessageQueueClient):
             `None`
         """
         self._logger.info(f"Queueing {len(tasks)} tasks.")
-        self._logger.info(json.dumps(tasks))
+        formatted_tasks = [
+            {
+                "id": task["id"],
+                "job": task["job"],
+                "source": task["source"],
+                "workflow_type": task["workflow_type"],
+                "url": task["url"],
+            }
+            for task in tasks
+        ]
+        self._logger.info(json.dumps(formatted_tasks))
 
     def purge(self) -> None:
         """Purges all tasks from the configured queues.
@@ -102,6 +113,14 @@ class GoogleCloudTaskQueue(MessageQueueClient):
         except AttributeError as e:
             raise RuntimeError(
                 f"Django project not correctly configured. {e}"
+            ) from None
+
+        # Parse environment variables
+        try:
+            self._env_flag = "-p-" if os.environ["ENV"] == "prod" else "-t-"
+        except KeyError as e:
+            raise RuntimeError(
+                f'Missing required environment variable "{e}". '
             ) from None
 
         # List project queues
@@ -192,7 +211,7 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             return matches[0]
 
     def list_names(self) -> list[str]:
-        """Fetches the names of all queues in the current project.
+        """Fetches the names of all queues in the current project environment.
 
         NOTE: Names are fully-qualified and have the format:
         `projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID`
@@ -229,7 +248,11 @@ class GoogleCloudTaskQueue(MessageQueueClient):
             )
 
         # Return names
-        return [queue["name"] for queue in r.json()["queues"]]
+        return [
+            queue["name"]
+            for queue in r.json()["queues"]
+            if self._env_flag in queue["name"]
+        ]
 
     def purge(self) -> None:
         """Purges all tasks from the configured queues.

@@ -105,6 +105,12 @@ QUEUE_CONFIG = [
 
 # Parse environment variables
 try:
+    CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ["CLOUDFLARE_R2_ACCESS_KEY_ID"]
+    CLOUDFLARE_R2_BUCKET_URL = os.environ["CLOUDFLARE_R2_BUCKET_URL"]
+    CLOUDFLARE_R2_ENDPOINT_URL = os.environ["CLOUDFLARE_R2_ENDPOINT_URL"]
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY = os.environ[
+        "CLOUDFLARE_R2_SECRET_ACCESS_KEY"
+    ]
     DJANGO_PORT = os.environ["DJANGO_PORT"]
     DJANGO_SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
     ENV = "p" if os.environ["ENV"] == "prod" else "t"
@@ -117,6 +123,11 @@ try:
     ]
     EXTRACTION_PIPELINE_SCHEDULE = os.environ["EXTRACTION_PIPELINE_SCHEDULE"]
     GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+    OUTPUT_FILE_MAX_AGE = os.environ["OUTPUT_FILE_MAX_AGE"]
+    OUTPUT_FILE_NAME = os.environ["OUTPUT_FILE_NAME"]
+    OUTPUT_FILE_TOTAL_MAX_ATTEMPTS = os.environ[
+        "OUTPUT_FILE_TOTAL_MAX_ATTEMPTS"
+    ]
     POSTGRES_DB = os.environ["POSTGRES_DB"]
     POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
     POSTGRES_USER = os.environ["POSTGRES_USER"]

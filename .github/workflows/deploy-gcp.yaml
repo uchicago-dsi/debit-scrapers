@@ -110,6 +110,10 @@ jobs:
           work-dir: ${{ env.INFRA_DIR }}
           cloud-url: ${{ env.BUCKET_URL}}
         env:
+          CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          CLOUDFLARE_R2_BUCKET_URL: ${{ vars.CLOUDFLARE_R2_BUCKET_URL }}
+          CLOUDFLARE_R2_ENDPOINT_URL: ${{ vars.CLOUDFLARE_R2_ENDPOINT_URL }}
+          CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           DJANGO_PORT: ${{ vars.DJANGO_PORT }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           ENV: ${{ vars.ENV }}
@@ -121,6 +125,9 @@ jobs:
           GCP_PROJECT_REGION: ${{ vars.GCP_PROJECT_REGION }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT_FILE_MAX_AGE: ${{ vars.OUTPUT_FILE_MAX_AGE }}
+          OUTPUT_FILE_NAME: ${{ vars.OUTPUT_FILE_NAME }}
+          OUTPUT_FILE_TOTAL_MAX_ATTEMPTS: ${{ vars.OUTPUT_FILE_TOTAL_MAX_ATTEMPTS }}
           POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_USER: ${{ vars.POSTGRES_USER }}
@@ -135,6 +142,10 @@ jobs:
           cloud-url: ${{ env.BUCKET_URL}}
           upsert: true
         env:
+          CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          CLOUDFLARE_R2_BUCKET_URL: ${{ vars.CLOUDFLARE_R2_BUCKET_URL }}
+          CLOUDFLARE_R2_ENDPOINT_URL: ${{ vars.CLOUDFLARE_R2_ENDPOINT_URL }}
+          CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           DJANGO_PORT: ${{ vars.DJANGO_PORT }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           ENV: ${{ vars.ENV }}
@@ -146,6 +157,9 @@ jobs:
           GCP_PROJECT_REGION: ${{ vars.GCP_PROJECT_REGION }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT_FILE_MAX_AGE: ${{ vars.OUTPUT_FILE_MAX_AGE }}
+          OUTPUT_FILE_NAME: ${{ vars.OUTPUT_FILE_NAME }}
+          OUTPUT_FILE_TOTAL_MAX_ATTEMPTS: ${{ vars.OUTPUT_FILE_TOTAL_MAX_ATTEMPTS }}
           POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_USER: ${{ vars.POSTGRES_USER }}

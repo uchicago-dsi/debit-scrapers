@@ -11,17 +11,32 @@ import pandas as pd
 import smart_open
 
 # Package imports
-from map_clean.constants import INPUT_DIR, OUTPUT_DIR, OUTPUT_FNAME
-from map_clean.utils import LoggerFactory
+from map_clean.constants import INPUT_DIR, OUTPUT_DIR
+from map_clean.utils import configure_cloudflare_request_params, LoggerFactory
 
 
-def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
+def main(
+    input_fpath: str,
+    output_fpath: str,
+    transport_params: dict,
+    logger: logging.Logger,
+) -> None:
     """Maps clean project data to the format required by the DeBIT website.
+
+    The input file is expected to be in Parquet format and saved within a
+    Google Cloud Storage bucket. The function reads the file from the remote
+    storage location, maps the clean data, and then writes the output Parquet
+    file to a public Cloudflare R2 bucket.
+
+    References:
+    - https://github.com/piskvorky/smart_open
 
     Args:
         input_fpath: The path to the input file. May be local or remote.
 
         output_fpath: The path to the output file. May be local or remote.
+
+        transport_params: The request parameters to use for object uploads.
 
         logger: A standard logger instance.
 
@@ -78,7 +93,7 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
         ]
         for date_type in ranked_date_types:
             if row[date_type]:
-                return date_type, row[date_type]
+                return date_type.upper().replace("_", " "), row[date_type]
         return "", ""
 
     # Add "Display Date" and "Display Date Type" columns
@@ -119,14 +134,19 @@ def main(input_fpath: str, output_fpath: str, logger: logging.Logger) -> None:
     logger.info("Adding document column.")
     clean_df.loc[:, ["document"]] = clean_df.apply(get_document, axis=1)
 
-    # Write mapped data to output file
+    # Write mapped data to output file in S3-compatible storage bucket
     try:
         logger.info(f'Writing mapped project data to "{output_fpath}".')
-        with smart_open.open(output_fpath, "wb") as f:
+        with smart_open.open(
+            output_fpath,
+            "wb",
+            transport_params=transport_params,
+        ) as f:
             clean_df.to_parquet(f, index=False, compression="gzip")
     except Exception as e:
-        logger.error(f"Failed to write mapped project data to file. {e}")
-        exit(1)
+        raise RuntimeError(
+            f"Failed to write mapped project data to file. {e}"
+        ) from None
 
 
 if __name__ == "__main__":
@@ -136,9 +156,14 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "object_key",
+        "input_object_key",
         type=str,
         help="The path to the input file in the storage directory or bucket.",
+    )
+    parser.add_argument(
+        "output_object_key",
+        type=str,
+        help="The path to the output file in the storage directory or bucket.",
     )
     parser.add_argument(
         "--input_bucket",
@@ -159,11 +184,18 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Validate object key argument received
-    if not args.object_key:
+    # Validate positional arguments received
+    if not args.input_object_key:
         logger.error(
             "Missing positional argument for the path to the "
             "input file in the storage directory or bucket."
+        )
+        exit(1)
+
+    if not args.output_object_key:
+        logger.error(
+            "Missing positional argument for the path to the "
+            "output file in the storage directory or bucket."
         )
         exit(1)
 
@@ -178,22 +210,32 @@ if __name__ == "__main__":
             exit(1)
 
         # Compose path to remote input file
-        input_fpath = f"{args.input_bucket}/{args.object_key}"
+        input_fpath = f"{args.input_bucket}/{args.input_object_key}"
 
         # Compose path to remote output file
-        output_fpath = f"{args.output_bucket}/{OUTPUT_FNAME}"
+        output_fpath = f"{args.output_bucket}/{args.output_object_key}"
+
+        # Compose storage transport parameters
+        try:
+            transport_params = configure_cloudflare_request_params()
+        except Exception as e:
+            logger.error(f"Failed to configure S3 request parameters. {e}")
+            exit(1)
     else:
         # Compose path to local input file
-        input_fpath = f"{INPUT_DIR}/{args.object_key}"
+        input_fpath = f"{INPUT_DIR}/{args.input_object_key}"
 
         # Compose path to local output file
         Path.mkdir(OUTPUT_DIR, exist_ok=True)
-        output_fpath = f"{OUTPUT_DIR}/{OUTPUT_FNAME}"
+        output_fpath = f"{OUTPUT_DIR}/{args.output_object_key}"
+
+        # Compose storage transport parameters
+        transport_params = {}
 
     # Execute main program logic
     try:
         logger.info(f'Received request to map clean data file at "{input_fpath}".')
-        main(input_fpath, output_fpath, logger)
+        main(input_fpath, output_fpath, transport_params, logger)
     except Exception as e:
         logger.error(f"Failed to map clean development bank project data. {e}")
         exit(1)

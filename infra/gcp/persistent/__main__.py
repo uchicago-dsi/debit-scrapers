@@ -8,6 +8,10 @@ import pulumi_std as std
 
 # Application imports
 from constants import (
+    CLOUDFLARE_R2_ACCESS_KEY_ID,
+    CLOUDFLARE_R2_BUCKET_URL,
+    CLOUDFLARE_R2_ENDPOINT_URL,
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY,
     DJANGO_ALLOWED_HOST,
     DJANGO_API_PATH_DATA_EXTRACTION,
     DJANGO_PORT,
@@ -22,6 +26,9 @@ from constants import (
     GEMINI_API_KEY,
     IS_TEST,
     MAPPING_DIR,
+    OUTPUT_FILE_MAX_AGE,
+    OUTPUT_FILE_NAME,
+    OUTPUT_FILE_TOTAL_MAX_ATTEMPTS,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
     POSTGRES_USER,
@@ -174,6 +181,60 @@ gemini_api_key_version = gcp.secretmanager.SecretVersion(
 )
 pulumi.export("gemini_api_key", gemini_api_key.name)
 
+# Create Cloudflare R2 access key id
+cloudflare_r2_access_key = gcp.secretmanager.Secret(
+    f"debit-{ENV}-secret-r2-access-key-id",
+    secret_id=f"debit-{ENV}-r2-access-key-id",
+    replication=gcp.secretmanager.SecretReplicationArgs(
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+cloudflare_r2_access_key_version = gcp.secretmanager.SecretVersion(
+    f"debit-{ENV}-secret-version-r2-access-key-id",
+    secret=cloudflare_r2_access_key.id,
+    secret_data=CLOUDFLARE_R2_ACCESS_KEY_ID,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("cloudflare_r2_access_key", cloudflare_r2_access_key.name)
+
+# Create Cloudflare R2 secret key
+cloudflare_r2_secret_key = gcp.secretmanager.Secret(
+    f"debit-{ENV}-secret-r2-secret-key",
+    secret_id=f"debit-{ENV}-r2-secret-key",
+    replication=gcp.secretmanager.SecretReplicationArgs(
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+cloudflare_r2_secret_key_version = gcp.secretmanager.SecretVersion(
+    f"debit-{ENV}-secret-version-r2-secret-key",
+    secret=cloudflare_r2_secret_key.id,
+    secret_data=CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("cloudflare_r2_secret_key", cloudflare_r2_secret_key.name)
+
 # endregion
 
 # ------------------------------------------------------------------------
@@ -208,26 +269,6 @@ transform_data_bucket = gcp.storage.Bucket(
 )
 pulumi.export("transform_data_bucket_name", transform_data_bucket.name)
 pulumi.export("transform_data_bucket_url", transform_data_bucket.url)
-
-# Data mapping
-map_data_bucket = gcp.storage.Bucket(
-    f"debit-{ENV}-map-bucket",
-    location=PROJECT_REGION,
-    uniform_bucket_level_access=True,
-    force_destroy=IS_TEST,
-    cors=[
-        gcp.storage.BucketCorArgs(
-            max_age_seconds=3600,
-            methods=["GET", "HEAD"],
-            origins=["*"],
-        )
-    ],
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-pulumi.export("map_data_bucket_name", map_data_bucket.name)
-pulumi.export("map_data_bucket_url", map_data_bucket.url)
 
 # endregion
 
@@ -483,6 +524,8 @@ cloud_run_service_account_member = cloud_run_service_account.email.apply(
 # Grant account access to secrets
 for idx, secret_id in enumerate(
     (
+        cloudflare_r2_access_key.secret_id,
+        cloudflare_r2_secret_key.secret_id,
         django_secret.secret_id,
         gemini_api_key.secret_id,
         postgres_password.secret_id,
@@ -524,17 +567,6 @@ gcp.storage.BucketIAMMember(
 gcp.storage.BucketIAMMember(
     f"debit-{ENV}-run-cleanbucket-access",
     bucket=transform_data_bucket.name,
-    role="roles/storage.objectAdmin",
-    member=cloud_run_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# Grant account access to data mapping Cloud Storage bucket
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-run-mapbucket-access",
-    bucket=map_data_bucket.name,
     role="roles/storage.objectAdmin",
     member=cloud_run_service_account_member,
     opts=pulumi.ResourceOptions(
@@ -722,19 +754,6 @@ gcp.projects.IAMMember(
     project=PROJECT_ID,
     role="roles/eventarc.eventReceiver",
     member=eventarc_service_account_member,
-    opts=pulumi.ResourceOptions(
-        depends_on=enabled_services, provider=gcp_provider
-    ),
-)
-
-# PUBLIC
-
-# Grant open access to the storage bucket with mapped data
-gcp.storage.BucketIAMMember(
-    f"debit-{ENV}-public-mapbucket-access",
-    bucket=map_data_bucket.name,
-    role="roles/storage.objectViewer",
-    member="allUsers",
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider
     ),
@@ -1021,7 +1040,7 @@ orchestrate_cloud_run_job = gcp.cloudrunv2.Job(
                 )
             ],
             service_account=cloud_run_service_account.email,
-            timeout="86400s",
+            timeout="172800s",
             volumes=[
                 gcp.cloudrunv2.JobTemplateTemplateVolumeArgs(
                     name="cloudsql",
@@ -1185,9 +1204,39 @@ map_cloud_run_job = gcp.cloudrunv2.Job(
                 gcp.cloudrunv2.JobTemplateTemplateContainerArgs(
                     envs=[
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_ACCESS_KEY_ID",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=cloudflare_r2_access_key.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_ENDPOINT_URL",
+                            value=CLOUDFLARE_R2_ENDPOINT_URL,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=cloudflare_r2_secret_key.secret_id,
+                                    version="latest",
+                                )
+                            ),
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="ENV",
                             value="prod" if ENV == "p" else "test",
-                        )
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="OUTPUT_FILE_MAX_AGE",
+                            value=OUTPUT_FILE_MAX_AGE,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="OUTPUT_FILE_TOTAL_MAX_ATTEMPTS",
+                            value=OUTPUT_FILE_TOTAL_MAX_ATTEMPTS,
+                        ),
                     ],
                     image=map_image.image_name,
                     resources=gcp.cloudrunv2.JobTemplateTemplateContainerResourcesArgs(
@@ -1574,8 +1623,9 @@ mapping_workflow = gcp.workflows.Workflow(
                 - initializeVariables:
                     assign:
                         - inputBucket: ${{ "gs://" + event.data.bucket }}
-                        - outputBucket: {output_bucket_url}
-                        - objectKey: ${{ event.data.name }}
+                        - inputObjectKey: ${{ event.data.name }}
+                        - outputBucket: {output_bucket}
+                        - outputObjectKey: {output_object_key}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
                         - mapJobFullName: ${{ jobPrefix + "{map_job_name}" }}
                 - mapData:
@@ -1586,7 +1636,8 @@ mapping_workflow = gcp.workflows.Workflow(
                             overrides:
                                 containerOverrides:
                                     args:
-                                        - ${{ objectKey }}
+                                        - ${{ inputObjectKey }}
+                                        - ${{ outputObjectKey }}
                                         - --input_bucket
                                         - ${{ inputBucket }}
                                         - --output_bucket
@@ -1597,9 +1648,10 @@ mapping_workflow = gcp.workflows.Workflow(
                     result: mapDataOperation
         """,
         map_job_name=map_cloud_run_job.name,
+        output_bucket=CLOUDFLARE_R2_BUCKET_URL,
+        output_object_key=OUTPUT_FILE_NAME,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
-        output_bucket_url=map_data_bucket.url,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

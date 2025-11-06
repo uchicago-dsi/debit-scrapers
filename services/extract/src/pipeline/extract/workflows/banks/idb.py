@@ -400,7 +400,7 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
     """Scrapes an IDB search results page for project data only."""
 
     def scrape_project_page(self, url: str) -> list[dict]:
-        """Extracts a IDB project's total funding, status, and approval date.
+        """Extracts an IDB project's name, total funding, status, and approval date.
 
         Args:
             url: The URL to the project webpage.
@@ -432,6 +432,14 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         # Parse webpage HTML into node tree
         soup = BeautifulSoup(r.text, "html.parser")
+
+        # Scrape section wrapper for project name
+        try:
+            project["name"] = soup.find("idb-section-wrapper", {"eyebrow": "Projects"})[
+                "heading"
+            ]
+        except Exception as e:
+            raise RuntimeError(f'Error scraping project name at "{url}". {e}') from None
 
         # Scrape table for project data
         try:
@@ -466,7 +474,7 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
 
         except Exception as e:
             raise RuntimeError(
-                f"Error scraping project data from '{url}'. {e}"
+                f'Error scraping project table at "{url}". {e}'
             ) from None
 
         return [project]
