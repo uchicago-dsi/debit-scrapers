@@ -524,6 +524,8 @@ cloud_run_service_account_member = cloud_run_service_account.email.apply(
 # Grant account access to secrets
 for idx, secret_id in enumerate(
     (
+        cloudflare_r2_access_key.secret_id,
+        cloudflare_r2_secret_key.secret_id,
         django_secret.secret_id,
         gemini_api_key.secret_id,
         postgres_password.secret_id,
