@@ -181,6 +181,60 @@ gemini_api_key_version = gcp.secretmanager.SecretVersion(
 )
 pulumi.export("gemini_api_key", gemini_api_key.name)
 
+# Create Cloudflare R2 access key id
+cloudflare_r2_access_key = gcp.secretmanager.Secret(
+    f"debit-{ENV}-secret-r2-access-key-id",
+    secret_id=f"debit-{ENV}-r2-access-key-id",
+    replication=gcp.secretmanager.SecretReplicationArgs(
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+cloudflare_r2_access_key_version = gcp.secretmanager.SecretVersion(
+    f"debit-{ENV}-secret-version-r2-access-key-id",
+    secret=cloudflare_r2_access_key.id,
+    secret_data=CLOUDFLARE_R2_ACCESS_KEY_ID,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("cloudflare_r2_access_key", cloudflare_r2_access_key.name)
+
+# Create Cloudflare R2 secret key
+cloudflare_r2_secret_key = gcp.secretmanager.Secret(
+    f"debit-{ENV}-secret-r2-secret-key",
+    secret_id=f"debit-{ENV}-r2-secret-key",
+    replication=gcp.secretmanager.SecretReplicationArgs(
+        user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
+            replicas=[
+                gcp.secretmanager.SecretReplicationUserManagedReplicaArgs(
+                    location=PROJECT_REGION
+                ),
+            ]
+        ),
+    ),
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+cloudflare_r2_secret_key_version = gcp.secretmanager.SecretVersion(
+    f"debit-{ENV}-secret-version-r2-secret-key",
+    secret=cloudflare_r2_secret_key.id,
+    secret_data=CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    opts=pulumi.ResourceOptions(
+        depends_on=enabled_services, provider=gcp_provider
+    ),
+)
+pulumi.export("cloudflare_r2_secret_key", cloudflare_r2_secret_key.name)
+
 # endregion
 
 # ------------------------------------------------------------------------
@@ -1149,7 +1203,12 @@ map_cloud_run_job = gcp.cloudrunv2.Job(
                     envs=[
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="CLOUDFLARE_R2_ACCESS_KEY_ID",
-                            value=CLOUDFLARE_R2_ACCESS_KEY_ID,
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=cloudflare_r2_access_key.secret_id,
+                                    version="latest",
+                                )
+                            ),
                         ),
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="CLOUDFLARE_R2_ENDPOINT_URL",
@@ -1157,7 +1216,12 @@ map_cloud_run_job = gcp.cloudrunv2.Job(
                         ),
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="CLOUDFLARE_R2_SECRET_ACCESS_KEY",
-                            value=CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+                            value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+                                secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                                    secret=cloudflare_r2_secret_key.secret_id,
+                                    version="latest",
+                                )
+                            ),
                         ),
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="ENV",
