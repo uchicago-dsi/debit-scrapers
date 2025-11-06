@@ -11,7 +11,7 @@ import pandas as pd
 import smart_open
 
 # Package imports
-from map_clean.constants import INPUT_DIR, OUTPUT_DIR, OUTPUT_FNAME
+from map_clean.constants import INPUT_DIR, OUTPUT_DIR
 from map_clean.utils import configure_cloudflare_request_params, LoggerFactory
 
 
@@ -156,9 +156,14 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "object_key",
+        "input_object_key",
         type=str,
         help="The path to the input file in the storage directory or bucket.",
+    )
+    parser.add_argument(
+        "output_object_key",
+        type=str,
+        help="The path to the output file in the storage directory or bucket.",
     )
     parser.add_argument(
         "--input_bucket",
@@ -179,11 +184,18 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Validate object key argument received
-    if not args.object_key:
+    # Validate positional arguments received
+    if not args.input_object_key:
         logger.error(
             "Missing positional argument for the path to the "
             "input file in the storage directory or bucket."
+        )
+        exit(1)
+
+    if not args.output_object_key:
+        logger.error(
+            "Missing positional argument for the path to the "
+            "output file in the storage directory or bucket."
         )
         exit(1)
 
@@ -198,10 +210,10 @@ if __name__ == "__main__":
             exit(1)
 
         # Compose path to remote input file
-        input_fpath = f"{args.input_bucket}/{args.object_key}"
+        input_fpath = f"{args.input_bucket}/{args.input_object_key}"
 
         # Compose path to remote output file
-        output_fpath = f"{args.output_bucket}/{OUTPUT_FNAME}"
+        output_fpath = f"{args.output_bucket}/{args.output_object_key}"
 
         # Compose storage transport parameters
         try:
@@ -211,11 +223,11 @@ if __name__ == "__main__":
             exit(1)
     else:
         # Compose path to local input file
-        input_fpath = f"{INPUT_DIR}/{args.object_key}"
+        input_fpath = f"{INPUT_DIR}/{args.input_object_key}"
 
         # Compose path to local output file
         Path.mkdir(OUTPUT_DIR, exist_ok=True)
-        output_fpath = f"{OUTPUT_DIR}/{OUTPUT_FNAME}"
+        output_fpath = f"{OUTPUT_DIR}/{args.output_object_key}"
 
         # Compose storage transport parameters
         transport_params = {}

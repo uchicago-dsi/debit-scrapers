@@ -28,6 +28,7 @@ def configure_cloudflare_request_params() -> dict:
     # Parse environment variables
     try:
         cloudflare_access_key_id = os.environ["CLOUDFLARE_R2_ACCESS_KEY_ID"]
+        cloudflare_r2_endpoint_url = os.environ["CLOUDFLARE_R2_ENDPOINT_URL"]
         cloudflare_secret_access_key = os.environ["CLOUDFLARE_R2_SECRET_ACCESS_KEY"]
         output_file_max_age = int(os.getenv("OUTPUT_FILE_MAX_AGE", "3600"))
         output_file_max_attempts = int(os.getenv("OUTPUT_FILE_TOTAL_MAX_ATTEMPTS", "3"))
@@ -53,7 +54,11 @@ def configure_cloudflare_request_params() -> dict:
             aws_access_key_id=cloudflare_access_key_id,
             aws_secret_access_key=cloudflare_secret_access_key,
         )
-        client = session.client("s3", config=config)
+        client = session.client(
+            "s3",
+            endpoint_url=cloudflare_r2_endpoint_url,
+            config=config,
+        )
     except Exception as e:
         raise RuntimeError(
             "Failed to configure new client for writing "

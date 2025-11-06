@@ -10,6 +10,7 @@ import pulumi_std as std
 from constants import (
     CLOUDFLARE_R2_ACCESS_KEY_ID,
     CLOUDFLARE_R2_BUCKET_URL,
+    CLOUDFLARE_R2_ENDPOINT_URL,
     CLOUDFLARE_R2_SECRET_ACCESS_KEY,
     DJANGO_ALLOWED_HOST,
     DJANGO_API_PATH_DATA_EXTRACTION,
@@ -26,6 +27,7 @@ from constants import (
     IS_TEST,
     MAPPING_DIR,
     OUTPUT_FILE_MAX_AGE,
+    OUTPUT_FILE_NAME,
     OUTPUT_FILE_TOTAL_MAX_ATTEMPTS,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
@@ -982,7 +984,7 @@ orchestrate_cloud_run_job = gcp.cloudrunv2.Job(
                 )
             ],
             service_account=cloud_run_service_account.email,
-            timeout="86400s",
+            timeout="172800s",
             volumes=[
                 gcp.cloudrunv2.JobTemplateTemplateVolumeArgs(
                     name="cloudsql",
@@ -1148,6 +1150,10 @@ map_cloud_run_job = gcp.cloudrunv2.Job(
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="CLOUDFLARE_R2_ACCESS_KEY_ID",
                             value=CLOUDFLARE_R2_ACCESS_KEY_ID,
+                        ),
+                        gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
+                            name="CLOUDFLARE_R2_ENDPOINT_URL",
+                            value=CLOUDFLARE_R2_ENDPOINT_URL,
                         ),
                         gcp.cloudrunv2.JobTemplateTemplateContainerEnvArgs(
                             name="CLOUDFLARE_R2_SECRET_ACCESS_KEY",
@@ -1551,8 +1557,9 @@ mapping_workflow = gcp.workflows.Workflow(
                 - initializeVariables:
                     assign:
                         - inputBucket: ${{ "gs://" + event.data.bucket }}
-                        - outputBucket: {output_bucket_url}
-                        - objectKey: ${{ event.data.name }}
+                        - inputObjectKey: ${{ event.data.name }}
+                        - outputBucket: {output_bucket}
+                        - outputObjectKey: {output_object_key}
                         - jobPrefix: projects/{project_id}/locations/{project_region}/jobs/
                         - mapJobFullName: ${{ jobPrefix + "{map_job_name}" }}
                 - mapData:
@@ -1563,7 +1570,8 @@ mapping_workflow = gcp.workflows.Workflow(
                             overrides:
                                 containerOverrides:
                                     args:
-                                        - ${{ objectKey }}
+                                        - ${{ inputObjectKey }}
+                                        - ${{ outputObjectKey }}
                                         - --input_bucket
                                         - ${{ inputBucket }}
                                         - --output_bucket
@@ -1574,9 +1582,10 @@ mapping_workflow = gcp.workflows.Workflow(
                     result: mapDataOperation
         """,
         map_job_name=map_cloud_run_job.name,
+        output_bucket=CLOUDFLARE_R2_BUCKET_URL,
+        output_object_key=OUTPUT_FILE_NAME,
         project_id=PROJECT_ID,
         project_region=PROJECT_REGION,
-        output_bucket_url=CLOUDFLARE_R2_BUCKET_URL,
     ),
     opts=pulumi.ResourceOptions(
         depends_on=enabled_services, provider=gcp_provider

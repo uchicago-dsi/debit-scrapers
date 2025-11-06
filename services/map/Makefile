@@ -15,6 +15,7 @@ container_output_dir := "app/output"
 project_name := $(current_dir)
 env_path := $(current_abs_path).env.dev
 input_file := cleaned.parquet
+output_file := debit_projects.parquet
 
 # Define commands
 build-mapper:
@@ -27,4 +28,4 @@ run-mapper: build-mapper
 		-v $(input_dir):/$(container_input_dir) \
 		-v $(output_dir):/$(container_output_dir) \
 		--env-file $(env_path) \
-		--rm $(project_name) ${input_file}
+		--rm $(project_name) ${input_file} ${output_file}
