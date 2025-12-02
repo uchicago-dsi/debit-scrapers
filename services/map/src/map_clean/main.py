@@ -134,18 +134,61 @@ def main(
     logger.info("Adding document column.")
     clean_df.loc[:, ["document"]] = clean_df.apply(get_document, axis=1)
 
-    # Write mapped data to output file in S3-compatible storage bucket
+    # Attempt to fetch master projects file from storage
     try:
-        logger.info(f'Writing mapped project data to "{output_fpath}".')
+        logger.info("Fetching master projects file from storage.")
+        with smart_open.open(
+            output_fpath,
+            "rb",
+            transport_params=transport_params,
+        ) as f:
+            master_df = pd.read_parquet(f)
+    except FileNotFoundError:
+        master_df = None
+    except Exception as e:
+        raise RuntimeError(f"Failed to read master projects data file. {e}") from None
+
+    # Perform data upsert if master file of previous/historical data exists
+    # NOTE: By appending records to the master projects file rather than
+    # replacing the file completely, we preserve data entries that were
+    # dropped by the website or not scraped by the pipeline due to transient
+    # errors or bugs.
+    if master_df is None:
+        final_df = clean_df
+    else:
+        # Define common indices on current and incoming DataFrames
+        logger.info("Preparing current and incoming data for upsert operation.")
+        current_df = master_df.drop(columns="id").set_index("url").sort_index()
+        incoming_df = clean_df.drop(columns="id").set_index("url").sort_index()
+
+        # Refresh current DataFrame's value columns with latest updates
+        logger.info("Updating current project records with latest updates.")
+        current_df.update(incoming_df)
+
+        # Concatenate new records to compelete
+        logger.info("Concatenating new project records.")
+        additions_df = incoming_df[~incoming_df.index.isin(current_df.index)]
+        upserted_df = pd.concat([current_df, additions_df])
+
+        # Finalize columns
+        logger.info("Finalizing columns.")
+        final_df = upserted_df.reset_index().sort_values(
+            by=["source", "display_date", "name"],
+            ascending=[True, False, True],
+        )
+
+    # Write finalized data to output file in S3-compatible storage bucket
+    try:
+        logger.info(f'Writing finalized project data to "{output_fpath}".')
         with smart_open.open(
             output_fpath,
             "wb",
             transport_params=transport_params,
         ) as f:
-            clean_df.to_parquet(f, index=False, compression="gzip")
+            final_df.to_parquet(f, index=False, compression="gzip")
     except Exception as e:
         raise RuntimeError(
-            f"Failed to write mapped project data to file. {e}"
+            f"Failed to write finalized project data to file. {e}"
         ) from None
 
 

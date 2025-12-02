@@ -220,11 +220,15 @@ class AdbProjectScrapeWorkflow(ProjectScrapeWorkflow):
             iati_status_code = activity.find("activity-status").get("code")
             project["status"] = self._status_codes.get(iati_status_code, "")
 
-        # Parse total amount
+        # Parse total amount from transaction value
         for transaction in activity.findall("transaction"):
             if transaction.find("transaction-type").get("code") == "2":
                 project["total_amount"] = float(transaction.find("value").text)
                 break
+
+        # Set total amount to None if not found
+        if "total_amount" not in project:
+            project["total_amount"] = None
 
         # Parse currency
         project["total_amount_currency"] = activity.get("default-currency")

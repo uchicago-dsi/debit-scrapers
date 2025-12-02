@@ -22,6 +22,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
+from curl_cffi import requests
 from django.conf import settings
 
 # Application imports
@@ -79,8 +80,11 @@ class IdbPartialProjectDownloadWorkflow(ProjectPartialDownloadWorkflow):
                 "Error parsing IDB download options into JSON."
             ) from None
 
+        # Create browser session
+        session = requests.Session()
+
         # Fetch authentication token
-        r = self._data_request_client.get(self.token_url, use_random_delay=True)
+        r = session.get(self.token_url, impersonate="chrome110", timeout=60)
 
         # Raise error if token not received successfully
         if not r.ok:
@@ -99,10 +103,12 @@ class IdbPartialProjectDownloadWorkflow(ProjectPartialDownloadWorkflow):
             ) from None
 
         # Download project records
-        r = self._data_request_client.post(
+        r = session.post(
             self.download_url,
-            custom_headers={"Authorization": f"EmbedToken {token}"},
+            headers={"Authorization": f"EmbedToken {token}"},
             json=download_options,
+            impersonate="chrome110",
+            timeout=300,
         )
 
         # Raise error if download failed
@@ -363,12 +369,11 @@ class IdbResultsScrapeWorkflow(ResultsScrapeWorkflow):
         Returns:
             The list of scraped project page URLs.
         """
+        # Start session
+        session = requests.Session()
+
         # Request page
-        r = self._data_request_client.get(
-            url=url,
-            use_random_user_agent=True,
-            use_random_delay=True,
-        )
+        r = session.get(url=url, impersonate="chrome110", timeout=60)
 
         # Check response
         if not r.ok:
@@ -408,12 +413,11 @@ class IdbProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         Returns:
             The raw record(s).
         """
+        # Create new session
+        session = requests.Session()
+
         # Request page
-        r = self._data_request_client.get(
-            url=url,
-            use_random_user_agent=True,
-            use_random_delay=True,
-        )
+        r = session.get(url=url, impersonate="chrome110", timeout=60)
 
         # Check response
         if not r.ok:
