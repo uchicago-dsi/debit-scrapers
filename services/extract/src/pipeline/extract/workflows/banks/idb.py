@@ -291,13 +291,16 @@ class IdbSeedUrlsWorkflow(SeedUrlsWorkflow):
         Returns:
             The page number.
         """
+        # Create browser session
+        session = requests.Session()
+
         # Fetch page
         params = {"page_num": self.first_page_num}
         first_results_page = self.search_results_base_url.format(**params)
-        r = self._data_request_client.get(
+        r = session.get(
             first_results_page,
-            use_random_user_agent=True,
-            use_random_delay=True,
+            impersonate="chrome110",
+            timeout=60,
         )
 
         # Check response
