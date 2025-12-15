@@ -487,7 +487,7 @@ pulumi.export("map_image", map_image.image_name)
 # CLOUD STORAGE
 
 # Get reference to current cloud project
-project = gcp.organizations.get_project()
+project = gcp.organizations.get_project(project_id=PROJECT_ID)
 
 # Build reference to default storage service account
 storage_service_account_member = f"serviceAccount:service-{project.number}@gs-project-accounts.iam.gserviceaccount.com"
