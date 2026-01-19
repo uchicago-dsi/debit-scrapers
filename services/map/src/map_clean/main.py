@@ -158,7 +158,7 @@ def main(
     else:
         # Define common indices on current and incoming DataFrames
         logger.info("Preparing current and incoming data for upsert operation.")
-        current_df = master_df.drop(columns="id").set_index("url").sort_index()
+        current_df = master_df.set_index("url").sort_index()
         incoming_df = clean_df.drop(columns="id").set_index("url").sort_index()
 
         # Refresh current DataFrame's value columns with latest updates

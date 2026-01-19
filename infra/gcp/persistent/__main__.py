@@ -87,6 +87,7 @@ enabled_services = [
         service=svc,
         project=PROJECT_ID,
         disable_on_destroy=False,
+        opts=pulumi.ResourceOptions(provider=gcp_provider),
     )
     for svc in required_services
 ]
@@ -184,7 +185,7 @@ pulumi.export("gemini_api_key", gemini_api_key.name)
 # Create Cloudflare R2 access key id
 cloudflare_r2_access_key = gcp.secretmanager.Secret(
     f"debit-{ENV}-secret-r2-access-key-id",
-    secret_id=f"debit-{ENV}-r2-access-key-id",
+    secret_id=f"debit-{ENV}-secret-r2-access-key-id",
     replication=gcp.secretmanager.SecretReplicationArgs(
         user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
             replicas=[
@@ -211,7 +212,7 @@ pulumi.export("cloudflare_r2_access_key", cloudflare_r2_access_key.name)
 # Create Cloudflare R2 secret key
 cloudflare_r2_secret_key = gcp.secretmanager.Secret(
     f"debit-{ENV}-secret-r2-secret-key",
-    secret_id=f"debit-{ENV}-r2-secret-key",
+    secret_id=f"debit-{ENV}-secret-r2-secret-key",
     replication=gcp.secretmanager.SecretReplicationArgs(
         user_managed=gcp.secretmanager.SecretReplicationUserManagedArgs(
             replicas=[
@@ -284,7 +285,9 @@ pipeline_db = gcp.sql.DatabaseInstance(
     region=PROJECT_REGION,
     database_version="POSTGRES_17",
     settings=gcp.sql.DatabaseInstanceSettingsArgs(
-        edition="ENTERPRISE", tier="db-custom-1-3840"
+        edition="ENTERPRISE",
+        tier="db-custom-1-3840",
+        activation_policy="NEVER",
     ),
     deletion_protection=False,
     root_password=postgres_password_version.secret_data.apply(lambda val: val),
