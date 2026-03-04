@@ -186,8 +186,13 @@ class ProProjectScrapeWorkflow(ProjectScrapeWorkflow):
         # Extract project signature date from table
         try:
             raw_date = extract_table_value("Signature date")
-            parsed_date = datetime.strptime(raw_date, "%B %d %Y")
-            signed_utc = parsed_date.strftime("%Y-%m-%d")
+            signed_utc = ""
+            for fmt in ("%B %d %Y", "%B %d, %Y"):
+                try:
+                    signed_utc = datetime.strptime(raw_date, fmt).strftime("%Y-%m-%d")
+                    break
+                except ValueError:
+                    continue
         except (AttributeError, TypeError):
             signed_utc = ""
 
