@@ -326,7 +326,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             loan_amount_currency = ""
 
         # Fallback to AI if rule-based webscraping fails
-        if (not companies or not loan_amount_value or not loan_amount_currency) and self._gemini_client:
+        if (
+            not companies or not loan_amount_value or not loan_amount_currency
+        ) and self._gemini_client:
             try:
                 # Compose prompt from HTML
                 prompt = self._build_prompt(soup)
