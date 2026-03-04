@@ -171,11 +171,8 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         try:
             api_key = settings.GEMINI_API_KEY
         except AttributeError:
-            raise RuntimeError(
-                "Failed to instantiate EbrdProjectScrapeWorkflow. "
-                "Gemini API key not found in project settings."
-            ) from None
-        self._gemini_client = genai.Client(api_key=api_key)
+            api_key = ""
+        self._gemini_client = genai.Client(api_key=api_key) if api_key else None
 
     def _build_prompt(self, soup: BeautifulSoup) -> str:
         """Builds a prompt for an LLM to extract loan details from a webpage.
@@ -235,6 +232,8 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                 successfully extracted or `None` otherwise.
         """
         # Prompt model
+        if not self._gemini_client:
+            raise ValueError("Gemini client not configured.")
         response = self._gemini_client.models.generate_content(
             model="gemma-3-27b-it", contents=prompt
         )
@@ -327,7 +326,7 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             loan_amount_currency = ""
 
         # Fallback to AI if rule-based webscraping fails
-        if not companies or not loan_amount_value or not loan_amount_currency:
+        if (not companies or not loan_amount_value or not loan_amount_currency) and self._gemini_client:
             try:
                 # Compose prompt from HTML
                 prompt = self._build_prompt(soup)
