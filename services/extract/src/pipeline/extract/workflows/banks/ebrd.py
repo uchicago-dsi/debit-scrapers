@@ -107,11 +107,22 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Drop unnecessary columns
         df = df.drop(columns=["Bumped Link", "URL link to project"])
 
-        # Apply text encoding to selected columns
+        # Normalize text fields while preserving valid Unicode characters.
         cols = ["Title", "Sector", "Country"]
-        df[cols] = df[cols].map(
-            lambda x: x.encode("raw_unicode_escape").decode("utf-8")
-        )
+
+        def _normalize_text(val: str) -> str:
+            if not isinstance(val, str):
+                return ""
+            # Only decode when escape sequences are present in the raw text.
+            if "\\u" in val or "\\x" in val:
+                try:
+                    return val.encode("utf-8").decode("unicode_escape")
+                except UnicodeDecodeError:
+                    return val
+            return val
+
+        for col in cols:
+            df[col] = df[col].map(_normalize_text)
 
         # Map rows to URLs
         urls = [row["URL"] for _, row in df.iterrows()]
