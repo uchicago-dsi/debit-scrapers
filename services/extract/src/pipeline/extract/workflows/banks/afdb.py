@@ -76,7 +76,7 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Parse download id from response payload
         try:
             return r.json()["download_id"]
-        except (json.JsonDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError):
             raise RuntimeError(
                 "Error downloading data. The request to "
                 "trigger the data download did not return "
@@ -84,7 +84,11 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             ) from None
 
     def _wait_for_download(
-        self, session: requests.Session, download_id: str, max_checks: int = 3
+        self,
+        session: requests.Session,
+        download_id: str,
+        max_wait_in_seconds: int = 180,
+        check_interval_in_seconds: int = 10,
     ) -> str:
         """Waits for a download to complete.
 
@@ -98,14 +102,17 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
 
             download_id: The download id.
 
-            max_checks: The maximum number of times to check the download status.
-                Defaults to 3.
+            max_wait_in_seconds: The maximum time to wait for the
+                download to complete. Defaults to 180 seconds.
+
+            check_interval_in_seconds: The delay between status
+                checks in seconds. Defaults to 10.
 
         Returns:
             The name of the file to download.
         """
         # Wait until download is complete
-        num_checks = 0
+        elapsed_in_seconds = 0
         while True:
             # Check download status
             r = session.get(
@@ -126,9 +133,15 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
             # Parse response body
             try:
                 payload = r.json()
-                if payload["state"] == "SUCCESS":
+                state = payload["state"]
+                if state == "SUCCESS":
                     return payload["file"]
-            except (json.JsonDecodeError, KeyError):
+                if state == "FAILURE":
+                    raise RuntimeError(
+                        "Error downloading data. AFDB reported a failed "
+                        f"download state for id '{download_id}': {payload}."
+                    )
+            except (json.JSONDecodeError, KeyError):
                 raise RuntimeError(
                     "Error downloading data. The request to "
                     "check the status of the data download "
@@ -137,16 +150,14 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
                 ) from None
 
             # Wait before checking status again
-            time.sleep(10)
-
-            # Iterate number of times status has been checked
-            num_checks += 1
+            time.sleep(check_interval_in_seconds)
+            elapsed_in_seconds += check_interval_in_seconds
 
             # Raise exception if download has not completed
-            if num_checks >= max_checks:
+            if elapsed_in_seconds >= max_wait_in_seconds:
                 raise RuntimeError(
-                    "Error downloading data. The data download "
-                    f"has not completed after {max_checks} attempts."
+                    "Error downloading data. The data download has not "
+                    f"completed after {max_wait_in_seconds} seconds."
                 )
 
     def _download_file(self, session: requests.Session, file_name: str) -> IO[bytes]:
@@ -192,6 +203,64 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Return temporary file
         return temp_file
 
+    def _fetch_projects_from_activities_api(self) -> pd.DataFrame:
+        """Fetches project data from AFDB's activities API as a native fallback.
+
+        Returns:
+            A DataFrame with the same source columns expected by `clean_projects`.
+        """
+        session = requests.Session()
+        rows = []
+
+        for page in range(1, 500):
+            r = session.get(
+                f"https://mapafrica.afdb.org/api/v13/activities?page={page}",
+                impersonate="chrome110",
+                timeout=60,
+            )
+            if not r.ok:
+                raise RuntimeError(
+                    "Error downloading AFDB activities API data. "
+                    f'Request failed with "{r.status_code} - {r.reason}".'
+                )
+
+            try:
+                results = r.json()["results"]
+            except (json.JSONDecodeError, KeyError):
+                raise RuntimeError(
+                    "Error parsing AFDB activities API response body."
+                ) from None
+
+            if not results:
+                break
+
+            for row in results:
+                iati_identifier = row.get("iati_identifier", "")
+                identifier = iati_identifier.removeprefix("46002-")
+                rows.append(
+                    {
+                        "identifier": identifier,
+                        "country": row.get("country", ""),
+                        "Completion Date": row.get("activity_date_actual_end", ""),
+                        "Approval Date": row.get("activity_date_actual_start", ""),
+                        "Planned Completion Date": row.get(
+                            "activity_date_planned_end", ""
+                        ),
+                        "Signature Date": "",
+                        "title": row.get("title", ""),
+                        "AfDB Sector": row.get("sector_en", ""),
+                        "activity_status": row.get("activity_status", ""),
+                        "total_commitments (UA)": row.get("total_commitments", ""),
+                    }
+                )
+
+        if not rows:
+            raise RuntimeError(
+                "Error downloading AFDB activities API data. No records found."
+            )
+
+        return pd.DataFrame(rows)
+
     def get_projects(self) -> pd.DataFrame:
         """Downloads project records from an Excel file hosted on the website.
 
@@ -201,14 +270,28 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         Returns:
             The raw project records.
         """
-        # Initialize new session
-        session = requests.Session()
+        max_attempts = 3
+        last_error = None
+        file_name = None
+        for attempt in range(max_attempts):
+            # Initialize new session
+            session = requests.Session()
+            try:
+                # Trigger download
+                download_id = self._trigger_download(session)
 
-        # Trigger download
-        download_id = self._trigger_download(session)
+                # Wait for download to complete
+                file_name = self._wait_for_download(session, download_id)
+                break
+            except RuntimeError as e:
+                last_error = e
+                if attempt == max_attempts - 1:
+                    break
+                time.sleep(3)
 
-        # Wait for download to complete
-        file_name = self._wait_for_download(session, download_id)
+        # Fall back to the AFDB activities API if file downloads fail.
+        if not file_name:
+            return self._fetch_projects_from_activities_api()
 
         # Download file
         temp_file = self._download_file(session, file_name)
@@ -219,6 +302,8 @@ class AfdbProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Destroy temp file
         Path(temp_file.name).unlink()
 
+        if df.empty and last_error:
+            raise last_error
         return df
 
     def clean_projects(self, df: pd.DataFrame) -> tuple[list[str], pd.DataFrame]:

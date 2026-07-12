@@ -107,11 +107,22 @@ class EbrdProjectPartialDownloadWorkflow(ProjectPartialDownloadWorkflow):
         # Drop unnecessary columns
         df = df.drop(columns=["Bumped Link", "URL link to project"])
 
-        # Apply text encoding to selected columns
+        # Normalize text fields while preserving valid Unicode characters.
         cols = ["Title", "Sector", "Country"]
-        df[cols] = df[cols].map(
-            lambda x: x.encode("raw_unicode_escape").decode("utf-8")
-        )
+
+        def _normalize_text(val: str) -> str:
+            if not isinstance(val, str):
+                return ""
+            # Only decode when escape sequences are present in the raw text.
+            if "\\u" in val or "\\x" in val:
+                try:
+                    return val.encode("utf-8").decode("unicode_escape")
+                except UnicodeDecodeError:
+                    return val
+            return val
+
+        for col in cols:
+            df[col] = df[col].map(_normalize_text)
 
         # Map rows to URLs
         urls = [row["URL"] for _, row in df.iterrows()]
@@ -160,11 +171,8 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
         try:
             api_key = settings.GEMINI_API_KEY
         except AttributeError:
-            raise RuntimeError(
-                "Failed to instantiate EbrdProjectScrapeWorkflow. "
-                "Gemini API key not found in project settings."
-            ) from None
-        self._gemini_client = genai.Client(api_key=api_key)
+            api_key = ""
+        self._gemini_client = genai.Client(api_key=api_key) if api_key else None
 
     def _build_prompt(self, soup: BeautifulSoup) -> str:
         """Builds a prompt for an LLM to extract loan details from a webpage.
@@ -224,6 +232,8 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
                 successfully extracted or `None` otherwise.
         """
         # Prompt model
+        if not self._gemini_client:
+            raise ValueError("Gemini client not configured.")
         response = self._gemini_client.models.generate_content(
             model="gemma-3-27b-it", contents=prompt
         )
@@ -316,7 +326,9 @@ class EbrdProjectPartialScrapeWorkflow(ProjectPartialScrapeWorkflow):
             loan_amount_currency = ""
 
         # Fallback to AI if rule-based webscraping fails
-        if not companies or not loan_amount_value or not loan_amount_currency:
+        if (
+            not companies or not loan_amount_value or not loan_amount_currency
+        ) and self._gemini_client:
             try:
                 # Compose prompt from HTML
                 prompt = self._build_prompt(soup)

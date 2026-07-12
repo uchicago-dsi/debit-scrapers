@@ -97,7 +97,14 @@ class DfcDownloadWorkflow(ProjectDownloadWorkflow):
 
             # Create output columns
             df["countries"] = df["Country"]
-            df["fiscal_year_effective"] = df["Fiscal_Year"].astype(int)
+            fiscal_year_col = (
+                "Fiscal_Year" if "Fiscal_Year" in df.columns else "Fiscal Year"
+            )
+            df["fiscal_year_effective"] = (
+                pd.to_numeric(df[fiscal_year_col], errors="coerce")
+                .fillna(0)
+                .astype(int)
+            )
             df["finance_types"] = df["Project Type"]
             df["name"] = df["Project Name"]
             df["number"] = df["Project Number"]
